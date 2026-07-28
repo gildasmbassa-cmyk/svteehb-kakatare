@@ -5,11 +5,11 @@ import EDT_REEL from "./data/edt_reel.json";
 import * as XLSX from "xlsx";
 import { RealtimeClient } from "@supabase/realtime-js";
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SVTEEHB â€” Application PÃ©dagogique UnifiÃ©e
-// LycÃ©e de Kakatare Â· Maroua Â· Cameroun Â· 2025â€“2026
-// Version : React SaaS v1.0 â€” Toutes pages intÃ©grÃ©es
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════
+// SVTEEHB — Application Pédagogique Unifiée
+// Lycée de Kakatare · Maroua · Cameroun · 2025–2026
+// Version : React SaaS v1.0 — Toutes pages intégrées
+// ════════════════════════════════════════════════════════════════════
 
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -18,10 +18,10 @@ if (!SB_URL || !SB_KEY) {
   console.error("Variables d'environnement Supabase manquantes (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).");
 }
 const REALTIME_URL = SB_URL.replace("https://", "wss://") + "/realtime/v1";
-// Tables surveillÃ©es pour la synchronisation multi-sessions (Realtime)
+// Tables surveillées pour la synchronisation multi-sessions (Realtime)
 const REALTIME_TABLES = ["notes","absences","prog_suivi","epreuves","edt_exceptions","edt_base","utilisateurs","classes"];
 
-// â”€â”€ API Supabase (fetch lÃ©ger, pas de SDK) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── API Supabase (fetch léger, pas de SDK) ────────────────────────
 const sb = {
   h: () => ({ apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, "Content-Type":"application/json" }),
   async get(t, q="") {
@@ -36,7 +36,7 @@ const sb = {
       });
       if (r.ok||r.status===204) return true;
       const errBody = await r.text().catch(()=>"");
-      console.error(`sb.patchRow(${t}) â†’ ${r.status}: ${errBody}`);
+      console.error(`sb.patchRow(${t}) → ${r.status}: ${errBody}`);
       sb.lastError = errBody;
       return false;
     } catch (e) { sb.lastError = e?.message||String(e); return false; }
@@ -49,7 +49,7 @@ const sb = {
       });
       if (r.ok||r.status===201||r.status===204) return true;
       const errBody = await r.text().catch(()=>"");
-      console.error(`sb.upsert(${t}) â†’ ${r.status}: ${errBody}`);
+      console.error(`sb.upsert(${t}) → ${r.status}: ${errBody}`);
       sb.lastError = errBody;
       return false;
     } catch (e) { sb.lastError = e?.message||String(e); return false; }
@@ -96,7 +96,7 @@ const sb = {
       });
       if(!r.ok) {
         const errBody = await r.text().catch(()=>"");
-        console.error(`sb.rpc(${fn}) â†’ ${r.status}: ${errBody}`);
+        console.error(`sb.rpc(${fn}) → ${r.status}: ${errBody}`);
         sb.lastError = errBody;
         return null;
       }
@@ -106,26 +106,26 @@ const sb = {
   },
 };
 
-// â”€â”€ DonnÃ©es mÃ©tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const PROG_MAP = {"6Ã¨me 1":"SIX","6Ã¨me 2":"SIX","6Ã¨me 3":"SIX","6e II":"SIX","5Ã¨me 1":"CINQ","5Ã¨me 2":"CINQ","5Ã¨me 3":"CINQ","5e II":"CINQ","4Ã¨me 1 ALL/CHI":"QUATRE","4Ã¨me 2 ARA/ITA":"QUATRE","4Ã¨me 3 ESP":"QUATRE","4e II":"QUATRE","3Ã¨me 1 ALL/CHI":"TROIS","3Ã¨me 2 ARA/ITA":"TROIS","3Ã¨me 3 ESP":"TROIS","3e II":"TROIS","2nde C":"SEC_C","2nde L1 ALL/ARA/CHI":"SEC_A","2nde L2 ESP/ITA":"SEC_A","1e C":"PREM_CTI","1e Ti":"PREM_CTI","P C":"PREM_CTI","P Ã¨re Ti":"PREM_CTI","1Ã¨re S2 C/TI":"PREM_CTI","1e D":"PREM_D","1Ã¨re S1 D":"PREM_D","1e A":"PREM_A","1Ã¨re L1 ALL/ARA/CHI":"PREM_A","1Ã¨re L1 ALL/CHI":"PREM_A","1Ã¨re L2 ARA/ITA/ESP":"PREM_A","1Ã¨re L3 ESP 1":"PREM_A","1Ã¨re L3 ESP":"PREM_A","Tle D":"TERM_D","Tle S1 D":"TERM_D","Tle S2 C/TI":"TERM_CTI","Tle Ti":"TERM_CTI","Tle L1 ALL/ARA/CHI":"TERM_A","TLE Esp":"TERM_A","TLE Ita":"TERM_A","Tle L2 ESP/ITA":"TERM_A","1Ã¨re L2 ARA/ITA/ESP 2":"PREM_A","4Ã¨me ALL":"QUATRE","4Ã¨me ARB":"QUATRE","4Ã¨me CHN":"QUATRE","4Ã¨me ITA":"QUATRE","4Ã¨me ESP":"QUATRE","3Ã¨me ALL":"TROIS","3Ã¨me ARB":"TROIS","3Ã¨me CHN":"TROIS","3Ã¨me ESP":"TROIS","3Ã¨me ITA":"TROIS","2nde ALL":"SEC_A","2nde ARB":"SEC_A","2nde CHN":"SEC_A","2nde ITA":"SEC_A","2nde ESP":"SEC_A","1Ã¨re A4 ALL":"PREM_A","1Ã¨re A4 ARB":"PREM_A","1Ã¨re A4 ESP":"PREM_A","1Ã¨re CHN":"PREM_A","1Ã¨re ITA":"PREM_A","1Ã¨re C":"PREM_CTI","1Ã¨re Ti":"PREM_CTI","1Ã¨re D":"PREM_D","Tle A4 ALL":"TERM_A","Tle A4 ARB":"TERM_A","Tle A4 CHN":"TERM_A","Tle A4 ITA":"TERM_A","Tle A4 ESP":"TERM_A","Tle C":"TERM_CTI","1Ã¨re C/Ti":"PREM_CTI","Tle C/Ti":"TERM_CTI","Tle A4 ESP/ITA":"TERM_A"};
+// ── Données métier ─────────────────────────────────────────────────
+const PROG_MAP = {"6ème 1":"SIX","6ème 2":"SIX","6ème 3":"SIX","6e II":"SIX","5ème 1":"CINQ","5ème 2":"CINQ","5ème 3":"CINQ","5e II":"CINQ","4ème 1 ALL/CHI":"QUATRE","4ème 2 ARA/ITA":"QUATRE","4ème 3 ESP":"QUATRE","4e II":"QUATRE","3ème 1 ALL/CHI":"TROIS","3ème 2 ARA/ITA":"TROIS","3ème 3 ESP":"TROIS","3e II":"TROIS","2nde C":"SEC_C","2nde L1 ALL/ARA/CHI":"SEC_A","2nde L2 ESP/ITA":"SEC_A","1e C":"PREM_CTI","1e Ti":"PREM_CTI","P C":"PREM_CTI","P ère Ti":"PREM_CTI","1ère S2 C/TI":"PREM_CTI","1e D":"PREM_D","1ère S1 D":"PREM_D","1e A":"PREM_A","1ère L1 ALL/ARA/CHI":"PREM_A","1ère L1 ALL/CHI":"PREM_A","1ère L2 ARA/ITA/ESP":"PREM_A","1ère L3 ESP 1":"PREM_A","1ère L3 ESP":"PREM_A","Tle D":"TERM_D","Tle S1 D":"TERM_D","Tle S2 C/TI":"TERM_CTI","Tle Ti":"TERM_CTI","Tle L1 ALL/ARA/CHI":"TERM_A","TLE Esp":"TERM_A","TLE Ita":"TERM_A","Tle L2 ESP/ITA":"TERM_A","1ère L2 ARA/ITA/ESP 2":"PREM_A","4ème ALL":"QUATRE","4ème ARB":"QUATRE","4ème CHN":"QUATRE","4ème ITA":"QUATRE","4ème ESP":"QUATRE","3ème ALL":"TROIS","3ème ARB":"TROIS","3ème CHN":"TROIS","3ème ESP":"TROIS","3ème ITA":"TROIS","2nde ALL":"SEC_A","2nde ARB":"SEC_A","2nde CHN":"SEC_A","2nde ITA":"SEC_A","2nde ESP":"SEC_A","1ère A4 ALL":"PREM_A","1ère A4 ARB":"PREM_A","1ère A4 ESP":"PREM_A","1ère CHN":"PREM_A","1ère ITA":"PREM_A","1ère C":"PREM_CTI","1ère Ti":"PREM_CTI","1ère D":"PREM_D","Tle A4 ALL":"TERM_A","Tle A4 ARB":"TERM_A","Tle A4 CHN":"TERM_A","Tle A4 ITA":"TERM_A","Tle A4 ESP":"TERM_A","Tle C":"TERM_CTI","1ère C/Ti":"PREM_CTI","Tle C/Ti":"TERM_CTI","Tle A4 ESP/ITA":"TERM_A"};
 const PROG_META = {"SIX":{vh:2,hd:50,lpRef:33,tp:[2,3,4,9,10,11,14,15,16,21,22]},"CINQ":{vh:2,hd:50,lpRef:33,tp:[6,7,10,13,15,29,33]},"QUATRE":{vh:2,hd:50,lpRef:36,tp:[1,3,4,9,17,21,32]},"TROIS":{vh:2,hd:62,lpRef:45,tp:[4,5,7,9,13,25,28,32,43]},"SEC_C":{vh:2,hd:50,lpRef:29,tp:[1,12]},"SEC_A":{vh:1,hd:25,lpRef:20,tp:[]},"PREM_A":{vh:1,hd:25,lpRef:26,tp:[]},"PREM_CTI":{vh:2,hd:52,lpRef:41,tp:[]},"PREM_D":{vh:6,hd:168,lpRef:75,tp:[1,4,8,9,10,17,18,19,21,25,27,31,53]},"TERM_D":{vh:6,hd:186,lpRef:84,tp:[1,2,3,9,10,11,24,31,32,36,37,49,50,55,67,69,74,75,76,79,80,81,88,92,94,96]},"TERM_A":{vh:1,hd:31,lpRef:28,tp:[3,5,16,34,37,38]},"TERM_C":{vh:2,hd:50,lpRef:36,tp:[]},"TERM_CTI":{vh:2,hd:62,lpRef:36,tp:[1,3,6,8,15,17,18,21,24,25,30,32,37,38,39,40,41,42]}};
 const PROGRAMMES_LABELS = {
-  SIX:"6Ã¨me", CINQ:"5Ã¨me", QUATRE:"4Ã¨me", TROIS:"3Ã¨me",
+  SIX:"6ème", CINQ:"5ème", QUATRE:"4ème", TROIS:"3ème",
   SEC_C:"2nde C", SEC_A:"2nde A (L1/L2)",
-  PREM_A:"1Ã¨re A", PREM_CTI:"1Ã¨re C/Ti", PREM_D:"1Ã¨re D",
-  TERM_D:"Tle D", TERM_A:"Tle A4", TERM_CTI:"Tle C/Ti", TERM_C:"Tle LittÃ©raire",
+  PREM_A:"1ère A", PREM_CTI:"1ère C/Ti", PREM_D:"1ère D",
+  TERM_D:"Tle D", TERM_A:"Tle A4", TERM_CTI:"Tle C/Ti", TERM_C:"Tle Littéraire",
 };
 const PROG_TRIM = {"SIX":[19,40],"QUATRE":[15,33],"TROIS":[17,33],"TERM_A":[13,30],"CINQ":[19,39],"SEC_A":[12,19],"SEC_C":[11,24],"PREM_A":[9,15],"PREM_CTI":[13,29],"PREM_D":[30,62],"TERM_D":[35,73],"TERM_C":[13,30],"TERM_CTI":[17,34]};
-const TRIM_LABELS = {T1:"Trimestre 1 Â· Octâ€“DÃ©c",T2:"Trimestre 2 Â· Janâ€“Mars",T3:"Trimestre 3 Â· Avrâ€“Juin",ANN:"AnnÃ©e complÃ¨te"};
-const EP_SLOTS = [{trim:"T1",ep:"E1",label:"T1 Â· Ã‰preuve 1"},{trim:"T1",ep:"E2",label:"T1 Â· Ã‰preuve 2"},{trim:"T2",ep:"E1",label:"T2 Â· Ã‰preuve 1"},{trim:"T2",ep:"E2",label:"T2 Â· Ã‰preuve 2"},{trim:"T3",ep:"E1",label:"T3 Â· Ã‰preuve 1"},{trim:"T3",ep:"E2",label:"T3 Â· Ã‰preuve 2"}];
+const TRIM_LABELS = {T1:"Trimestre 1 · Oct–Déc",T2:"Trimestre 2 · Jan–Mars",T3:"Trimestre 3 · Avr–Juin",ANN:"Année complète"};
+const EP_SLOTS = [{trim:"T1",ep:"E1",label:"T1 · Épreuve 1"},{trim:"T1",ep:"E2",label:"T1 · Épreuve 2"},{trim:"T2",ep:"E1",label:"T2 · Épreuve 1"},{trim:"T2",ep:"E2",label:"T2 · Épreuve 2"},{trim:"T3",ep:"E1",label:"T3 · Épreuve 1"},{trim:"T3",ep:"E2",label:"T3 · Épreuve 2"}];
 const TRIM_COLORS = {T1:"#1a6b3c",T2:"#e67e22",T3:"#8e44ad"};
 const HEURES = ["07:30-08:25","08:25-09:20","09:20-10:15","10:30-11:25","11:25-12:20","12:50-13:45","13:45-14:40","14:40-15:35"];
 const JOURS  = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 const JKEYS  = ["L","Ma","Me","J","V"];
 const PLAGES_DEC = [[7.5,8.417],[8.417,9.333],[9.333,10.25],[10.5,11.417],[11.417,12.333],[12.833,13.75],[13.75,14.667],[14.667,15.583]];
-// EDT_REEL importÃ© depuis ./data/edt_reel.json (9 enseignants, base rÃ©elle)
+// EDT_REEL importé depuis ./data/edt_reel.json (9 enseignants, base réelle)
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────
 const LOGO_LYCEE_B64 = "data:image/webp;base64,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";
 const LOGIN_BG_B64 = "data:image/webp;base64,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";
 
@@ -137,10 +137,10 @@ const getColor = id => ENS_COLORS[id]||"#1a6b3c";
 const getIni   = nom => (nom||"").replace("Mme ","").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
 const getNomCourt = nom => {
   const sansTitre = (nom||"").replace(/^(Mme|M\.)\s+/,"");
-  return sansTitre.split(" ")[0] || sansTitre || "â€”";
+  return sansTitre.split(" ")[0] || sansTitre || "—";
 };
 
-// Redimensionne/compresse une image cÃ´tÃ© client avant upload (connexions lentes)
+// Redimensionne/compresse une image côté client avant upload (connexions lentes)
 function resizeImageFile(file, maxDim = 300, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -154,14 +154,14 @@ function resizeImageFile(file, maxDim = 300, quality = 0.82) {
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
       canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("toBlob a Ã©chouÃ©")), "image/jpeg", quality);
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("toBlob a échoué")), "image/jpeg", quality);
     };
     img.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// Avatar enseignant â€” photo si disponible, sinon initiales colorÃ©es (fallback automatique)
+// Avatar enseignant — photo si disponible, sinon initiales colorées (fallback automatique)
 const Avatar = ({ ens, size = 30, fontSize }) => {
   const [erreur, setErreur] = useState(false);
   const fs = fontSize || Math.round(size*0.34);
@@ -179,7 +179,7 @@ const Avatar = ({ ens, size = 30, fontSize }) => {
   );
 };
 
-// Export Excel gÃ©nÃ©rique â€” un tableau d'objets devient une feuille tÃ©lÃ©chargeable
+// Export Excel générique — un tableau d'objets devient une feuille téléchargeable
 function exportToExcel(filename, sheetName, dataRows) {
   try {
     const ws = XLSX.utils.json_to_sheet(dataRows);
@@ -194,13 +194,13 @@ const PROG_MAP_NORM=(()=>{const o={};for(const k in PROG_MAP)o[normLabel(k)]=PRO
 function resolveProgCode(cl){return PROG_MAP[cl]||PROG_MAP_NORM[normLabel(cl)]||null;}
 function getTrimRange(code,trim){if(!code)return null;const b=PROG_TRIM[code];if(!b)return null;if(trim==="T1")return[1,b[0]];if(trim==="T2")return[b[0]+1,b[1]];if(trim==="T3")return[b[1]+1,9999];return null;}
 
-// â”€â”€ Coefficient SVTEEHB par classe (officiel MINESEC) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Coefficient SVTEEHB par classe (officiel MINESEC) ──────────────
 function getNowInfo(){const now=new Date();const h=now.getHours()+now.getMinutes()/60;const dIdx=now.getDay();const jk=dIdx>=1&&dIdx<=5?JKEYS[dIdx-1]:null;let hi=-1;PLAGES_DEC.forEach((p,i)=>{if(h>=p[0]&&h<p[1])hi=i;});return{jk,hi,isWeekend:!jk,now};}
 function progDocMeta(classe,trim,progIndex){const code=resolveProgCode(classe);const meta=code?PROG_META[code]:null;if(!code||!meta)return null;const trimRange=trim&&trim!=="ANN"?getTrimRange(code,trim):null;const allFaites=new Set();Object.entries(progIndex).forEach(([key,arr])=>{if(key.endsWith("||"+classe))(arr||[]).forEach(n=>allFaites.add(n));});let lpRef=meta.lpRef;let faites=allFaites.size;if(trimRange){const[tMin,tMax]=trimRange;lpRef=Math.round(meta.lpRef*(tMax-tMin+1)/meta.lpRef)||meta.lpRef;faites=[...allFaites].filter(n=>n>=tMin&&n<=tMax).length;}const taux=lpRef>0?Math.min(100, Math.round(faites/lpRef*100)):0;return{vh:meta.vh,hd:meta.hd,lpRef,lfRef:Math.min(lpRef,faites),taux};}
 const taux2col = t => t >= 75 ? "#16a34a" : t >= 50 ? "#f59e0b" : "#ef4444";
 const fmtDateFr = (v) => {
-  if (!v) return "â€”";
-  // DÃ©jÃ  au format franÃ§ais (ancien data ou saisie directe) â†’ afficher tel quel
+  if (!v) return "—";
+  // Déjà au format français (ancien data ou saisie directe) → afficher tel quel
   if (typeof v === "string" && /^\d{2}\/\d{2}\/\d{4}/.test(v)) return v;
   const d = new Date(v);
   return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});
@@ -209,14 +209,14 @@ const taux2bg  = t => t >= 75 ? "#f0fdf4" : t >= 50 ? "#fffbeb" : "#fef2f2";
 const classColorCache={};let colorIdx=0;
 function getClassColor(cl){if(!cl)return"#94a3b8";if(!classColorCache[cl])classColorCache[cl]=CLASS_COLORS[colorIdx++%CLASS_COLORS.length];return classColorCache[cl];}
 
-// â”€â”€ Comptes dÃ©mo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Comptes démo ──────────────────────────────────────────────────
 // Classes issues de ENSEIGNANTS1.pdf (EDT Lantiv officiel Kakatare)
 // Classes officielles (source : CLASSES.pdf Lantiv Kakatare)
-// ClÃ©s = noms exacts du PDF utilisÃ©s pour PROG_MAP ; display = nom court feuille de calcul
+// Clés = noms exacts du PDF utilisés pour PROG_MAP ; display = nom court feuille de calcul
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CHARGEMENT LAZY DES DONNÃ‰ES STATIQUES (JSON servis par Vercel)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// CHARGEMENT LAZY DES DONNÉES STATIQUES (JSON servis par Vercel)
+// ════════════════════════════════════════════════════════════════
 let _elevesLoaded = false;
 
 function loadElevesDB() {
@@ -227,41 +227,41 @@ function loadElevesDB() {
   TOTAL_GARCONS = getTotalGarcons();
 }
 
-// LECONS_DATA est dÃ©sormais dans le bundle â€” chargement direct
+// LECONS_DATA est désormais dans le bundle — chargement direct
 async function loadStaticData() {
-  await loadElevesDB(); // Seul ELEVES_DB est chargÃ© dynamiquement
+  await loadElevesDB(); // Seul ELEVES_DB est chargé dynamiquement
 }
 
 const ENS_CLASSES_REF = {
-  // LibellÃ©s alignÃ©s sur EDT_REEL harmonisÃ© + RelevÃ© de notes
-  mbassam:    ["5Ã¨me 2","1Ã¨re C","1Ã¨re Ti","Tle A4 ESP","Tle A4 ITA"],  // 1Ã¨re C/Ti Ã©clatÃ©e + Tle ESP/ITA sÃ©parÃ©es  // Tle ESP/ITA (classe mixte)
-  boubam:     ["2nde C","3Ã¨me ARB","4Ã¨me ARB"],
-  douniaroud: ["6Ã¨me 1","Tle A4 ALL","Tle C/Ti"],
-  hayatouh:   ["1Ã¨re D"],
+  // Libellés alignés sur EDT_REEL harmonisé + Relevé de notes
+  mbassam:    ["5ème 2","1ère C","1ère Ti","Tle A4 ESP","Tle A4 ITA"],  // 1ère C/Ti éclatée + Tle ESP/ITA séparées  // Tle ESP/ITA (classe mixte)
+  boubam:     ["2nde C","3ème ARB","4ème ARB"],
+  douniaroud: ["6ème 1","Tle A4 ALL","Tle C/Ti"],
+  hayatouh:   ["1ère D"],
   aissatous:  ["Tle D"],
-  essambas:   ["1Ã¨re A4 ARB","3Ã¨me ALL","4Ã¨me ALL"],
-  koffa:      ["1Ã¨re A4 ESP","5Ã¨me 3","6Ã¨me 3"],
-  mawiyak:    ["2nde ALL","2nde ESP","4Ã¨me ESP","6Ã¨me 2"],
-  sadjot:     ["1Ã¨re A4 ALL","3Ã¨me ESP","5Ã¨me 1"],
+  essambas:   ["1ère A4 ARB","3ème ALL","4ème ALL"],
+  koffa:      ["1ère A4 ESP","5ème 3","6ème 3"],
+  mawiyak:    ["2nde ALL","2nde ESP","4ème ESP","6ème 2"],
+  sadjot:     ["1ère A4 ALL","3ème ESP","5ème 1"],
   sylvie:     [],
 };
 
 // Noms d'affichage courts (feuille de calcul MINESEC)
 const CLASS_DISPLAY = {
-  // Source : RelevÃ© de notes officiel â€” LycÃ©e de Kakatare 2025â€“2026
-  // 38 classes sÃ©parÃ©es + alias EDT
-  "6Ã¨me 1":"6Ã¨me I","6Ã¨me 2":"6Ã¨me II","6Ã¨me 3":"6Ã¨me III",
-  "5Ã¨me 1":"5Ã¨me I","5Ã¨me 2":"5Ã¨me II","5Ã¨me 3":"5Ã¨me III",
-  "4Ã¨me ALL":"4Ã¨me Allemand","4Ã¨me ARB":"4Ã¨me Arabe",
-  "4Ã¨me CHN":"4Ã¨me Chinois","4Ã¨me ITA":"4Ã¨me Italien","4Ã¨me ESP":"4Ã¨me Espagnol",
-  "3Ã¨me ALL":"3Ã¨me Allemand","3Ã¨me ARB":"3Ã¨me Arabe",
-  "3Ã¨me CHN":"3Ã¨me Chinois","3Ã¨me ESP":"3Ã¨me Espagnol","3Ã¨me ITA":"3Ã¨me Italien",
+  // Source : Relevé de notes officiel — Lycée de Kakatare 2025–2026
+  // 38 classes séparées + alias EDT
+  "6ème 1":"6ème I","6ème 2":"6ème II","6ème 3":"6ème III",
+  "5ème 1":"5ème I","5ème 2":"5ème II","5ème 3":"5ème III",
+  "4ème ALL":"4ème Allemand","4ème ARB":"4ème Arabe",
+  "4ème CHN":"4ème Chinois","4ème ITA":"4ème Italien","4ème ESP":"4ème Espagnol",
+  "3ème ALL":"3ème Allemand","3ème ARB":"3ème Arabe",
+  "3ème CHN":"3ème Chinois","3ème ESP":"3ème Espagnol","3ème ITA":"3ème Italien",
   "2nde ALL":"2nde Allemand","2nde ARB":"2nde Arabe","2nde CHN":"2nde Chinois",
   "2nde ITA":"2nde Italien","2nde ESP":"2nde Espagnol","2nde C":"2nde C",
-  "1Ã¨re A4 ALL":"1Ã¨re A4 Allemand","1Ã¨re A4 ARB":"1Ã¨re A4 Arabe",
-  "1Ã¨re A4 ESP":"1Ã¨re A4 Espagnol","1Ã¨re CHN":"1Ã¨re Chinois","1Ã¨re ITA":"1Ã¨re Italien",
-  "1Ã¨re C":"1Ã¨re C","1Ã¨re D":"1Ã¨re D","1Ã¨re Ti":"1Ã¨re Ti",
-  "1Ã¨re C/Ti":"1Ã¨re C & Ti",
+  "1ère A4 ALL":"1ère A4 Allemand","1ère A4 ARB":"1ère A4 Arabe",
+  "1ère A4 ESP":"1ère A4 Espagnol","1ère CHN":"1ère Chinois","1ère ITA":"1ère Italien",
+  "1ère C":"1ère C","1ère D":"1ère D","1ère Ti":"1ère Ti",
+  "1ère C/Ti":"1ère C & Ti",
   "Tle A4 ALL":"Tle A4 Allemand","Tle A4 ARB":"Tle A4 Arabe","Tle A4 CHN":"Tle A4 Chinois",
   "Tle A4 ITA":"Tle A4 Italien","Tle A4 ESP":"Tle A4 Espagnol",
   "Tle C":"Tle C","Tle D":"Tle D","Tle Ti":"Tle Ti",
@@ -270,23 +270,23 @@ const CLASS_DISPLAY = {
 "Tle A4 ESP/ITA":"Tle A4 Espagnol / Italien",};
 
 const DEMO_ACCOUNTS = [
-  // Source : ENSEIGNANTS1.pdf + CLASSES.pdf Lantiv â€” LycÃ©e de Kakatare 2025â€“2026
-  // Mots de passe Ã  personnaliser avant dÃ©ploiement dÃ©finitif
-  {id:"sylvie",nom:"AÃSSATOU SYLVIE",   role:"animatrice", sub:"Animatrice PÃ©dagogique Â· PCEG", classes:[]},
-  {id:"mbassam", nom:"MBASSA AndrÃ© Gildas",role:"enseignant", sub:"5Ã¨me 2 Â· 1Ã¨re C/Ti Â· Tle A4 ESP", classes:["5Ã¨me 2","1Ã¨re C","1Ã¨re Ti","Tle A4 ESP","Tle A4 ITA"]},
-  {id:"boubam", nom:"BOUBA M",            role:"enseignant", sub:"2nde C Â· 3Ã¨me ARB Â· 4Ã¨me ARB",   classes:["2nde C","3Ã¨me ARB","4Ã¨me ARB"]},
-  {id:"douniaroud",nom:"DOUNIAROU D",        role:"enseignant", sub:"6Ã¨me 1 Â· Tle A4 ALL Â· Tle C/Ti", classes:["6Ã¨me 1","Tle A4 ALL","Tle C/Ti"]},
-  {id:"hayatouh", nom:"HAYATOU H",          role:"enseignant", sub:"1Ã¨re D",                         classes:["1Ã¨re D"]},
-  {id:"aissatous", nom:"Mme AÃSSATOU S",     role:"enseignant", sub:"Tle D",                          classes:["Tle D"]},
-  {id:"essambas", nom:"Mme ESSAMBA S",       role:"enseignant", sub:"1Ã¨re A4 ARB Â· 3Ã¨me ALL Â· 4Ã¨me ALL", classes:["1Ã¨re A4 ARB","3Ã¨me ALL","4Ã¨me ALL"]},
-  {id:"koffa", nom:"Mme KOFFA",           role:"enseignant", sub:"1Ã¨re A4 ESP Â· 5Ã¨me 3 Â· 6Ã¨me 3", classes:["1Ã¨re A4 ESP","5Ã¨me 3","6Ã¨me 3"]},
-  {id:"mawiyak", nom:"Mme MAWIYA K",        role:"enseignant", sub:"2nde ALL Â· 2nde ESP Â· 4Ã¨me ESP Â· 6Ã¨me 2", classes:["2nde ALL","2nde ESP","4Ã¨me ESP","6Ã¨me 2"]},
-  {id:"sadjot", nom:"Mme SADJO T",          role:"enseignant", sub:"1Ã¨re A4 ALL Â· 3Ã¨me ESP Â· 5Ã¨me 1", classes:["1Ã¨re A4 ALL","3Ã¨me ESP","5Ã¨me 1"]},
+  // Source : ENSEIGNANTS1.pdf + CLASSES.pdf Lantiv — Lycée de Kakatare 2025–2026
+  // Mots de passe à personnaliser avant déploiement définitif
+  {id:"sylvie",nom:"AÏSSATOU SYLVIE",   role:"animatrice", sub:"Animatrice Pédagogique · PCEG", classes:[]},
+  {id:"mbassam", nom:"MBASSA André Gildas",role:"enseignant", sub:"5ème 2 · 1ère C/Ti · Tle A4 ESP", classes:["5ème 2","1ère C","1ère Ti","Tle A4 ESP","Tle A4 ITA"]},
+  {id:"boubam", nom:"BOUBA M",            role:"enseignant", sub:"2nde C · 3ème ARB · 4ème ARB",   classes:["2nde C","3ème ARB","4ème ARB"]},
+  {id:"douniaroud",nom:"DOUNIAROU D",        role:"enseignant", sub:"6ème 1 · Tle A4 ALL · Tle C/Ti", classes:["6ème 1","Tle A4 ALL","Tle C/Ti"]},
+  {id:"hayatouh", nom:"HAYATOU H",          role:"enseignant", sub:"1ère D",                         classes:["1ère D"]},
+  {id:"aissatous", nom:"Mme AÏSSATOU S",     role:"enseignant", sub:"Tle D",                          classes:["Tle D"]},
+  {id:"essambas", nom:"Mme ESSAMBA S",       role:"enseignant", sub:"1ère A4 ARB · 3ème ALL · 4ème ALL", classes:["1ère A4 ARB","3ème ALL","4ème ALL"]},
+  {id:"koffa", nom:"Mme KOFFA",           role:"enseignant", sub:"1ère A4 ESP · 5ème 3 · 6ème 3", classes:["1ère A4 ESP","5ème 3","6ème 3"]},
+  {id:"mawiyak", nom:"Mme MAWIYA K",        role:"enseignant", sub:"2nde ALL · 2nde ESP · 4ème ESP · 6ème 2", classes:["2nde ALL","2nde ESP","4ème ESP","6ème 2"]},
+  {id:"sadjot", nom:"Mme SADJO T",          role:"enseignant", sub:"1ère A4 ALL · 3ème ESP · 5ème 1", classes:["1ère A4 ALL","3ème ESP","5ème 1"]},
 ];
 
 
-// â”€â”€ Chargement donnÃ©es Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Fusionne les ajouts/modifications d'Ã©lÃ¨ves persistÃ©s (eleves_import) dans ELEVES_DB
+// ── Chargement données Supabase ───────────────────────────────────
+// Fusionne les ajouts/modifications d'élèves persistés (eleves_import) dans ELEVES_DB
 async function syncElevesImport() {
   try {
     const rows = await sb.get("eleves_import", "?select=classe,donnees");
@@ -297,7 +297,7 @@ async function syncElevesImport() {
         ELEVES_DB[r.classe] = arr;
       }
     });
-  } catch { /* Ã©chec silencieux â€” on garde les donnÃ©es par dÃ©faut */ }
+  } catch { /* échec silencieux — on garde les données par défaut */ }
 }
 
 async function loadAllData() {
@@ -310,7 +310,6 @@ async function loadAllData() {
     sb.get("edt_exceptions","?select=ens_id,slot,lbl"),
     sb.get("notes","?select=classe,evaluation,eleve_id,note"),
     sb.get("absences","?select=ens_id,classe,seance,absents"),
-    sb.get("edt_base","?select=ens_id,slot,lbl"),
   ]);
   const progIndex={};
   (prog||[]).forEach(r=>{progIndex[`${r.ens_id}||${r.classe}`]=Array.isArray(r.faites)?r.faites:[];});
@@ -333,7 +332,7 @@ async function loadAllData() {
   return{classes:classes||[],users:usersMap,prog:progIndex,epreuves:eps,exceptions:excMap,notes:notesIndex,absences:absIndex,edtBase:edtBaseMap};
 }
 
-// â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Palette ───────────────────────────────────────────────────────
 const C = {
   sidebar:"var(--c-sidebar)",sidebarBorder:"var(--c-sidebarBorder)",sidebarActive:"var(--c-sidebarActive)",sidebarActiveText:"var(--c-sidebarActiveText)",sidebarText:"var(--c-sidebarText)",sidebarHover:"var(--c-sidebarHover)",
   green:"var(--c-green)",greenLight:"var(--c-greenLight)",greenDark:"var(--c-greenDark)",greenPale:"var(--c-greenPale)",greenBorder:"var(--c-greenBorder)",
@@ -347,18 +346,18 @@ const C = {
   purple:"var(--c-purple)",purplePale:"var(--c-purplePale)",
   teal:"var(--c-teal)",tealPale:"var(--c-tealPale)",
   pink:"var(--c-pink)",pinkPale:"var(--c-pinkPale)",
-  // Tokens avec alpha prÃ©-calculÃ© (remplacent les anciennes concatÃ©nations C.xxx+"NN" incompatibles avec var())
+  // Tokens avec alpha pré-calculé (remplacent les anciennes concaténations C.xxx+"NN" incompatibles avec var())
   greenPaleA30:"var(--c-greenPaleA30)",greenPaleA40:"var(--c-greenPaleA40)",greenPaleA60:"var(--c-greenPaleA60)",
   blueA40:"var(--c-blueA40)",pinkA40:"var(--c-pinkA40)",redA30:"var(--c-redA30)",redA40:"var(--c-redA40)",
 };
 
-// â”€â”€ Contexte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Contexte ──────────────────────────────────────────────────────
 const AppCtx = createContext(null);
 const useApp = () => useContext(AppCtx);
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// HOOK : DÃ©tecteur automatique mobile / tablette / desktop
-// RÃ©actif au resize â€” met Ã  jour en temps rÃ©el
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// HOOK : Détecteur automatique mobile / tablette / desktop
+// Réactif au resize — met à jour en temps réel
+// ══════════════════════════════════════════════════════════════════════
 function useDevice() {
   const getState = () => {
     if (typeof window === "undefined") return {device:"desktop", orientation:"landscape"};
@@ -394,7 +393,7 @@ function useDevice() {
     isSmall:     device !== "desktop",
     isPortrait:  orientation === "portrait",
     isLandscape: orientation === "landscape",
-    // Cas spÃ©cifiques
+    // Cas spécifiques
     mobileLandscape: device === "mobile"  && orientation === "landscape",
     mobilePortrait:  device === "mobile"  && orientation === "portrait",
     tabletLandscape: device === "tablet"  && orientation === "landscape",
@@ -402,9 +401,9 @@ function useDevice() {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 // HOOK MODE SOMBRE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 function useDarkMode() {
   const [dark, setDark] = useState(()=>{
     try { return localStorage.getItem("svteehb-dark")==="1"; } catch{return false;}
@@ -418,8 +417,8 @@ function useDarkMode() {
 
 
 
-// â”€â”€ Composants UI partagÃ©s â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€â”€ Logo officiel SVTEEHB â€” microscope + feuille + globe + bandeau SVT â”€â”€
+// ── Composants UI partagés ────────────────────────────────────────
+// ─── Logo officiel SVTEEHB — microscope + feuille + globe + bandeau SVT ──
 const SVTLogo = ({size=36}) => (
   <svg viewBox="0 0 160 160" width={size} height={size} style={{flexShrink:0}}>
     {/* Fond cercle */}
@@ -469,14 +468,14 @@ const Sk = ({h=14,w="100%",br=6}) => (<div style={{height:h,width:w,borderRadius
 const Pill = ({ch,color=C.green,bg}) => (<span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:bg||color+"18",color,whiteSpace:"nowrap"}}>{ch}</span>);
 const ProgBar = ({value,h=5}) => {const c=value>=75?C.green:value>=50?C.amber:C.red;return(<div style={{height:h,background:"#e2e8f0",borderRadius:h,overflow:"hidden"}}><div style={{width:`${Math.min(100,value||0)}%`,height:"100%",background:c,borderRadius:h,transition:"width .5s"}}/></div>);};
 const Toast = ({msg,ok}) => (<div style={{position:"fixed",bottom:24,right:24,zIndex:9999,display:"flex",alignItems:"center",gap:10,padding:"12px 18px",borderRadius:12,background:ok===false?C.red:C.greenDark,color:"#fff",fontSize:13,fontWeight:600,boxShadow:"0 8px 24px rgba(0,0,0,.25)",animation:"fadeUp .3s ease",maxWidth:360}}>{msg}</div>);
-const STATUT_CFG = {attente:{label:"En attente",emoji:"â³",color:C.orange,bg:C.orangePale,border:C.orangeBorder},validee:{label:"ValidÃ©e",emoji:"âœ…",color:C.green,bg:C.greenPale,border:C.greenBorder},rejetee:{label:"RejetÃ©e",emoji:"âŒ",color:C.red,bg:C.redPale,border:C.redBorder},vide:{label:"Non soumise",emoji:"â—‹",color:C.txtLight,bg:"#f8fafc",border:C.border}};
+const STATUT_CFG = {attente:{label:"En attente",emoji:"⏳",color:C.orange,bg:C.orangePale,border:C.orangeBorder},validee:{label:"Validée",emoji:"✅",color:C.green,bg:C.greenPale,border:C.greenBorder},rejetee:{label:"Rejetée",emoji:"❌",color:C.red,bg:C.redPale,border:C.redBorder},vide:{label:"Non soumise",emoji:"○",color:C.txtLight,bg:"#f8fafc",border:C.border}};
 
-// â”€â”€ CSS Global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── CSS Global ────────────────────────────────────────────────────
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
-  /* â”€â”€ Palette claire (par dÃ©faut) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Palette claire (par défaut) ──────────────────────────────── */
   :root{
     --c-sidebar:#0f1f14;--c-sidebarBorder:rgba(255,255,255,0.07);--c-sidebarActive:rgba(34,197,94,0.15);--c-sidebarActiveText:#4ade80;--c-sidebarText:rgba(255,255,255,0.55);--c-sidebarHover:rgba(255,255,255,0.05);
     --c-green:#16a34a;--c-greenLight:#22c55e;--c-greenDark:#0c3d24;--c-greenPale:#f0fdf4;--c-greenBorder:#bbf7d0;
@@ -494,7 +493,7 @@ const GLOBAL_CSS = `
     --c-blueA40:rgba(59,130,246,.4);--c-pinkA40:rgba(236,72,153,.4);--c-redA30:rgba(239,68,68,.3);--c-redA40:rgba(239,68,68,.4);
   }
 
-  /* â”€â”€ Palette sombre â€” activÃ©e via body.dark-mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Palette sombre — activée via body.dark-mode ─────────────── */
   body.dark-mode{
     --c-white:#1a2420;--c-bg:#0f1411;--c-border:#2d3a33;
     --c-txt:#e8f0ea;--c-txtMuted:#94a89e;--c-txtLight:#6b7d73;
@@ -524,32 +523,32 @@ const GLOBAL_CSS = `
 `;
 
 
-// useState, useMemo: importÃ©s en tÃªte de fichier
+// useState, useMemo: importés en tête de fichier
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// BASE NOMINALE COMPLÃˆTE â€” 1163 Ã©lÃ¨ves / 38 classes
+// ═══════════════════════════════════════════════════
+// BASE NOMINALE COMPLÈTE — 1163 élèves / 38 classes
 // Source : Fiche_Suivi_Annuel_Kakatare_2025_2026.xlsx
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ELEVES_DB importÃ© depuis ./data/eleves.json (38 classes, 1166 Ã©lÃ¨ves) // 38 classes, 1166 Ã©lÃ¨ves â€” donnÃ©es inline
+// ═══════════════════════════════════════════════════
+// ELEVES_DB importé depuis ./data/eleves.json (38 classes, 1166 élèves) // 38 classes, 1166 élèves — données inline
 
-// Liste fiable classes+effectifs, dÃ©rivÃ©e d'ELEVES_DB â€” Ã  utiliser PARTOUT
-// au lieu de la table Supabase "classes" (peu fiable : vide ou codes dÃ©synchronisÃ©s)
+// Liste fiable classes+effectifs, dérivée d'ELEVES_DB — à utiliser PARTOUT
+// au lieu de la table Supabase "classes" (peu fiable : vide ou codes désynchronisés)
 const CLASSES_REELLES = Object.keys(ELEVES_DB).sort().map(code => ({
   code, effectif: (ELEVES_DB[code]||[]).length,
 }));
 
 
-// â”€â”€ RÃ©fÃ©rentiel programmes par niveau (avec coefficients) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Référentiel programmes par niveau (avec coefficients) ──────────
 const PROGRAMME_SVTEEHB = {
-  "6Ã¨me":        { lp_t1:19, lp_t2:21, lp_t3:12, tp:12, coeff:2 },
-  "5Ã¨me":        { lp_t1:19, lp_t2:20, lp_t3:5,  tp:9,  coeff:2 },
-  "4Ã¨me":        { lp_t1:15, lp_t2:18, lp_t3:12, tp:8,  coeff:2 },
-  "3Ã¨me":        { lp_t1:17, lp_t2:16, lp_t3:11, tp:10, coeff:2 },
+  "6ème":        { lp_t1:19, lp_t2:21, lp_t3:12, tp:12, coeff:2 },
+  "5ème":        { lp_t1:19, lp_t2:20, lp_t3:5,  tp:9,  coeff:2 },
+  "4ème":        { lp_t1:15, lp_t2:18, lp_t3:12, tp:8,  coeff:2 },
+  "3ème":        { lp_t1:17, lp_t2:16, lp_t3:11, tp:10, coeff:2 },
   "2nde C":      { lp_t1:11, lp_t2:8,  lp_t3:11, tp:4,  coeff:2 },
   "2nde A":      { lp_t1:9,  lp_t2:6,  lp_t3:5,  tp:0,  coeff:1 },
-  "1Ã¨re D":      { lp_t1:30, lp_t2:32, lp_t3:16, tp:21, coeff:6 },
-  "1Ã¨re C/Ti":   { lp_t1:13, lp_t2:16, lp_t3:12, tp:8,  coeff:2 },
-  "1Ã¨re A":      { lp_t1:9,  lp_t2:6,  lp_t3:5,  tp:0,  coeff:1 },
+  "1ère D":      { lp_t1:30, lp_t2:32, lp_t3:16, tp:21, coeff:6 },
+  "1ère C/Ti":   { lp_t1:13, lp_t2:16, lp_t3:12, tp:8,  coeff:2 },
+  "1ère A":      { lp_t1:9,  lp_t2:6,  lp_t3:5,  tp:0,  coeff:1 },
   "Terminale D": { lp_t1:35, lp_t2:38, lp_t3:24, tp:28, coeff:6 },
   "Terminale C": { lp_t1:17, lp_t2:17, lp_t3:9,  tp:20, coeff:2 },
   "Terminale A": { lp_t1:13, lp_t2:12, lp_t3:8,  tp:4,  coeff:1 },
@@ -557,40 +556,40 @@ const PROGRAMME_SVTEEHB = {
 
 function getNiveau(code) {
   const c = code.toLowerCase();
-  if (c.startsWith("6")) return "6Ã¨me";
-  if (c.startsWith("5")) return "5Ã¨me";
-  if (c.startsWith("4")) return "4Ã¨me";
-  if (c.startsWith("3")) return "3Ã¨me";
+  if (c.startsWith("6")) return "6ème";
+  if (c.startsWith("5")) return "5ème";
+  if (c.startsWith("4")) return "4ème";
+  if (c.startsWith("3")) return "3ème";
   if (c.includes("2nde c")) return "2nde C";
   if (c.includes("2nde")) return "2nde A";
-  if (c.includes("1Ã¨re") && (c.includes(" d") || c.includes("s1"))) return "1Ã¨re D";
-  if (c.includes("1Ã¨re") && (c.includes("c") || c.includes("ti"))) return "1Ã¨re C/Ti";
-  if (c.includes("1Ã¨re")) return "1Ã¨re A";
+  if (c.includes("1ère") && (c.includes(" d") || c.includes("s1"))) return "1ère D";
+  if (c.includes("1ère") && (c.includes("c") || c.includes("ti"))) return "1ère C/Ti";
+  if (c.includes("1ère")) return "1ère A";
   if (c.includes("tle") && (c.includes(" d") || c.includes("s1"))) return "Terminale D";
   if (c.includes("tle") && (c.includes("c"))) return "Terminale C";
   if (c.includes("tle") || c.includes("terminale")) return "Terminale A";
   return null;
 }
 
-// â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// const C: dÃ©fini et enrichi globalement (pink, amber ajoutÃ©s)
+// ── Palette ────────────────────────────────────────────────────────
+// const C: défini et enrichi globalement (pink, amber ajoutés)
 
 // Niveaux pour le groupement de navigation
-const NIVEAUX_ORDER = ["6Ã¨me","5Ã¨me","4Ã¨me","3Ã¨me","2nde","1Ã¨re","Terminale"];
-// getNiveauGroupe supprimÃ© â€” utiliser niveauGroupe() (ligne 110)
+const NIVEAUX_ORDER = ["6ème","5ème","4ème","3ème","2nde","1ère","Terminale"];
+// getNiveauGroupe supprimé — utiliser niveauGroupe() (ligne 110)
 
-// Sk: dÃ©fini globalement
+// Sk: défini globalement
 
-// â”€â”€ Stats globales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Stats globales â€” calculÃ©es dynamiquement aprÃ¨s chargement ELEVES_DB
+// ── Stats globales ─────────────────────────────────────────────────
+// Stats globales — calculées dynamiquement après chargement ELEVES_DB
 function getAllClasses() { return Object.keys(ELEVES_DB); }
 function getTotalEleves() { return Object.values(ELEVES_DB).reduce((s,cl)=>s+cl.length,0); }
 function getTotalFilles() { return Object.values(ELEVES_DB).reduce((s,cl)=>s+cl.filter(e=>e.g==="F").length,0); }
 function getTotalGarcons() { return getTotalEleves() - getTotalFilles(); }
-// Aliases statiques (ne pas utiliser dans les composants React â€” utiliser les fonctions ci-dessus)
+// Aliases statiques (ne pas utiliser dans les composants React — utiliser les fonctions ci-dessus)
 let ALL_CLASSES = [], TOTAL_ELEVES = 0, TOTAL_FILLES = 0, TOTAL_GARCONS = 0;
 
-// â”€â”€ Impression liste de classe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Impression liste de classe ──────────────────────────────────────
 let printGuard = false;
 function imprimerListeClasse(code, eleves) {
   if (printGuard) return;
@@ -621,31 +620,31 @@ function imprimerListeClasse(code, eleves) {
 </style></head><body>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;border-bottom:2px solid #16a34a;padding-bottom:8px">
     <div style="text-align:center;font-size:8px;line-height:1.5;width:40%">
-      <strong>REPUBLIQUE DU CAMEROUN</strong><br><em>Paix â€“ Travail â€“ Patrie</em><br>
-      MINISTERE DES ENSEIGNEMENTS SECONDAIRES<br><strong>LYCÃ‰E DE KAKATARE â€” MAROUA</strong>
+      <strong>REPUBLIQUE DU CAMEROUN</strong><br><em>Paix – Travail – Patrie</em><br>
+      MINISTERE DES ENSEIGNEMENTS SECONDAIRES<br><strong>LYCÉE DE KAKATARE — MAROUA</strong>
     </div>
     <div style="text-align:center;width:20%">
       <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#34b06c,#0c3d24);margin:0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px">SV</div>
     </div>
     <div style="text-align:center;font-size:8px;line-height:1.5;width:40%">
-      <strong>REPUBLIC OF CAMEROON</strong><br><em>Peace â€“ Work â€“ Fatherland</em><br>
-      MINISTRY OF SECONDARY EDUCATION<br><strong>LYCÃ‰E DE KAKATARE â€” MAROUA</strong>
+      <strong>REPUBLIC OF CAMEROON</strong><br><em>Peace – Work – Fatherland</em><br>
+      MINISTRY OF SECONDARY EDUCATION<br><strong>LYCÉE DE KAKATARE — MAROUA</strong>
     </div>
   </div>
   <h2 style="text-align:center;font-size:12px;font-weight:900;text-transform:uppercase;border:2px solid #222;padding:6px;margin:8px 0;letter-spacing:.04em">
-    LISTE OFFICIELLE DES Ã‰LÃˆVES â€” CLASSE : ${code}
+    LISTE OFFICIELLE DES ÉLÈVES — CLASSE : ${code}
   </h2>
   <div style="font-size:9px;margin-bottom:8px;display:flex;gap:20px">
-    <span>AnnÃ©e scolaire : <strong>2025â€“2026</strong></span>
+    <span>Année scolaire : <strong>2025–2026</strong></span>
     <span>Effectif total : <strong>${eleves.length}</strong></span>
     <span>Filles : <strong>${filles}</strong></span>
-    <span>GarÃ§ons : <strong>${garcons}</strong></span>
+    <span>Garçons : <strong>${garcons}</strong></span>
     <span>Date : ${date}</span>
   </div>
   <table>
     <thead><tr>
-      <th style="width:40px;text-align:center">NÂ°</th>
-      <th>NOM ET PRÃ‰NOM(S)</th>
+      <th style="width:40px;text-align:center">N°</th>
+      <th>NOM ET PRÉNOM(S)</th>
       <th style="width:50px;text-align:center">GENRE</th>
       <th style="width:100px">SIGNATURE</th>
       <th style="width:120px">OBSERVATIONS</th>
@@ -669,12 +668,12 @@ function imprimerListeClasse(code, eleves) {
   }, 400);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PAGE PRINCIPALE Ã‰LÃˆVES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// MES CLASSES (enseignant) â€” liste Ã©lÃ¨ves + prÃ©sences + notes
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════
+// PAGE PRINCIPALE ÉLÈVES
+// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// MES CLASSES (enseignant) — liste élèves + présences + notes
+// ═══════════════════════════════════════════════════════════════
 function MesClassesPage() {
   const {user, data, setData, showToast} = useApp();
   const {isMobile} = useDevice();
@@ -687,7 +686,7 @@ function MesClassesPage() {
   const [newEleveNom,  setNewEleveNom]  = useState("");
   const [newEleveGenre,setNewEleveGenre]= useState("M");
 
-  // PrÃ©sences
+  // Présences
   const todayStr = () => new Date().toISOString().slice(0,10);
   const [datePresence, setDatePresence] = useState(todayStr());
 
@@ -708,7 +707,7 @@ function MesClassesPage() {
     return true;
   });
 
-  // â”€â”€ PrÃ©sences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Présences ────────────────────────────────────────────────
   const absKey = selClasse ? `${user.id}||${selClasse}||${datePresence}` : null;
   const absentsJour = absKey ? (data?.absences?.[absKey]||[]) : [];
 
@@ -719,15 +718,15 @@ function MesClassesPage() {
       : [...absentsJour, eleveId];
     setData(prev => ({...prev, absences:{...(prev?.absences||{}), [absKey]:newAbsents}}));
     try {
-      // Ã‰criture via RPC sÃ©curisÃ©e (submit_absence) plutÃ´t que PATCH/POST direct.
+      // Écriture via RPC sécurisée (submit_absence) plutôt que PATCH/POST direct.
       const ok = await sb.rpc("submit_absence", {
         p_ens_id: user.id, p_classe: selClasse, p_seance: datePresence, p_absents: newAbsents
       });
-      if (!ok) showToast("âš  PrÃ©sence non sauvegardÃ©e â€” rÃ©essaie", false);
-    } catch { showToast("âš  Erreur rÃ©seau â€” prÃ©sence non sauvegardÃ©e", false); }
+      if (!ok) showToast("⚠ Présence non sauvegardée — réessaie", false);
+    } catch { showToast("⚠ Erreur réseau — présence non sauvegardée", false); }
   };
 
-  // â”€â”€ Notes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Notes ────────────────────────────────────────────────────
   const evalCode = `${selTrim}-${selEval}`;
   const notesEval = selClasse ? (data?.notes?.[`${selClasse}||${evalCode}`]||{}) : {};
 
@@ -745,53 +744,53 @@ function MesClassesPage() {
     if (syncTimer.current[timerKey]) clearTimeout(syncTimer.current[timerKey]);
     syncTimer.current[timerKey] = setTimeout(async () => {
       try {
-        // Ã‰criture via RPC sÃ©curisÃ©e (submit_note) plutÃ´t que PATCH/POST direct sur la table â€”
-        // notes passe en RLS avec Ã©criture directe bloquÃ©e ; seule cette fonction peut Ã©crire.
+        // Écriture via RPC sécurisée (submit_note) plutôt que PATCH/POST direct sur la table —
+        // notes passe en RLS avec écriture directe bloquée ; seule cette fonction peut écrire.
         const ok = await sb.rpc("submit_note", {
           p_classe: selClasse, p_evaluation: evalCode, p_eleve_id: eleveId, p_note: num
         });
         setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]: ok?"saved":"error"}));
-        if (!ok) showToast("âš  Note non sauvegardÃ©e â€” rÃ©essaie", false);
+        if (!ok) showToast("⚠ Note non sauvegardée — réessaie", false);
       } catch {
         setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"error"}));
-        showToast("âš  Erreur rÃ©seau â€” note non sauvegardÃ©e", false);
+        showToast("⚠ Erreur réseau — note non sauvegardée", false);
       }
     }, 600);
   };
 
-  // â”€â”€ Ajout / retrait Ã©lÃ¨ve (persistÃ© dans eleves_import) â”€â”€â”€â”€â”€â”€
+  // ── Ajout / retrait élève (persisté dans eleves_import) ──────
   const persisterClasse = async (nouvelleListe) => {
     const ok = await sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe");
-    if (!ok) showToast("âš  Sauvegarde Supabase Ã©chouÃ©e â€” Ã©lÃ¨ve visible ici seulement", false);
+    if (!ok) showToast("⚠ Sauvegarde Supabase échouée — élève visible ici seulement", false);
     return ok;
   };
 
   const addEleve = async () => {
     const nom = newEleveNom.trim().toUpperCase().split(/\s+/).join(" ");
-    if (!selClasse || nom.length < 3) { showToast("âš  Nom trop court (min 3 car.)", false); return; }
+    if (!selClasse || nom.length < 3) { showToast("⚠ Nom trop court (min 3 car.)", false); return; }
     const id = selClasse.replace(/[^a-zA-Z0-9]/g,"_") + "_" + Date.now();
     const nouvel = {id, nom, g:newEleveGenre};
     const nouvelleListe = [...(ELEVES_DB[selClasse]||[]), nouvel];
     ELEVES_DB[selClasse] = nouvelleListe;
     setNewEleveNom(""); setShowAddEleve(false);
-    showToast(`âœ“ ${nom} ajoutÃ©(e) Ã  ${selClasse}`);
+    showToast(`✓ ${nom} ajouté(e) à ${selClasse}`);
     await persisterClasse(nouvelleListe);
   };
 
   const retirerEleve = async (eleve) => {
     const nouvelleListe = (ELEVES_DB[selClasse]||[]).filter(e=>e.id!==eleve.id);
     ELEVES_DB[selClasse] = nouvelleListe;
-    showToast(`âœ“ ${eleve.nom} retirÃ©(e)`);
+    showToast(`✓ ${eleve.nom} retiré(e)`);
     await persisterClasse(nouvelleListe);
   };
 
-  // â”€â”€ Rendu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Rendu ──────────────────────────────────────────────────────
   if (mesClasses.length===0) {
     return (
       <div style={{padding:isMobile?16:24}}>
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:40, textAlign:"center"}}>
-          <div style={{fontSize:32, marginBottom:10}}>ðŸ“š</div>
-          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignÃ©e.</p>
+          <div style={{fontSize:32, marginBottom:10}}>📚</div>
+          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignée.</p>
         </div>
       </div>
     );
@@ -800,7 +799,7 @@ function MesClassesPage() {
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,overflow:"hidden"}}>
     <div style={{flex:1, minHeight:0, overflowY:"auto", padding:isMobile?12:24, display:"flex", flexDirection:"column", gap:14}}>
-      {/* SÃ©lecteur de classe */}
+      {/* Sélecteur de classe */}
       <div style={{display:"flex", gap:8, overflowX:"auto", paddingBottom:4, flexShrink:0}}>
         {mesClasses.map(cl=>(
           <button key={cl} onClick={()=>setSelClasse(cl)}
@@ -815,7 +814,7 @@ function MesClassesPage() {
 
       {/* Onglets Liste / Notes */}
       <div style={{display:"flex", gap:8, flexShrink:0}}>
-        {[{id:"liste",label:"ðŸ‘¥ Liste & prÃ©sences"},{id:"notes",label:"ðŸ“ Notes"}].map(t=>(
+        {[{id:"liste",label:"👥 Liste & présences"},{id:"notes",label:"📝 Notes"}].map(t=>(
           <button key={t.id} onClick={()=>setOnglet(t.id)}
             style={{flex: isMobile?1:"none", padding: isMobile?"10px":"8px 16px", borderRadius:9, fontSize:12.5, fontWeight:700, fontFamily:"inherit", cursor:"pointer",
               border:`1.5px solid ${onglet===t.id?C.green:C.border}`,
@@ -828,10 +827,10 @@ function MesClassesPage() {
 
       {onglet==="liste" ? (
         <>
-          {/* Barre prÃ©sences */}
+          {/* Barre présences */}
           <div style={{background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:11, padding: isMobile?"12px":"12px 16px",
             display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"stretch":"center", gap:10, flexShrink:0}}>
-            <span style={{fontSize:12.5, fontWeight:700, color:C.green, flexShrink:0}}>ðŸ“… PrÃ©sences du jour</span>
+            <span style={{fontSize:12.5, fontWeight:700, color:C.green, flexShrink:0}}>📅 Présences du jour</span>
             <div style={{display:"flex", gap:8, flex:1}}>
               <input type="date" value={datePresence} onChange={e=>setDatePresence(e.target.value)}
                 style={{flex:1, padding: isMobile?"9px":"6px 10px", borderRadius:8, border:`1px solid ${C.greenBorder}`, fontSize:12.5, fontFamily:"inherit"}}/>
@@ -844,10 +843,10 @@ function MesClassesPage() {
 
           {/* Recherche + filtre genre */}
           <div style={{display:"flex", flexDirection: isMobile?"column":"row", gap:8, flexShrink:0}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ðŸ” Rechercher un Ã©lÃ¨veâ€¦"
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un élève…"
               style={{flex:1, padding: isMobile?"10px 12px":"8px 12px", borderRadius:9, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit"}}/>
             <div style={{display:"flex", gap:6}}>
-              {[{id:"all",label:"Tous"},{id:"M",label:"â™‚ GarÃ§ons"},{id:"F",label:"â™€ Filles"}].map(f=>(
+              {[{id:"all",label:"Tous"},{id:"M",label:"♂ Garçons"},{id:"F",label:"♀ Filles"}].map(f=>(
                 <button key={f.id} onClick={()=>setFiltreG(f.id)}
                   style={{flex: isMobile?1:"none", padding: isMobile?"9px 10px":"6px 12px", borderRadius:8, fontSize:11.5, fontWeight:700, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap",
                     border:`1.5px solid ${filtreG===f.id?C.blue:C.border}`,
@@ -859,57 +858,57 @@ function MesClassesPage() {
             </div>
           </div>
 
-          {/* Liste Ã©lÃ¨ves */}
+          {/* Liste élèves */}
           <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0}}>
             {elevesFiltres.length===0 ? (
-              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun Ã©lÃ¨ve trouvÃ©</div>
+              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun élève trouvé</div>
             ) : elevesFiltres.map((e,i)=>{
               const absent = absentsJour.includes(e.id);
               return (
                 <div key={e.id} style={{display:"flex", alignItems:"center", gap:10, padding: isMobile?"10px 12px":"9px 14px",
                   borderBottom: i<elevesFiltres.length-1?`1px solid #f1f5f9`:"none"}}>
                   <span style={{fontSize:11, color:C.txtLight, width:20, flexShrink:0}}>{i+1}</span>
-                  <span style={{fontSize:14, flexShrink:0}}>{e.g==="F"?"ðŸ‘§":"ðŸ‘¦"}</span>
+                  <span style={{fontSize:14, flexShrink:0}}>{e.g==="F"?"👧":"👦"}</span>
                   <span style={{flex:1, fontSize: isMobile?12.5:13, fontWeight:600, color:C.txt, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{e.nom}</span>
                   <button onClick={()=>toggleAbsence(e.id)}
                     style={{padding: isMobile?"7px 12px":"5px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", flexShrink:0,
                       background:absent?"#fef2f2":"#f0fdf4", color:absent?"#b91c1c":"#166534"}}>
-                    {absent ? "âœ• Absent" : "âœ“ PrÃ©sent"}
+                    {absent ? "✕ Absent" : "✓ Présent"}
                   </button>
-                  <button onClick={()=>retirerEleve(e)} title="Retirer cet Ã©lÃ¨ve"
+                  <button onClick={()=>retirerEleve(e)} title="Retirer cet élève"
                     style={{width:26, height:26, borderRadius:6, border:"none", background:"transparent", color:"#cbd5e1", fontSize:14, cursor:"pointer", flexShrink:0}}>
-                    âœ•
+                    ✕
                   </button>
                 </div>
               );
             })}
           </div>
 
-          {/* Ajout Ã©lÃ¨ve */}
+          {/* Ajout élève */}
           {showAddEleve ? (
             <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.green}`, padding: isMobile?14:16, display:"flex", flexDirection: isMobile?"column":"row", gap:10, flexShrink:0}}>
-              <input value={newEleveNom} onChange={e=>setNewEleveNom(e.target.value)} placeholder="Nom complet de l'Ã©lÃ¨ve"
+              <input value={newEleveNom} onChange={e=>setNewEleveNom(e.target.value)} placeholder="Nom complet de l'élève"
                 style={{flex:1, padding: isMobile?"10px 12px":"8px 12px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit"}}/>
               <select value={newEleveGenre} onChange={e=>setNewEleveGenre(e.target.value)}
                 style={{padding: isMobile?"10px 12px":"8px 12px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit"}}>
-                <option value="M">GarÃ§on</option>
+                <option value="M">Garçon</option>
                 <option value="F">Fille</option>
               </select>
               <div style={{display:"flex", gap:8}}>
-                <button onClick={addEleve} style={{flex:1, padding: isMobile?"10px":"8px 16px", borderRadius:8, border:"none", background:C.green, color:"#fff", fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>âœ“ Ajouter</button>
+                <button onClick={addEleve} style={{flex:1, padding: isMobile?"10px":"8px 16px", borderRadius:8, border:"none", background:C.green, color:"#fff", fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>✓ Ajouter</button>
                 <button onClick={()=>{setShowAddEleve(false);setNewEleveNom("");}} style={{padding: isMobile?"10px 14px":"8px 14px", borderRadius:8, border:"none", background:"transparent", color:C.txtMuted, fontSize:12.5, cursor:"pointer", fontFamily:"inherit"}}>Annuler</button>
               </div>
             </div>
           ) : (
             <button onClick={()=>setShowAddEleve(true)}
               style={{padding: isMobile?"12px":"10px", borderRadius:10, border:`1.5px dashed ${C.border}`, background:"transparent", color:C.txtMuted, fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit", flexShrink:0}}>
-              + Nouvel Ã©lÃ¨ve
+              + Nouvel élève
             </button>
           )}
         </>
       ) : (
         <>
-          {/* SÃ©lecteurs Trimestre / Ã‰valuation */}
+          {/* Sélecteurs Trimestre / Évaluation */}
           <div style={{display:"flex", flexDirection: isMobile?"column":"row", gap:10, flexShrink:0}}>
             <div style={{display:"flex", gap:6, flex:1}}>
               {["T1","T2","T3"].map(t=>(
@@ -925,7 +924,7 @@ function MesClassesPage() {
                 <button key={ev} onClick={()=>setSelEval(ev)}
                   style={{flex:1, padding: isMobile?"9px":"7px", borderRadius:8, fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer",
                     border:`1.5px solid ${selEval===ev?C.blue:"#cbd5e1"}`, background:selEval===ev?C.bluePale:"#eef1f5", color:selEval===ev?C.blue:"#475569"}}>
-                  {ev==="E1"?"Ã‰valuation 1":"Ã‰valuation 2"}
+                  {ev==="E1"?"Évaluation 1":"Évaluation 2"}
                 </button>
               ))}
             </div>
@@ -934,7 +933,7 @@ function MesClassesPage() {
           {/* Liste notes */}
           <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0}}>
             {eleves.length===0 ? (
-              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun Ã©lÃ¨ve dans cette classe</div>
+              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun élève dans cette classe</div>
             ) : eleves.map((e,i)=>{
               const val = notesEval[e.id];
               const status = savingNote[`${e.id}-${evalCode}`];
@@ -944,10 +943,10 @@ function MesClassesPage() {
                   <span style={{fontSize:11, color:C.txtLight, width:20, flexShrink:0}}>{i+1}</span>
                   <span style={{flex:1, fontSize: isMobile?12.5:13, fontWeight:600, color:C.txt, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{e.nom}</span>
                   <input key={`${e.id}-${evalCode}`} type="number" min="0" max="20" step="0.5" defaultValue={val??""} onChange={ev=>saveNote(e.id, ev.target.value)}
-                    placeholder="â€”"
+                    placeholder="—"
                     style={{width: isMobile?60:64, padding: isMobile?"8px":"6px 8px", borderRadius:7, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit", textAlign:"center", flexShrink:0}}/>
                   <span style={{width:16, flexShrink:0, fontSize:13}}>
-                    {status==="pending"?"â³":status==="saved"?"âœ…":status==="error"?"âš ï¸":""}
+                    {status==="pending"?"⏳":status==="saved"?"✅":status==="error"?"⚠️":""}
                   </span>
                 </div>
               );
@@ -961,9 +960,9 @@ function MesClassesPage() {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// MON PROGRAMME (enseignant) â€” synthÃ¨se de couverture par classe
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// MON PROGRAMME (enseignant) — synthèse de couverture par classe
+// ═══════════════════════════════════════════════════════════════
 function MonProgrammePage() {
   const {user, data} = useApp();
   const {isMobile} = useDevice();
@@ -971,7 +970,7 @@ function MonProgrammePage() {
 
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
-      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargementâ€¦</div>
+      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargement…</div>
     </div>
   );
 
@@ -1000,8 +999,8 @@ function MonProgrammePage() {
     }).length;
 
     const taux   = lp>0 ? Math.min(100, Math.round(lfTrim/lp*100)) : null;
-    // tpFait limitÃ© Ã  la mÃªme plage que tpP (range) â€” sinon des TP/TD faits en avance
-    // sur un autre trimestre se comptaient dans le trimestre affichÃ©, faussant le taux.
+    // tpFait limité à la même plage que tpP (range) — sinon des TP/TD faits en avance
+    // sur un autre trimestre se comptaient dans le trimestre affiché, faussant le taux.
     const tpFait = (meta?.tp||[]).filter(n => prog.includes(n) && (trim===0 || (range && n>=range[0] && n<=range[1]))).length;
     const tauxTP = tpP>0 ? Math.min(100, Math.round(tpFait/tpP*100)) : null;
     const ef     = (ELEVES_DB[cl]||[]).length;
@@ -1027,7 +1026,7 @@ function MonProgrammePage() {
       {taux!==null ? (
         <span style={{fontSize:10.5, fontWeight:800, padding:"2px 7px", borderRadius:20, background:`${color}15`, color}}>{taux}%</span>
       ) : (
-        <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>â€”</span>
+        <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>—</span>
       )}
     </div>
   );
@@ -1036,14 +1035,14 @@ function MonProgrammePage() {
     <div style={{padding:isMobile?12:24, display:"flex", flexDirection:"column", gap:14}}>
       {/* KPIs */}
       <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-        <KpiCard label="Couverture moyenne" value={`${tauxMoyen}%`} sub={tauxMoyen>=75?"Objectif atteint âœ“":"Sous l'objectif"} subColor={taux2col(tauxMoyen)} iconEmoji="ðŸ“Š" bg={C.greenPale} loading={false} delay={0}/>
-        <KpiCard label="LeÃ§ons dispensÃ©es" value={totalFait} sub={`sur ${totalPrevu} prÃ©vues`} iconEmoji="âœ…" bg={C.bluePale} subColor={C.blue} loading={false} delay={0.05}/>
-        <KpiCard label="Mes classes" value={mesClasses.length} sub={`${rows.reduce((s,r)=>s+r.ef,0)} Ã©lÃ¨ves`} iconEmoji="ðŸ“š" bg={C.amberPale} subColor={C.amber} loading={false} delay={0.1}/>
+        <KpiCard label="Couverture moyenne" value={`${tauxMoyen}%`} sub={tauxMoyen>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={taux2col(tauxMoyen)} iconEmoji="📊" bg={C.greenPale} loading={false} delay={0}/>
+        <KpiCard label="Leçons dispensées" value={totalFait} sub={`sur ${totalPrevu} prévues`} iconEmoji="✅" bg={C.bluePale} subColor={C.blue} loading={false} delay={0.05}/>
+        <KpiCard label="Mes classes" value={mesClasses.length} sub={`${rows.reduce((s,r)=>s+r.ef,0)} élèves`} iconEmoji="📚" bg={C.amberPale} subColor={C.amber} loading={false} delay={0.1}/>
       </div>
 
-      {/* SÃ©lecteur pÃ©riode */}
+      {/* Sélecteur période */}
       <div style={{display:"flex", gap:6}}>
-        {[{id:0,label:"AnnÃ©e"},{id:1,label:"T1"},{id:2,label:"T2"},{id:3,label:"T3"}].map(t=>(
+        {[{id:0,label:"Année"},{id:1,label:"T1"},{id:2,label:"T2"},{id:3,label:"T3"}].map(t=>(
           <button key={t.id} onClick={()=>setTrim(t.id)}
             style={{flex: isMobile?1:"none", padding: isMobile?"9px":"7px 16px", borderRadius:8, fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer",
               border:`1.5px solid ${trim===t.id?C.green:"#cbd5e1"}`, background:trim===t.id?C.green:"#eef1f5", color:trim===t.id?"#fff":"#475569"}}>
@@ -1055,7 +1054,7 @@ function MonProgrammePage() {
       {/* Liste classes */}
       {mesClasses.length===0 ? (
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:40, textAlign:"center", color:C.txtMuted}}>
-          Aucune classe assignÃ©e.
+          Aucune classe assignée.
         </div>
       ) : isMobile ? (
         <div style={{display:"flex", flexDirection:"column", gap:10}}>
@@ -1070,7 +1069,7 @@ function MonProgrammePage() {
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
                   <div>
                     <div style={{fontSize:13.5, fontWeight:800, color:C.txt}}>{displayCl(r.cl)}</div>
-                    <div style={{fontSize:10.5, color:C.txtMuted}}>{r.ef} Ã©lÃ¨ve{r.ef>1?"s":""}</div>
+                    <div style={{fontSize:10.5, color:C.txtMuted}}>{r.ef} élève{r.ef>1?"s":""}</div>
                   </div>
                   {statut && (
                     <span style={{display:"inline-flex", alignItems:"center", gap:5, padding:"4px 10px", borderRadius:20, background:statut.bg, color:statut.fg, fontSize:10.5, fontWeight:700}}>
@@ -1108,7 +1107,7 @@ function MonProgrammePage() {
                   <tr key={r.cl} style={{borderBottom:`1px solid #f1f5f9`}}>
                     <td style={{padding:"12px 14px"}}>
                       <div style={{fontSize:12.5,fontWeight:700,color:"#1e293b"}}>{displayCl(r.cl)}</div>
-                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} Ã©lÃ¨ve{r.ef>1?"s":""}</div>
+                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} élève{r.ef>1?"s":""}</div>
                     </td>
                     <td style={{padding:"12px 14px"}}>{badge(`${r.lf}/${r.lp}`, r.taux, r.taux!==null?taux2col(r.taux):"#94a3b8")}</td>
                     <td style={{padding:"12px 14px"}}>{badge(`${r.tpFait}/${r.tpP}`, r.tauxTP, r.tauxTP!==null?taux2col(r.tauxTP):"#94a3b8")}</td>
@@ -1131,11 +1130,11 @@ function MonProgrammePage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CAHIER DE TEXTE (enseignant) â€” wrapper de sÃ©lection de classe
-// rÃ©utilise EnsClasLecons (liste des leÃ§ons + cases Ã  cocher),
-// dÃ©jÃ  existant et fonctionnel pour la vue admin par enseignant.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// CAHIER DE TEXTE (enseignant) — wrapper de sélection de classe
+// réutilise EnsClasLecons (liste des leçons + cases à cocher),
+// déjà existant et fonctionnel pour la vue admin par enseignant.
+// ═══════════════════════════════════════════════════════════════
 function CahierDeTextePage() {
   const {user, data, setData, showToast} = useApp();
   const {isMobile} = useDevice();
@@ -1149,8 +1148,8 @@ function CahierDeTextePage() {
     return (
       <div style={{padding:isMobile?16:24}}>
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:40, textAlign:"center"}}>
-          <div style={{fontSize:32, marginBottom:10}}>ðŸ“–</div>
-          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignÃ©e.</p>
+          <div style={{fontSize:32, marginBottom:10}}>📖</div>
+          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignée.</p>
         </div>
       </div>
     );
@@ -1170,7 +1169,7 @@ function CahierDeTextePage() {
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,overflow:"hidden"}}>
     <div style={{flex:1, minHeight:0, overflowY:"auto", padding:isMobile?16:24, display:"flex", flexDirection:"column", gap:14}}>
-      <h2 style={{fontSize:15, fontWeight:800, color:C.txt, margin:0}}>ðŸ“– Choisis une classe</h2>
+      <h2 style={{fontSize:15, fontWeight:800, color:C.txt, margin:0}}>📖 Choisis une classe</h2>
       <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"repeat(auto-fill,minmax(200px,1fr))", gap:10}}>
         {mesClasses.map(cl=>{
           const code = resolveProgCode(cl);
@@ -1182,11 +1181,11 @@ function CahierDeTextePage() {
             <button key={cl} onClick={()=>setSelClasse(cl)}
               style={{textAlign:"left", padding:16, borderRadius:12, border:`1px solid ${C.border}`, background:C.white, cursor:"pointer", fontFamily:"inherit"}}>
               <div style={{fontSize:13.5, fontWeight:800, color:C.txt, marginBottom:6}}>{displayCl(cl)}</div>
-              <div style={{fontSize:11, color:C.txtMuted, marginBottom:8}}>{(ELEVES_DB[cl]||[]).length} Ã©lÃ¨ves</div>
+              <div style={{fontSize:11, color:C.txtMuted, marginBottom:8}}>{(ELEVES_DB[cl]||[]).length} élèves</div>
               <div style={{height:6, borderRadius:3, background:"#e2e8f0", overflow:"hidden"}}>
                 <div style={{width:`${taux}%`, height:"100%", background:taux2col(taux)}}/>
               </div>
-              <div style={{fontSize:10.5, color:taux2col(taux), fontWeight:700, marginTop:5}}>{fait} leÃ§ons faites Â· {taux}%</div>
+              <div style={{fontSize:10.5, color:taux2col(taux), fontWeight:700, marginTop:5}}>{fait} leçons faites · {taux}%</div>
             </button>
           );
         })}
@@ -1199,20 +1198,20 @@ function CahierDeTextePage() {
 function ElevesPage() {
   const {isMobile} = useDevice();
   const {pendingClasseSelect, setPendingClasseSelect} = useApp();
-  // â”€â”€ Ã‰tat principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const [selClasse, setSelClasse] = useState(() => "6Ã¨me 1");
+  // ── État principal ────────────────────────────────────────────────
+  const [selClasse, setSelClasse] = useState(() => "6ème 1");
   const [search, setSearch]       = useState("");
   const [filtreGenre, setFiltreGenre] = useState("all");
   const [vue, setVue]             = useState("registre");
 
-  // Navigation ciblÃ©e depuis la recherche globale
+  // Navigation ciblée depuis la recherche globale
   useEffect(() => {
     if (!pendingClasseSelect) return;
     setSelClasse(pendingClasseSelect);
     setPendingClasseSelect(null);
   }, [pendingClasseSelect]);
 
-  // â”€â”€ Base locale â€” modifiable (ajout / retrait) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Base locale — modifiable (ajout / retrait) ───────────────────
   const [localDB, setLocalDB] = useState(() => {
     // Cloner ELEVES_DB pour pouvoir le modifier localement
     const clone = {};
@@ -1220,7 +1219,7 @@ function ElevesPage() {
     return clone;
   });
 
-  // â”€â”€ Modal ajout / retrait â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Modal ajout / retrait ─────────────────────────────────────────
   const [modal, setModal]           = useState(null); // null | "ajout" | {type:"retrait",eleve}
   const [newNom, setNewNom]         = useState("");
   const [newGenre, setNewGenre]     = useState("M");
@@ -1232,35 +1231,35 @@ function ElevesPage() {
     setTimeout(()=>setToast(null), 2800);
   }
 
-  // â”€â”€ Ajout d'un Ã©lÃ¨ve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Ajout d'un élève ─────────────────────────────────────────────
   function ajouterEleve() {
     const nom = newNom.trim().toUpperCase();
-    if (!nom || nom.length < 3) return showToast("âš  Nom trop court", false);
+    if (!nom || nom.length < 3) return showToast("⚠ Nom trop court", false);
     const safe = selClasse.replace(/[^a-zA-Z0-9]/g,'_');
     const id   = `${safe}_new_${Date.now()}`;
     const nouvelleListe = [...(localDB[selClasse]||[]), {id, nom, g:newGenre}];
     setLocalDB(prev => ({ ...prev, [selClasse]: nouvelleListe }));
     ELEVES_DB[selClasse] = nouvelleListe;
-    showToast(`âœ“ ${nom} ajoutÃ©(e) en ${selClasse}`);
+    showToast(`✓ ${nom} ajouté(e) en ${selClasse}`);
     setNewNom(""); setModal(null);
     sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe")
-      .then(ok=>{ if(!ok) showToast("âš  Sauvegarde Supabase Ã©chouÃ©e â€” Ã©lÃ¨ve visible ici seulement", false); })
-      .catch(()=>showToast("âš  Sauvegarde Supabase Ã©chouÃ©e", false));
+      .then(ok=>{ if(!ok) showToast("⚠ Sauvegarde Supabase échouée — élève visible ici seulement", false); })
+      .catch(()=>showToast("⚠ Sauvegarde Supabase échouée", false));
   }
 
-  // â”€â”€ Retrait d'un Ã©lÃ¨ve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Retrait d'un élève ───────────────────────────────────────────
   function retirerEleve(eleve) {
     const nouvelleListe = (localDB[selClasse]||[]).filter(e => e.id !== eleve.id);
     setLocalDB(prev => ({ ...prev, [selClasse]: nouvelleListe }));
     ELEVES_DB[selClasse] = nouvelleListe;
-    showToast(`âœ“ ${eleve.nom} retirÃ©(e)`);
+    showToast(`✓ ${eleve.nom} retiré(e)`);
     setConfirmRetrait(null);
     sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe")
-      .then(ok=>{ if(!ok) showToast("âš  Sauvegarde Supabase Ã©chouÃ©e", false); })
-      .catch(()=>showToast("âš  Sauvegarde Supabase Ã©chouÃ©e", false));
+      .then(ok=>{ if(!ok) showToast("⚠ Sauvegarde Supabase échouée", false); })
+      .catch(()=>showToast("⚠ Sauvegarde Supabase échouée", false));
   }
 
-  // â”€â”€ DonnÃ©es de la classe sÃ©lectionnÃ©e â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Données de la classe sélectionnée ────────────────────────────
   const eleves   = localDB[selClasse] || [];
   const filles   = eleves.filter(e=>e.g==="F").length;
   const garcons  = eleves.length - filles;
@@ -1271,22 +1270,22 @@ function ElevesPage() {
     return ms && mg;
   }), [eleves, search, filtreGenre]);
 
-  // â”€â”€ Stats globales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Stats globales ────────────────────────────────────────────────
   const TOTAL_LOC   = Object.values(localDB).reduce((s,cl)=>s+cl.length, 0);
   const FILLES_LOC  = Object.values(localDB).reduce((s,cl)=>s+cl.filter(e=>e.g==="F").length, 0);
   const GARCONS_LOC = TOTAL_LOC - FILLES_LOC;
   const ALL_CLS     = Object.keys(localDB);
 
-  // â”€â”€ Groupement sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Groupement sidebar ────────────────────────────────────────────
   const GROUPES_ORDRE = [
-    {label:"6Ã¨me",     classes:["6Ã¨me 1","6Ã¨me 2","6Ã¨me 3"]},
-    {label:"5Ã¨me",     classes:["5Ã¨me 1","5Ã¨me 2","5Ã¨me 3"]},
-    {label:"4Ã¨me",     classes:["4Ã¨me ALL","4Ã¨me ARB","4Ã¨me CHN","4Ã¨me ITA","4Ã¨me ESP"]},
-    {label:"3Ã¨me",     classes:["3Ã¨me ALL","3Ã¨me ARB","3Ã¨me CHN","3Ã¨me ESP","3Ã¨me ITA"]},
+    {label:"6ème",     classes:["6ème 1","6ème 2","6ème 3"]},
+    {label:"5ème",     classes:["5ème 1","5ème 2","5ème 3"]},
+    {label:"4ème",     classes:["4ème ALL","4ème ARB","4ème CHN","4ème ITA","4ème ESP"]},
+    {label:"3ème",     classes:["3ème ALL","3ème ARB","3ème CHN","3ème ESP","3ème ITA"]},
     {label:"2nde A4",  classes:["2nde ALL","2nde ARB","2nde CHN","2nde ITA","2nde ESP"]},
     {label:"2nde C",   classes:["2nde C"]},
-    {label:"1Ã¨re A4",  classes:["1Ã¨re A4 ALL","1Ã¨re A4 ARB","1Ã¨re A4 ESP","1Ã¨re CHN","1Ã¨re ITA"]},
-    {label:"1Ã¨re S/D", classes:["1Ã¨re C","1Ã¨re D","1Ã¨re Ti"]},
+    {label:"1ère A4",  classes:["1ère A4 ALL","1ère A4 ARB","1ère A4 ESP","1ère CHN","1ère ITA"]},
+    {label:"1ère S/D", classes:["1ère C","1ère D","1ère Ti"]},
     {label:"Tle A4",   classes:["Tle A4 ALL","Tle A4 ARB","Tle A4 CHN","Tle A4 ITA","Tle A4 ESP"]},
     {label:"Tle S/D",  classes:["Tle C","Tle D","Tle Ti"]},
   ];
@@ -1297,10 +1296,10 @@ function ElevesPage() {
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,overflow:"hidden"}}>
 
-      {/* â”€â”€ Barre d'onglets + KPIs (remplace l'ancien header propre) â”€â”€ */}
+      {/* ── Barre d'onglets + KPIs (remplace l'ancien header propre) ── */}
       <div style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:"8px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
         <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:9,padding:3}}>
-          {[["registre","ðŸ“‹ Registre"],["stats","ðŸ“Š Stats"],["programmes","ðŸ“š Programmes"]].map(([id,label])=>(
+          {[["registre","📋 Registre"],["stats","📊 Stats"],["programmes","📚 Programmes"]].map(([id,label])=>(
             <button key={id} onClick={()=>setVue(id)}
               style={{padding:"5px 12px",borderRadius:7,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",background:vue===id?C.white:"transparent",color:vue===id?C.txt:C.txtMuted,boxShadow:vue===id?"0 1px 4px rgba(0,0,0,.08)":"none"}}>
               {label}
@@ -1310,9 +1309,9 @@ function ElevesPage() {
         <div style={{flex:1}}/>
         <div style={{display:"flex",gap:8}}>
           {[
-            {v:TOTAL_LOC,  l:"Ã‰lÃ¨ves", col:C.green},
+            {v:TOTAL_LOC,  l:"Élèves", col:C.green},
             {v:FILLES_LOC, l:"Filles",  col:C.pink},
-            {v:GARCONS_LOC,l:"GarÃ§ons", col:C.blue},
+            {v:GARCONS_LOC,l:"Garçons", col:C.blue},
             {v:ALL_CLS.length,l:"Classes",col:C.purple},
           ].map((k,i)=>(
             <div key={i} style={{textAlign:"center",padding:"3px 10px",background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:8}}>
@@ -1325,7 +1324,7 @@ function ElevesPage() {
 
       <div style={{display:"flex", flexDirection: isMobile?"column":"row", flex:1,minHeight:0,overflow:"hidden"}}>
 
-        {/* â”€â”€ Sidebar classes â€” vertical (desktop) ou chips horizontaux (mobile) â”€â”€ */}
+        {/* ── Sidebar classes — vertical (desktop) ou chips horizontaux (mobile) ── */}
         {isMobile ? (
           <div style={{display:"flex", gap:6, overflowX:"auto", padding:"10px 12px", background:C.sidebar, flexShrink:0, scrollbarWidth:"none", WebkitOverflowScrolling:"touch"}}>
             {GROUPES_ORDRE.flatMap(g=>g.classes).map(cl=>{
@@ -1368,10 +1367,10 @@ function ElevesPage() {
           </aside>
         )}
 
-        {/* â”€â”€ Contenu principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Contenu principal ────────────────────────────────── */}
         <main style={{flex:1,padding: isMobile?12:20,overflowY:"auto",minHeight:0}}>
 
-          {/* â•â• VUE REGISTRE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══ VUE REGISTRE ══════════════════════════════════════ */}
           {vue==="registre" && (
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
@@ -1380,15 +1379,15 @@ function ElevesPage() {
                 <div>
                   <h2 style={{fontSize:18,fontWeight:800,color:C.txt,margin:0}}>{selClasse}</h2>
                   <div style={{fontSize:12,color:C.txtMuted,marginTop:4}}>
-                    LycÃ©e de Kakatare Â· Maroua Â· 2025â€“2026
+                    Lycée de Kakatare · Maroua · 2025–2026
                     {niveau && <span style={{marginLeft:8,padding:"1px 8px",background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:20,fontSize:10,fontWeight:700,color:C.green}}>{niveau}</span>}
                   </div>
                   {prog && (
                     <div style={{marginTop:8,display:"flex",gap:8,flexWrap:"wrap"}}>
                       <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.greenPale,color:C.green,fontWeight:600}}>Coeff. {prog.coeff}</span>
-                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.bluePale,color:C.blue,fontWeight:600}}>T1: {prog.lp_t1} leÃ§ons</span>
-                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#fffbeb",color:C.amber,fontWeight:600}}>T2: {prog.lp_t2} leÃ§ons</span>
-                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.purplePale,color:C.purple,fontWeight:600}}>T3: {prog.lp_t3} leÃ§ons</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.bluePale,color:C.blue,fontWeight:600}}>T1: {prog.lp_t1} leçons</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#fffbeb",color:C.amber,fontWeight:600}}>T2: {prog.lp_t2} leçons</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.purplePale,color:C.purple,fontWeight:600}}>T3: {prog.lp_t3} leçons</span>
                     </div>
                   )}
                 </div>
@@ -1397,7 +1396,7 @@ function ElevesPage() {
                   {[
                     {v:eleves.length,l:"Total", col:C.txt, bg:"#f8fafc"},
                     {v:filles,       l:"Filles", col:C.pink, bg:C.pinkPale},
-                    {v:garcons,      l:"GarÃ§ons",col:C.blue, bg:C.bluePale},
+                    {v:garcons,      l:"Garçons",col:C.blue, bg:C.bluePale},
                   ].map((k,i)=>(
                     <div key={i} style={{textAlign:"center",padding:"8px 14px",background:k.bg,borderRadius:9,border:`1px solid ${C.border}`}}>
                       <div style={{fontSize:22,fontWeight:900,color:k.col}}>{k.v}</div>
@@ -1410,8 +1409,8 @@ function ElevesPage() {
               {/* Barre genre */}
               <div style={{background:C.white,borderRadius:10,border:`1px solid ${C.border}`,padding:"10px 14px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                  <span style={{fontSize:11,color:C.pink,fontWeight:700}}>â™€ {filles} filles ({eleves.length?Math.min(100, Math.round(filles/eleves.length*100)):0}%)</span>
-                  <span style={{fontSize:11,color:C.blue,fontWeight:700}}>â™‚ {garcons} garÃ§ons ({eleves.length?Math.min(100, Math.round(garcons/eleves.length*100)):0}%)</span>
+                  <span style={{fontSize:11,color:C.pink,fontWeight:700}}>♀ {filles} filles ({eleves.length?Math.min(100, Math.round(filles/eleves.length*100)):0}%)</span>
+                  <span style={{fontSize:11,color:C.blue,fontWeight:700}}>♂ {garcons} garçons ({eleves.length?Math.min(100, Math.round(garcons/eleves.length*100)):0}%)</span>
                 </div>
                 <div style={{height:8,borderRadius:4,overflow:"hidden",background:"#e2e8f0",display:"flex"}}>
                   <div style={{width:`${eleves.length?filles/eleves.length*100:50}%`,background:C.pink,transition:"width .5s"}}/>
@@ -1423,15 +1422,15 @@ function ElevesPage() {
               <div style={{display:"flex",gap:9,alignItems:"center",flexWrap:"wrap"}}>
                 {/* Recherche */}
                 <div style={{position:"relative",flex:1,minWidth:180}}>
-                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:13}}>ðŸ”</span>
-                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un Ã©lÃ¨veâ€¦"
+                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:13}}>🔍</span>
+                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un élève…"
                     style={{width:"100%",padding:"8px 12px 8px 32px",border:`1px solid ${C.border}`,borderRadius:9,fontSize:12,color:C.txt,background:"#f8fafc",outline:"none"}}
                     onFocus={e=>{e.target.style.borderColor=C.green;e.target.style.background=C.white;}}
                     onBlur={e=>{e.target.style.borderColor=C.border;e.target.style.background="#f8fafc";}}/>
                 </div>
                 {/* Filtre genre */}
                 <div style={{display:"flex",gap:4}}>
-                  {[["all","Tous"],["F","â™€ Filles"],["M","â™‚ GarÃ§ons"]].map(([val,lab])=>(
+                  {[["all","Tous"],["F","♀ Filles"],["M","♂ Garçons"]].map(([val,lab])=>(
                     <button key={val} onClick={()=>setFiltreGenre(val)}
                       style={{padding:"7px 11px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",border:`1.5px solid ${filtreGenre===val?(val==="F"?C.pink:val==="M"?C.blue:C.green):C.border}`,background:filtreGenre===val?(val==="F"?C.pinkPale:val==="M"?C.bluePale:C.greenPale):C.white,color:filtreGenre===val?(val==="F"?C.pink:val==="M"?C.blue:C.green):C.txtMuted}}>
                       {lab}
@@ -1441,23 +1440,23 @@ function ElevesPage() {
                 {/* Bouton Ajouter */}
                 <button onClick={()=>{setModal("ajout");setNewNom("");setNewGenre("M");}}
                   style={{padding:"7px 14px",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                  âž• Ajouter un Ã©lÃ¨ve
+                  ➕ Ajouter un élève
                 </button>
                 {/* Impression */}
                 <button onClick={()=>imprimerListeClasse(selClasse, eleves)}
                   style={{padding:"7px 14px",background:C.white,color:C.txt,border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                  ðŸ–¨ï¸ Imprimer
+                  🖨️ Imprimer
                 </button>
                 <span style={{fontSize:11,color:C.txtMuted}}>{elevesFiltres.length}/{eleves.length}</span>
               </div>
 
-              {/* Table des Ã©lÃ¨ves */}
+              {/* Table des élèves */}
               <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#f8fafc",borderBottom:`1px solid ${C.border}`}}>
-                      <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:48}}>NÂ°</th>
-                      <th style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>NOM ET PRÃ‰NOM(S)</th>
+                      <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:48}}>N°</th>
+                      <th style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>NOM ET PRÉNOM(S)</th>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:80}}>GENRE</th>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:80}}>ACTION</th>
                     </tr>
@@ -1465,7 +1464,7 @@ function ElevesPage() {
                   <tbody>
                     {elevesFiltres.length===0 ? (
                       <tr><td colSpan={4} style={{padding:"32px",textAlign:"center",color:C.txtLight}}>
-                        <div style={{fontSize:28,marginBottom:6}}>ðŸ”</div>Aucun Ã©lÃ¨ve trouvÃ©
+                        <div style={{fontSize:28,marginBottom:6}}>🔍</div>Aucun élève trouvé
                       </td></tr>
                     ) : elevesFiltres.map((e,i)=>(
                       <tr key={e.id}
@@ -1483,13 +1482,13 @@ function ElevesPage() {
                         </td>
                         <td style={{padding:"10px 12px",textAlign:"center"}}>
                           <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,background:e.g==="F"?C.pinkPale:C.bluePale,color:e.g==="F"?C.pink:C.blue,border:`1px solid ${e.g==="F"?C.pinkA40:C.blueA40}`}}>
-                            {e.g==="F"?"â™€ F":"â™‚ M"}
+                            {e.g==="F"?"♀ F":"♂ M"}
                           </span>
                         </td>
                         <td style={{padding:"10px 12px",textAlign:"center"}}>
                           <button onClick={()=>setConfirmRetrait(e)}
                             style={{padding:"4px 10px",background:C.redPale,border:`1px solid ${C.redBorder}`,borderRadius:7,color:C.red,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-                            âœ• Retirer
+                            ✕ Retirer
                           </button>
                         </td>
                       </tr>
@@ -1500,16 +1499,16 @@ function ElevesPage() {
             </div>
           )}
 
-          {/* â•â• VUE STATISTIQUES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══ VUE STATISTIQUES ══════════════════════════════════ */}
           {vue==="stats" && (
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>ðŸ“Š Statistiques â€” 2025â€“2026</h2>
+              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>📊 Statistiques — 2025–2026</h2>
               <div style={{display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12}}>
                 {[
-                  {v:TOTAL_LOC,  l:"Total Ã©lÃ¨ves", col:C.green,  bg:C.greenPale,  emoji:"ðŸŽ“"},
-                  {v:FILLES_LOC, l:"Filles",        col:C.pink,   bg:C.pinkPale,   emoji:"â™€"},
-                  {v:GARCONS_LOC,l:"GarÃ§ons",       col:C.blue,   bg:C.bluePale,   emoji:"â™‚"},
-                  {v:ALL_CLS.length,l:"Classes",   col:C.purple, bg:C.purplePale, emoji:"ðŸ“š"},
+                  {v:TOTAL_LOC,  l:"Total élèves", col:C.green,  bg:C.greenPale,  emoji:"🎓"},
+                  {v:FILLES_LOC, l:"Filles",        col:C.pink,   bg:C.pinkPale,   emoji:"♀"},
+                  {v:GARCONS_LOC,l:"Garçons",       col:C.blue,   bg:C.bluePale,   emoji:"♂"},
+                  {v:ALL_CLS.length,l:"Classes",   col:C.purple, bg:C.purplePale, emoji:"📚"},
                 ].map((k,i)=>(
                   <div key={i} style={{background:k.bg,borderRadius:11,border:`1px solid ${C.border}`,padding:"16px",textAlign:"center"}}>
                     <div style={{fontSize:22}}>{k.emoji}</div>
@@ -1520,11 +1519,11 @@ function ElevesPage() {
               </div>
               {/* Tableau par groupe */}
               <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden"}}>
-                <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:700,color:C.txt}}>RÃ©partition par niveau</div>
+                <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:700,color:C.txt}}>Répartition par niveau</div>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#0f1f14",color:"#fff"}}>
-                      {["Niveau","Classes","Total","Filles","GarÃ§ons","Ratio â™€"].map((h,i)=>(
+                      {["Niveau","Classes","Total","Filles","Garçons","Ratio ♀"].map((h,i)=>(
                         <th key={i} style={{padding:"9px 12px",textAlign:i===0?"left":"center",fontSize:10,fontWeight:700}}>{h}</th>
                       ))}
                     </tr>
@@ -1567,10 +1566,10 @@ function ElevesPage() {
             </div>
           )}
 
-          {/* â•â• VUE PROGRAMMES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══ VUE PROGRAMMES ════════════════════════════════════ */}
           {vue==="programmes" && (
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>ðŸ“š RÃ©fÃ©rentiel programmes SVTEEHB</h2>
+              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>📚 Référentiel programmes SVTEEHB</h2>
               <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14}}>
                 {Object.entries(PROGRAMME_SVTEEHB).map(([niv,prog])=>{
                   const total = prog.lp_t1+prog.lp_t2+prog.lp_t3;
@@ -1579,7 +1578,7 @@ function ElevesPage() {
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
                         <div>
                           <h3 style={{fontSize:14,fontWeight:800,color:C.txt,margin:0}}>{niv}</h3>
-                          <div style={{fontSize:11,color:C.txtMuted,marginTop:2}}>{total} leÃ§ons Â· {prog.tp} TP Â· Coeff. {prog.coeff}</div>
+                          <div style={{fontSize:11,color:C.txtMuted,marginTop:2}}>{total} leçons · {prog.tp} TP · Coeff. {prog.coeff}</div>
                         </div>
                         <div style={{padding:"4px 10px",background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:20,fontSize:12,fontWeight:800,color:C.green}}>Coeff. {prog.coeff}</div>
                       </div>
@@ -1593,7 +1592,7 @@ function ElevesPage() {
                           <div key={i} style={{background:d.bg,borderRadius:8,padding:"8px",textAlign:"center"}}>
                             <div style={{fontSize:10,color:d.col,fontWeight:700,marginBottom:2}}>{d.t}</div>
                             <div style={{fontSize:18,fontWeight:900,color:d.col}}>{d.v}</div>
-                            <div style={{fontSize:9,color:C.txtMuted}}>leÃ§ons</div>
+                            <div style={{fontSize:9,color:C.txtMuted}}>leçons</div>
                           </div>
                         ))}
                       </div>
@@ -1606,15 +1605,15 @@ function ElevesPage() {
         </main>
       </div>
 
-      {/* â•â• MODAL AJOUT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══ MODAL AJOUT ═══════════════════════════════════════════ */}
       {modal==="ajout" && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,animation:"fadeIn .2s"}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
-            <h3 style={{fontSize:16,fontWeight:800,color:C.txt,marginBottom:4}}>âž• Ajouter un Ã©lÃ¨ve</h3>
+            <h3 style={{fontSize:16,fontWeight:800,color:C.txt,marginBottom:4}}>➕ Ajouter un élève</h3>
             <p style={{fontSize:12,color:C.txtMuted,marginBottom:20}}>Classe : <strong>{selClasse}</strong></p>
 
             <div style={{marginBottom:14}}>
-              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:5}}>Nom et PrÃ©nom(s) <span style={{color:C.red}}>*</span></label>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:5}}>Nom et Prénom(s) <span style={{color:C.red}}>*</span></label>
               <input
                 autoFocus
                 value={newNom}
@@ -1629,7 +1628,7 @@ function ElevesPage() {
             <div style={{marginBottom:20}}>
               <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:5}}>Genre</label>
               <div style={{display:"flex",gap:10}}>
-                {[["M","â™‚ Masculin",C.blue,C.bluePale],["F","â™€ FÃ©minin",C.pink,C.pinkPale]].map(([val,lab,col,bg])=>(
+                {[["M","♂ Masculin",C.blue,C.bluePale],["F","♀ Féminin",C.pink,C.pinkPale]].map(([val,lab,col,bg])=>(
                   <button key={val} onClick={()=>setNewGenre(val)}
                     style={{flex:1,padding:"10px",borderRadius:9,border:`2px solid ${newGenre===val?col:C.border}`,background:newGenre===val?bg:C.white,color:newGenre===val?col:C.txtMuted,fontSize:13,fontWeight:700,cursor:"pointer"}}>
                     {lab}
@@ -1645,24 +1644,24 @@ function ElevesPage() {
               </button>
               <button onClick={ajouterEleve}
                 style={{flex:2,padding:"11px",borderRadius:9,border:"none",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                âœ“ Confirmer l'ajout
+                ✓ Confirmer l'ajout
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* â•â• MODAL CONFIRMATION RETRAIT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══ MODAL CONFIRMATION RETRAIT ════════════════════════════ */}
       {confirmRetrait && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,animation:"fadeIn .2s"}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:400,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
-            <div style={{fontSize:32,textAlign:"center",marginBottom:12}}>âš ï¸</div>
-            <h3 style={{fontSize:15,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>Retirer cet Ã©lÃ¨ve ?</h3>
+            <div style={{fontSize:32,textAlign:"center",marginBottom:12}}>⚠️</div>
+            <h3 style={{fontSize:15,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>Retirer cet élève ?</h3>
             <p style={{fontSize:13,color:C.txtMuted,textAlign:"center",marginBottom:6}}>
               <strong style={{color:C.txt}}>{confirmRetrait.nom}</strong>
             </p>
             <p style={{fontSize:12,color:C.txtMuted,textAlign:"center",marginBottom:24}}>
-              sera retirÃ©(e) de <strong>{selClasse}</strong>. Cette action est rÃ©versible uniquement par rechargement de la page.
+              sera retiré(e) de <strong>{selClasse}</strong>. Cette action est réversible uniquement par rechargement de la page.
             </p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setConfirmRetrait(null)}
@@ -1671,7 +1670,7 @@ function ElevesPage() {
               </button>
               <button onClick={()=>retirerEleve(confirmRetrait)}
                 style={{flex:1,padding:"11px",borderRadius:9,border:"none",background:C.red,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                âœ• Confirmer le retrait
+                ✕ Confirmer le retrait
               </button>
             </div>
           </div>
@@ -1682,14 +1681,14 @@ function ElevesPage() {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SECTION ENSEIGNANTS â€” Interface Animatrice PÃ©dagogique
-// Vue : liste globale â†’ dÃ©tail par enseignant â†’ dÃ©tail par classe
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GESTION ENSEIGNANTS â€” Ajout Â· Suppression Â· DonnÃ©es fictives
-// IntÃ©grÃ© dans EnseignantsPage comme onglet "GÃ©rer"
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// SECTION ENSEIGNANTS — Interface Animatrice Pédagogique
+// Vue : liste globale → détail par enseignant → détail par classe
+// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// GESTION ENSEIGNANTS — Ajout · Suppression · Données fictives
+// Intégré dans EnseignantsPage comme onglet "Gérer"
+// ══════════════════════════════════════════════════════════════════════
 
 function EnseignantsPage() {
   const {data, setData, showToast, refreshData} = useApp();
@@ -1701,18 +1700,18 @@ function EnseignantsPage() {
 
   if (!data) return (
     <div style={{padding:"40px",textAlign:"center",color:C.txtMuted}}>
-      <Spinner size={28} color={C.green}/><br/><br/>Chargementâ€¦
+      <Spinner size={28} color={C.green}/><br/><br/>Chargement…
     </div>
   );
 
-  // Niveau 3 â€” LeÃ§ons d'une classe
+  // Niveau 3 — Leçons d'une classe
   if (viewEns && viewCl) {
     return <EnsClasLecons ens={viewEns} cl={viewCl}
       data={data} setData={setData} showToast={showToast}
       onBack={()=>setViewCl(null)}/>;
   }
 
-  // Niveau 2 â€” DÃ©tail enseignant
+  // Niveau 2 — Détail enseignant
   if (viewEns) {
     return <EnsDetail ens={viewEns}
       data={data} setData={setData} showToast={showToast}
@@ -1723,13 +1722,13 @@ function EnseignantsPage() {
   return (
     <div style={{display:"flex", flexDirection:"column", flex:1}}>
 
-      {/* â”€â”€ Onglets â”€â”€ */}
+      {/* ── Onglets ── */}
       <div style={{background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:0, flexShrink:0}}>
         <div style={{display:"flex"}}>
           {[
-            {id:"liste", label:"ðŸ‘¥ Enseignants",     sub:"Vue globale"},
-            {id:"gerer", label:"âš™ï¸ GÃ©rer",            sub:"Ajouter Â· Supprimer"},
-            {id:"clean", label:"ðŸ§¹ DonnÃ©es fictives", sub:"Nettoyer la base"},
+            {id:"liste", label:"👥 Enseignants",     sub:"Vue globale"},
+            {id:"gerer", label:"⚙️ Gérer",            sub:"Ajouter · Supprimer"},
+            {id:"clean", label:"🧹 Données fictives", sub:"Nettoyer la base"},
           ].map(o=>(
             <button key={o.id} onClick={()=>setOnglet(o.id)}
               style={{padding:"12px 18px", border:"none", borderBottom:`3px solid ${onglet===o.id?C.green:"transparent"}`, background:"transparent", cursor:"pointer", fontFamily:"inherit", textAlign:"left"}}>
@@ -1745,11 +1744,11 @@ function EnseignantsPage() {
           }}
           disabled={refreshing}
           style={{display:"flex", alignItems:"center", gap:6, padding: isMobile?"8px":"7px 14px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, color:C.txtMuted, fontSize:11.5, fontWeight:700, cursor:refreshing?"not-allowed":"pointer", fontFamily:"inherit", flexShrink:0}}>
-          {refreshing ? <Spinner size={12} color={C.txtMuted}/> : "ðŸ”„"} {!isMobile && "Actualiser"}
+          {refreshing ? <Spinner size={12} color={C.txtMuted}/> : "🔄"} {!isMobile && "Actualiser"}
         </button>
       </div>
 
-      {/* â”€â”€ Contenu â”€â”€ */}
+      {/* ── Contenu ── */}
       <div style={{flex:1, overflowY:"auto"}}>
         {onglet==="liste" && <EnsListe data={data} onSelect={ens=>{setViewEns(ens);}}/>}
         {onglet==="gerer" && <EnsGerer data={data} setData={setData} showToast={showToast}/>}
@@ -1759,13 +1758,13 @@ function EnseignantsPage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ONGLET GÃ‰RER â€” Ajouter / Modifier / Supprimer un enseignant
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â”€â”€ DÃ©tecteur de conflits : une classe assignÃ©e Ã  plusieurs enseignants Ã  la fois â”€â”€
+// ══════════════════════════════════════════════════════════════════════
+// ONGLET GÉRER — Ajouter / Modifier / Supprimer un enseignant
+// ══════════════════════════════════════════════════════════════════════
+// ── Détecteur de conflits : une classe assignée à plusieurs enseignants à la fois ──
 function ConflitsClassesPanel({ enseignants, data }) {
   const { showToast, refreshData } = useApp();
-  const [resolving, setResolving] = useState(null); // nom de la classe ou id enseignant en cours de rÃ©solution
+  const [resolving, setResolving] = useState(null); // nom de la classe ou id enseignant en cours de résolution
 
   const conflits = useMemo(() => {
     const parClasse = {};
@@ -1775,9 +1774,9 @@ function ConflitsClassesPanel({ enseignants, data }) {
     return Object.entries(parClasse).filter(([, list]) => list.length > 1);
   }, [enseignants]);
 
-  // IncohÃ©rences par enseignant : ses "classes assignÃ©es" ne correspondent pas Ã  ce qui
-  // est rÃ©ellement dans son EDT (cas vÃ©cu : Essamba avait "1Ã¨re A4 ARB" en classes
-  // assignÃ©es mais "1Ã¨re L2 ARA/ITA/ESP" dans son EDT_REEL d'origine).
+  // Incohérences par enseignant : ses "classes assignées" ne correspondent pas à ce qui
+  // est réellement dans son EDT (cas vécu : Essamba avait "1ère A4 ARB" en classes
+  // assignées mais "1ère L2 ARA/ITA/ESP" dans son EDT_REEL d'origine).
   const incoherences = useMemo(() => {
     const result = [];
     enseignants.forEach(ens => {
@@ -1806,9 +1805,9 @@ function ConflitsClassesPanel({ enseignants, data }) {
       if (slots.length > 0) {
         await sb.rpc("admin_set_edt_slots", { p_ens_id: ens.id, p_slots: slots.map(slot=>({ slot, lbl:"" })) });
       }
-      // Cascade identique Ã  ModalEnsForm : la classe transfÃ©rÃ©e ne doit pas laisser
-      // de progression (ni de suivi digital) fantÃ´me rattachÃ©e au perdant du conflit.
-      // NettoyÃ©e seulement si le retrait de classe a rÃ©ellement rÃ©ussi (r).
+      // Cascade identique à ModalEnsForm : la classe transférée ne doit pas laisser
+      // de progression (ni de suivi digital) fantôme rattachée au perdant du conflit.
+      // Nettoyée seulement si le retrait de classe a réellement réussi (r).
       const r = await sb.rpc("admin_set_teacher_classes", { p_id: ens.id, p_classes: nouvellesClasses });
       if (r) {
         await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(classe)}`);
@@ -1819,24 +1818,24 @@ function ConflitsClassesPanel({ enseignants, data }) {
     }
     setResolving(null);
     const nomGarde = getNomCourt(enseignants.find(e=>e.id===ensGardeId)?.nom);
-    showToast(ok ? `âœ“ "${classe}" attribuÃ©e uniquement Ã  ${nomGarde}` : "âš  Ã‰chec partiel â€” vÃ©rifiez la connexion", ok);
+    showToast(ok ? `✓ "${classe}" attribuée uniquement à ${nomGarde}` : "⚠ Échec partiel — vérifiez la connexion", ok);
     await refreshData?.();
   };
 
   const reconcilier = async (item) => {
     const { ens, manquantes, classesEdt } = item;
     setResolving(ens.id);
-    // VÃ©rifier qu'aucune des classes manquantes n'est dÃ©jÃ  chez un autre enseignant
-    // (Ã©vite de crÃ©er un nouveau conflit en rÃ©conciliant celui-ci)
+    // Vérifier qu'aucune des classes manquantes n'est déjà chez un autre enseignant
+    // (évite de créer un nouveau conflit en réconciliant celui-ci)
     const dejaAilleurs = manquantes.filter(cl => enseignants.some(autre => autre.id!==ens.id && (autre.classes||[]).includes(cl)));
     if (dejaAilleurs.length > 0) {
-      showToast(`âš  RÃ©conciliation bloquÃ©e : ${dejaAilleurs.join(", ")} dÃ©jÃ  chez un autre enseignant â€” rÃ©sous d'abord ce conflit ci-dessus`, false);
+      showToast(`⚠ Réconciliation bloquée : ${dejaAilleurs.join(", ")} déjà chez un autre enseignant — résous d'abord ce conflit ci-dessus`, false);
       setResolving(null);
       return;
     }
     const ok = await sb.rpc("admin_set_teacher_classes", { p_id: ens.id, p_classes: classesEdt });
     setResolving(null);
-    showToast(ok ? `âœ“ Classes de ${getNomCourt(ens.nom)} alignÃ©es sur son EDT rÃ©el` : "âš  Ã‰chec â€” vÃ©rifiez la connexion", ok);
+    showToast(ok ? `✓ Classes de ${getNomCourt(ens.nom)} alignées sur son EDT réel` : "⚠ Échec — vérifiez la connexion", ok);
     await refreshData?.();
   };
 
@@ -1845,8 +1844,8 @@ function ConflitsClassesPanel({ enseignants, data }) {
       {conflits.length > 0 && (
         <div style={{background:C.redPale, border:`1px solid ${C.redBorder}`, borderRadius:12, padding:"16px 18px", display:"flex", flexDirection:"column", gap:14}}>
           <div>
-            <h3 style={{fontSize:13, fontWeight:800, color:C.red, margin:0}}>âš ï¸ {conflits.length} classe{conflits.length>1?"s":""} assignÃ©e{conflits.length>1?"s":""} Ã  plusieurs enseignants</h3>
-            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Choisis qui garde chaque classe â€” elle sera retirÃ©e automatiquement des autres (classes assignÃ©es + leur EDT).</p>
+            <h3 style={{fontSize:13, fontWeight:800, color:C.red, margin:0}}>⚠️ {conflits.length} classe{conflits.length>1?"s":""} assignée{conflits.length>1?"s":""} à plusieurs enseignants</h3>
+            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Choisis qui garde chaque classe — elle sera retirée automatiquement des autres (classes assignées + leur EDT).</p>
           </div>
           {conflits.map(([classe, list]) => (
             <div key={classe} style={{background:C.white, borderRadius:9, padding:"12px 14px", display:"flex", flexDirection:"column", gap:8}}>
@@ -1868,18 +1867,18 @@ function ConflitsClassesPanel({ enseignants, data }) {
       {incoherences.length > 0 && (
         <div style={{background:C.amberPale, border:`1px solid #fde68a`, borderRadius:12, padding:"16px 18px", display:"flex", flexDirection:"column", gap:14}}>
           <div>
-            <h3 style={{fontSize:13, fontWeight:800, color:"#92400e", margin:0}}>ðŸ”¶ {incoherences.length} enseignant{incoherences.length>1?"s":""} dont les classes assignÃ©es ne correspondent pas Ã  l'EDT</h3>
-            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Ses "classes assignÃ©es" et le contenu rÃ©el de son emploi du temps ont divergÃ© â€” probablement un ancien rÃ©glage jamais mis Ã  jour.</p>
+            <h3 style={{fontSize:13, fontWeight:800, color:"#92400e", margin:0}}>🔶 {incoherences.length} enseignant{incoherences.length>1?"s":""} dont les classes assignées ne correspondent pas à l'EDT</h3>
+            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Ses "classes assignées" et le contenu réel de son emploi du temps ont divergé — probablement un ancien réglage jamais mis à jour.</p>
           </div>
           {incoherences.map(item => (
             <div key={item.ens.id} style={{background:C.white, borderRadius:9, padding:"12px 14px", display:"flex", flexDirection:"column", gap:8}}>
               <div style={{fontWeight:800, fontSize:13, color:C.txt}}>{getNomCourt(item.ens.nom)}</div>
-              {item.manquantes.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans son EDT mais pas dans ses classes assignÃ©es : <strong>{item.manquantes.join(", ")}</strong></div>}
-              {item.enTrop.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans ses classes assignÃ©es mais absent de son EDT : <strong>{item.enTrop.join(", ")}</strong></div>}
+              {item.manquantes.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans son EDT mais pas dans ses classes assignées : <strong>{item.manquantes.join(", ")}</strong></div>}
+              {item.enTrop.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans ses classes assignées mais absent de son EDT : <strong>{item.enTrop.join(", ")}</strong></div>}
               <button disabled={resolving===item.ens.id} onClick={()=>reconcilier(item)}
                 style={{alignSelf:"flex-start", padding:"7px 14px", borderRadius:8, border:"1.5px solid #92400e", background:C.white, fontSize:12, fontWeight:700,
                   color:"#92400e", cursor:resolving===item.ens.id?"not-allowed":"pointer", fontFamily:"inherit", opacity:resolving===item.ens.id?.6:1}}>
-                âœ“ Aligner ses classes assignÃ©es sur son EDT rÃ©el
+                ✓ Aligner ses classes assignées sur son EDT réel
               </button>
             </div>
           ))}
@@ -1890,8 +1889,8 @@ function ConflitsClassesPanel({ enseignants, data }) {
 }
 
 function EnsGerer({ data, setData, showToast }) {
-  const [modal,    setModal]    = useState(null); // null | "ajout" | {ens} pour Ã©dition
-  const [confirm,  setConfirm]  = useState(null); // enseignant Ã  supprimer
+  const [modal,    setModal]    = useState(null); // null | "ajout" | {ens} pour édition
+  const [confirm,  setConfirm]  = useState(null); // enseignant à supprimer
   const [saving,   setSaving]   = useState(false);
 
   // Source enseignants
@@ -1900,7 +1899,7 @@ function EnsGerer({ data, setData, showToast }) {
     ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), ini:u.ini||getIni(u.nom), classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, col:getColor(a.id), ini:getIni(a.nom), classes:ENS_CLASSES_REF[a.id]||[]}));
 
-  // â”€â”€ Supprimer un enseignant â”€â”€
+  // ── Supprimer un enseignant ──
   const supprimerEnseignant = async(ens) => {
     setSaving(true);
     // 1. Supprimer de Supabase utilisateurs
@@ -1909,11 +1908,11 @@ function EnsGerer({ data, setData, showToast }) {
     const ok2 = await sb.del("prog_suivi", `?ens_id=eq.${ens.id}`);
     // 3. Supprimer ses epreuves
     const ok3 = await sb.rpc("admin_delete_epreuves_by_teacher", { p_ens_id: ens.id });
-    // 4. Supprimer ses exceptions d'EDT (sinon orphelines â€” pourraient ressurgir si l'id est rÃ©utilisÃ©)
+    // 4. Supprimer ses exceptions d'EDT (sinon orphelines — pourraient ressurgir si l'id est réutilisé)
     await sb.rpc("admin_delete_edt_slots_by_teacher", { p_ens_id: ens.id });
     // 5. Supprimer ses absences et ses notes
     await sb.rpc("admin_delete_absences_by_teacher", { p_ens_id: ens.id });
-    // 6. Mettre Ã  jour le contexte local
+    // 6. Mettre à jour le contexte local
     setData(prev => {
       const newUsers = {...(prev.users||{})};
       delete newUsers[ens.id];
@@ -1926,8 +1925,8 @@ function EnsGerer({ data, setData, showToast }) {
     });
     setSaving(false);
     setConfirm(null);
-    if(ok1) showToast(`âœ“ ${ens.nom} supprimÃ©(e)`);
-    else     showToast("âš  Erreur Supabase â€” compte local supprimÃ©", false);
+    if(ok1) showToast(`✓ ${ens.nom} supprimé(e)`);
+    else     showToast("⚠ Erreur Supabase — compte local supprimé", false);
   };
 
   return (
@@ -1936,12 +1935,12 @@ function EnsGerer({ data, setData, showToast }) {
       {/* Header + bouton ajouter */}
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
         <div>
-          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>âš™ï¸ Gestion des enseignants</h2>
-          <p style={{fontSize:12, color:C.txtMuted, margin:"4px 0 0"}}>DÃ©partement SVTEEHB Â· LycÃ©e de Kakatare</p>
+          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>⚙️ Gestion des enseignants</h2>
+          <p style={{fontSize:12, color:C.txtMuted, margin:"4px 0 0"}}>Département SVTEEHB · Lycée de Kakatare</p>
         </div>
         <button onClick={()=>setModal("ajout")}
           style={{padding:"9px 18px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:7}}>
-          âž• Ajouter un enseignant
+          ➕ Ajouter un enseignant
         </button>
       </div>
 
@@ -1950,7 +1949,7 @@ function EnsGerer({ data, setData, showToast }) {
       {/* Liste enseignants */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden"}}>
         <div style={{padding:"12px 18px", borderBottom:`1px solid ${C.border}`, fontSize:12, fontWeight:700, color:C.txt}}>
-          {enseignants.length} enseignant{enseignants.length>1?"s":""} dans le dÃ©partement
+          {enseignants.length} enseignant{enseignants.length>1?"s":""} dans le département
         </div>
         {enseignants.map((ens,i)=>(
           <div key={ens.id} style={{display:"flex", alignItems:"center", gap:12, padding:"14px 18px", borderBottom:i<enseignants.length-1?`1px solid ${C.border}`:"none"}}>
@@ -1961,7 +1960,7 @@ function EnsGerer({ data, setData, showToast }) {
               <div style={{fontSize:14, fontWeight:700, color:C.txt}}>{ens.nom}</div>
               <div style={{fontSize:11, color:C.txtMuted, marginTop:2}}>
                 id: <code style={{background:"#f1f5f9", padding:"1px 5px", borderRadius:4, fontSize:11}}>{ens.id}</code>
-                &nbsp;Â·&nbsp; {(ens.classes||[]).length} classe{(ens.classes||[]).length>1?"s":""}
+                &nbsp;·&nbsp; {(ens.classes||[]).length} classe{(ens.classes||[]).length>1?"s":""}
               </div>
               {(ens.classes||[]).length > 0 && (
                 <div style={{display:"flex", flexWrap:"wrap", gap:4, marginTop:5}}>
@@ -1975,11 +1974,11 @@ function EnsGerer({ data, setData, showToast }) {
             <div style={{display:"flex", gap:8, flexShrink:0}}>
               <button onClick={()=>setModal(ens)}
                 style={{padding:"6px 12px", background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", color:C.green, fontFamily:"inherit"}}>
-                âœŽ Modifier
+                ✎ Modifier
               </button>
               <button onClick={()=>setConfirm(ens)}
                 style={{padding:"6px 12px", background:C.redPale, border:`1px solid ${C.redBorder||"#fca5a5"}`, borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", color:C.red, fontFamily:"inherit"}}>
-                ðŸ—‘ Supprimer
+                🗑 Supprimer
               </button>
             </div>
           </div>
@@ -1999,7 +1998,7 @@ function EnsGerer({ data, setData, showToast }) {
       {confirm && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:400,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
-            <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>âš ï¸</div>
+            <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>⚠️</div>
             <h3 style={{fontSize:15,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>
               Supprimer cet enseignant ?
             </h3>
@@ -2007,7 +2006,7 @@ function EnsGerer({ data, setData, showToast }) {
               <strong style={{color:C.txt}}>{confirm.nom}</strong>
             </p>
             <p style={{fontSize:12,color:C.txtMuted,textAlign:"center",marginBottom:24,lineHeight:1.5}}>
-              Son compte, ses leÃ§ons cochÃ©es et ses Ã©preuves seront dÃ©finitivement supprimÃ©s de Supabase.
+              Son compte, ses leçons cochées et ses épreuves seront définitivement supprimés de Supabase.
             </p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setConfirm(null)} disabled={saving}
@@ -2016,7 +2015,7 @@ function EnsGerer({ data, setData, showToast }) {
               </button>
               <button onClick={()=>supprimerEnseignant(confirm)} disabled={saving}
                 style={{flex:1,padding:"11px",borderRadius:9,border:"none",background:C.red,color:"#fff",fontSize:13,fontWeight:700,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                {saving?<><Spinner size={14} color="#fff"/>Suppressionâ€¦</>:"ðŸ—‘ Confirmer"}
+                {saving?<><Spinner size={14} color="#fff"/>Suppression…</>:"🗑 Confirmer"}
               </button>
             </div>
           </div>
@@ -2026,7 +2025,7 @@ function EnsGerer({ data, setData, showToast }) {
   );
 }
 
-// â”€â”€ Formulaire Ajout / Modification enseignant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Formulaire Ajout / Modification enseignant ────────────────────────
 function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   const {isMobile} = useDevice();
   const isEdit = !!ens;
@@ -2037,15 +2036,15 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   const [newCl,   setNewCl]   = useState("");
   const [saving,  setSaving]  = useState(false);
   const [err,     setErr]     = useState("");
-  const [photoFile, setPhotoFile] = useState(null);   // nouveau fichier choisi (pas encore envoyÃ©)
-  const [photoPreview, setPhotoPreview] = useState(null); // aperÃ§u local (URL objet)
-  const [photoExistant, setPhotoExistant] = useState(ens?.photo||null); // chemin dÃ©jÃ  en base
+  const [photoFile, setPhotoFile] = useState(null);   // nouveau fichier choisi (pas encore envoyé)
+  const [photoPreview, setPhotoPreview] = useState(null); // aperçu local (URL objet)
+  const [photoExistant, setPhotoExistant] = useState(ens?.photo||null); // chemin déjà en base
   const fileInputRef = useRef(null);
 
   const choisirPhoto = (file) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { showToast("âš  Choisis une image (jpg, pngâ€¦)", false); return; }
-    if (file.size > 8*1024*1024) { showToast("âš  Image trop lourde (max 8 Mo)", false); return; }
+    if (!file.type.startsWith("image/")) { showToast("⚠ Choisis une image (jpg, png…)", false); return; }
+    if (file.size > 8*1024*1024) { showToast("⚠ Image trop lourde (max 8 Mo)", false); return; }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };
@@ -2070,7 +2069,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     if(!nom.trim()) return setErr("Le nom est requis.");
     if(!ensId.trim()) return setErr("L'identifiant est requis.");
     if(!isEdit && !mdp.trim()) return setErr("Le mot de passe est requis pour un nouvel enseignant.");
-    if(!isEdit && mdp.trim().length < 6) return setErr("Le mot de passe doit contenir au moins 6 caractÃ¨res.");
+    if(!isEdit && mdp.trim().length < 6) return setErr("Le mot de passe doit contenir au moins 6 caractères.");
 
     setSaving(true); setErr("");
 
@@ -2081,9 +2080,9 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         const path = `${ensId.trim()}_${Date.now()}.jpg`;
         const ok = await sb.uploadPhoto(path, compressed);
         if (ok) photoPath = path;
-        else showToast("âš  Photo non envoyÃ©e â€” le reste a Ã©tÃ© sauvegardÃ©", false);
+        else showToast("⚠ Photo non envoyée — le reste a été sauvegardé", false);
       } catch {
-        showToast("âš  Erreur lors du traitement de la photo", false);
+        showToast("⚠ Erreur lors du traitement de la photo", false);
       }
     }
 
@@ -2093,12 +2092,12 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
       role: "enseignant",
       classes,
       photo: photoPath,
-      // mdp retirÃ© : plus jamais Ã©crit en clair â€” voir admin_set_password() aprÃ¨s l'upsert
+      // mdp retiré : plus jamais écrit en clair — voir admin_set_password() après l'upsert
     };
 
-    // Classes retirÃ©es des "Classes assignÃ©es" lors de cette modification (vide si nouvel enseignant)
+    // Classes retirées des "Classes assignées" lors de cette modification (vide si nouvel enseignant)
     const classesRetirees = isEdit ? (ens.classes||[]).filter(c => !classes.includes(c)) : [];
-    // Classes ajoutÃ©es â€” Ã  vÃ©rifier pour conflit avec un autre enseignant
+    // Classes ajoutées — à vérifier pour conflit avec un autre enseignant
     const classesAjouteesIci = isEdit ? classes.filter(c => !(ens.classes||[]).includes(c)) : classes;
 
     const autresEns = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice" && u.id!==ensId.trim());
@@ -2107,18 +2106,18 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
       autresEns.forEach(autre => { if ((autre.classes||[]).includes(cl)) conflits.push({ classe:cl, autreEns:autre }); });
     });
     if (conflits.length > 0) {
-      const liste = conflits.map(c => `â€¢ ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
+      const liste = conflits.map(c => `• ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
       const continuer = window.confirm(
-        `${conflits.length>1?"Ces classes sont":"Cette classe est"} dÃ©jÃ  assignÃ©e(s) Ã  un autre enseignant :\n\n${liste}\n\n`+
-        `Continuer va la/les retirer de l'autre enseignant (classes assignÃ©es + son EDT) pour la/les transfÃ©rer ici.\n\nContinuer ?`
+        `${conflits.length>1?"Ces classes sont":"Cette classe est"} déjà assignée(s) à un autre enseignant :\n\n${liste}\n\n`+
+        `Continuer va la/les retirer de l'autre enseignant (classes assignées + son EDT) pour la/les transférer ici.\n\nContinuer ?`
       );
       if (!continuer) { setSaving(false); return; }
     }
 
     const ok = await sb.rpc("admin_upsert_teacher", { p_id: userData.id, p_nom: userData.nom, p_classes: userData.classes, p_photo: userData.photo });
 
-    // Si un mot de passe a Ã©tÃ© saisi (crÃ©ation ou rÃ©initialisation), le dÃ©finir via la RPC
-    // sÃ©curisÃ©e (hachage cÃ´tÃ© serveur â€” jamais plus Ã©crit en clair depuis le client).
+    // Si un mot de passe a été saisi (création ou réinitialisation), le définir via la RPC
+    // sécurisée (hachage côté serveur — jamais plus écrit en clair depuis le client).
     let mdpOk = true;
     if (ok && mdp.trim()) {
       mdpOk = await sb.rpc("admin_set_password", { p_id: ensId.trim(), p_new_mdp: mdp.trim() });
@@ -2127,8 +2126,8 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     if(ok) {
       let nouvellesExceptions = data?.exceptions || {};
 
-      // Nettoyage chez les enseignants en conflit : retirer la classe transfÃ©rÃ©e de leurs
-      // classes assignÃ©es ET de tous leurs crÃ©neaux EDT correspondants.
+      // Nettoyage chez les enseignants en conflit : retirer la classe transférée de leurs
+      // classes assignées ET de tous leurs créneaux EDT correspondants.
       if (conflits.length > 0) {
         const parAutreEns = {};
         conflits.forEach(c => { (parAutreEns[c.autreEns.id] ||= []).push(c.classe); });
@@ -2147,8 +2146,8 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         }
       }
 
-      // Cascade : effacer automatiquement les classes retirÃ©es de tous ses crÃ©neaux EDT,
-      // pour Ã©viter qu'une classe reste affichÃ©e chez deux enseignants Ã  la fois.
+      // Cascade : effacer automatiquement les classes retirées de tous ses créneaux EDT,
+      // pour éviter qu'une classe reste affichée chez deux enseignants à la fois.
       let progKeysASupprimer = [];
       if (classesRetirees.length > 0) {
         const rt = buildEdtRuntime(data?.exceptions||{}, data?.edtBase||{})[ens.id] || {};
@@ -2166,8 +2165,8 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
 
         // Cascade identique pour prog_suivi (progression de cours + suivi digital) :
         // une classe qui quitte un enseignant ne doit pas laisser de traces de
-        // progression rattachÃ©es Ã  lui â€” mÃªme logique que la suppression complÃ¨te
-        // d'un enseignant, mais limitÃ©e Ã  la seule classe retirÃ©e.
+        // progression rattachées à lui — même logique que la suppression complète
+        // d'un enseignant, mais limitée à la seule classe retirée.
         for (const cl of classesRetirees) {
           await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(cl)}`);
           await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(cl+"||dig")}`);
@@ -2175,7 +2174,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         }
       }
 
-      // Mettre Ã  jour le contexte local
+      // Mettre à jour le contexte local
       setData(prev=>{
         const newProg = {...(prev.prog||{})};
         progKeysASupprimer.forEach(k => delete newProg[k]);
@@ -2194,18 +2193,18 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         };
       });
       const msgParts = [];
-      if (classesRetirees.length>0) msgParts.push(`${classesRetirees.join(", ")} retirÃ©e(s) de son EDT`);
-      if (conflits.length>0) msgParts.push(`${[...new Set(conflits.map(c=>c.classe))].join(", ")} transfÃ©rÃ©e(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
+      if (classesRetirees.length>0) msgParts.push(`${classesRetirees.join(", ")} retirée(s) de son EDT`);
+      if (conflits.length>0) msgParts.push(`${[...new Set(conflits.map(c=>c.classe))].join(", ")} transférée(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
       if (!mdpOk) {
-        showToast(`âš  ${userData.nom} sauvegardÃ©(e), mais la dÃ©finition du mot de passe a Ã©chouÃ© â€” rÃ©essaie depuis "GÃ©rer enseignants"`, false);
+        showToast(`⚠ ${userData.nom} sauvegardé(e), mais la définition du mot de passe a échoué — réessaie depuis "Gérer enseignants"`, false);
       } else {
         showToast(msgParts.length>0
-          ? `âœ“ ${userData.nom} mis Ã  jour Â· ${msgParts.join(" Â· ")}`
-          : `âœ“ ${userData.nom} ${isEdit?"mis Ã  jour":"ajoutÃ©(e)"}`);
+          ? `✓ ${userData.nom} mis à jour · ${msgParts.join(" · ")}`
+          : `✓ ${userData.nom} ${isEdit?"mis à jour":"ajouté(e)"}`);
       }
       onClose();
     } else {
-      setErr("Erreur Supabase. VÃ©rifiez les donnÃ©es.");
+      setErr("Erreur Supabase. Vérifiez les données.");
     }
     setSaving(false);
   };
@@ -2214,13 +2213,13 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,overflowY:"auto",padding:20}}>
       <div style={{background:C.white,borderRadius:16,padding:"28px 30px",width:"100%",maxWidth:480,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
         <h3 style={{fontSize:16,fontWeight:800,color:C.txt,margin:"0 0 4px"}}>
-          {isEdit?"âœŽ Modifier l'enseignant":"âž• Nouvel enseignant"}
+          {isEdit?"✎ Modifier l'enseignant":"➕ Nouvel enseignant"}
         </h3>
-        <p style={{fontSize:12,color:C.txtMuted,margin:"0 0 20px"}}>DÃ©partement SVTEEHB Â· LycÃ©e de Kakatare</p>
+        <p style={{fontSize:12,color:C.txtMuted,margin:"0 0 20px"}}>Département SVTEEHB · Lycée de Kakatare</p>
 
         {err && (
           <div style={{background:C.redPale,border:`1px solid ${C.redBorder||"#fca5a5"}`,borderRadius:8,padding:"9px 12px",marginBottom:14,fontSize:12,color:C.red,fontWeight:600}}>
-            âš ï¸ {err}
+            ⚠️ {err}
           </div>
         )}
 
@@ -2249,7 +2248,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
               ) : photoExistant ? (
                 <img src={sb.photoUrl(photoExistant)} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
               ) : (
-                <span style={{fontSize: isMobile?28:22,color:"#cbd5e1"}}>ðŸ‘¤</span>
+                <span style={{fontSize: isMobile?28:22,color:"#cbd5e1"}}>👤</span>
               )}
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:7,width: isMobile?"100%":"auto"}}>
@@ -2257,7 +2256,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
                 onChange={e=>choisirPhoto(e.target.files?.[0])}/>
               <button type="button" onClick={()=>fileInputRef.current?.click()}
                 style={{padding: isMobile?"11px 14px":"7px 14px",borderRadius:9,border:`1.5px solid ${C.green}`,background:C.greenPale,color:C.green,fontSize: isMobile?13:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%",textAlign:"center"}}>
-                ðŸ“· {photoExistant||photoPreview ? "Changer la photo" : "Ajouter une photo"}
+                📷 {photoExistant||photoPreview ? "Changer la photo" : "Ajouter une photo"}
               </button>
               {(photoExistant||photoPreview) && (
                 <button type="button" onClick={()=>{setPhotoFile(null);setPhotoPreview(null);setPhotoExistant(null);}}
@@ -2281,7 +2280,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
             onFocus={e=>e.target.style.borderColor=C.green}
             onBlur={e=>e.target.style.borderColor=C.border}/>
           <div style={{fontSize:10,color:C.txtMuted,marginTop:3}}>
-            GÃ©nÃ©rÃ© automatiquement Â· {isEdit?"non modifiable en Ã©dition":""}
+            Généré automatiquement · {isEdit?"non modifiable en édition":""}
           </div>
         </div>
 
@@ -2291,16 +2290,16 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
             Mot de passe {!isEdit && <span style={{color:C.red}}>*</span>}
           </label>
           <input type="password" value={mdp} onChange={e=>setMdp(e.target.value)}
-            placeholder={isEdit?"Laisser vide pour ne pas modifier":"Minimum 8 caractÃ¨res"}
+            placeholder={isEdit?"Laisser vide pour ne pas modifier":"Minimum 8 caractères"}
             style={{width:"100%",padding:"10px 14px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,color:C.txt,fontFamily:"inherit"}}
             onFocus={e=>e.target.style.borderColor=C.green}
             onBlur={e=>e.target.style.borderColor=C.border}/>
         </div>
 
-        {/* Classes assignÃ©es */}
+        {/* Classes assignées */}
         <div style={{marginBottom:20}}>
           <label style={{fontSize:11,fontWeight:700,color:C.txtMuted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:".06em"}}>
-            Classes assignÃ©es
+            Classes assignées
           </label>
           {/* Tags classes */}
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
@@ -2308,16 +2307,16 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
               <span key={cl} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,background:C.greenPale,border:`1px solid ${C.greenBorder}`,fontSize:12,fontWeight:700,color:C.green}}>
                 {cl}
                 <button onClick={()=>setClasses(prev=>prev.filter(c=>c!==cl))}
-                  style={{background:"none",border:"none",cursor:"pointer",color:C.green,fontSize:14,padding:0,lineHeight:1}}>Ã—</button>
+                  style={{background:"none",border:"none",cursor:"pointer",color:C.green,fontSize:14,padding:0,lineHeight:1}}>×</button>
               </span>
             ))}
-            {classes.length===0 && <span style={{fontSize:12,color:C.txtLight}}>Aucune classe assignÃ©e</span>}
+            {classes.length===0 && <span style={{fontSize:12,color:C.txtLight}}>Aucune classe assignée</span>}
           </div>
           {/* Ajouter une classe */}
           <div style={{display:"flex",gap:8}}>
             <select value={newCl} onChange={e=>setNewCl(e.target.value)}
               style={{flex:1,padding:"8px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.txt,fontFamily:"inherit",background:C.white}}>
-              <option value="">â€” Choisir une classe â€”</option>
+              <option value="">— Choisir une classe —</option>
               {Object.keys(ELEVES_DB).sort().filter(cl=>!classes.includes(cl)).map(cl=><option key={cl} value={cl}>{cl}</option>)}
             </select>
             <button onClick={ajouterClasse}
@@ -2335,7 +2334,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
           </button>
           <button onClick={sauvegarder} disabled={saving}
             style={{flex:2,padding:"11px",borderRadius:9,border:"none",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,color:"#fff",fontSize:13,fontWeight:700,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            {saving?<><Spinner size={14} color="#fff"/>Sauvegardeâ€¦</>:(isEdit?"âœ“ Enregistrer":"âœ“ CrÃ©er l'enseignant")}
+            {saving?<><Spinner size={14} color="#fff"/>Sauvegarde…</>:(isEdit?"✓ Enregistrer":"✓ Créer l'enseignant")}
           </button>
         </div>
       </div>
@@ -2343,34 +2342,34 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ONGLET NETTOYER â€” Suppression des donnÃ©es fictives
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// ONGLET NETTOYER — Suppression des données fictives
+// ══════════════════════════════════════════════════════════════════════
 function EnsClean({ data, setData, showToast }) {
   const {isMobile} = useDevice();
   const [loading,  setLoading]  = useState(false);
   const [results,  setResults]  = useState(null);
-  const [confirm,  setConfirm]  = useState(null); // action Ã  confirmer
+  const [confirm,  setConfirm]  = useState(null); // action à confirmer
 
-  // â”€â”€ Analyser ce qui existe dans Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Analyser ce qui existe dans Supabase ──────────────────────────
   const epreuves    = data?.epreuves||[];
   const progEntries = Object.entries(data?.prog||{});
 
-  // DÃ©tection donnÃ©es fictives / test
+  // Détection données fictives / test
   const epsTest = epreuves.filter(e=>
     e.type==="test" || e.type==="demo" ||
     !e.ens_id || !DEMO_ACCOUNTS.find(a=>a.id===e.ens_id) ||
     e.titre?.toLowerCase().includes("test") ||
-    e.titre?.toLowerCase().includes("dÃ©mo")
+    e.titre?.toLowerCase().includes("démo")
   );
   const progVides = progEntries.filter(([k,v])=>!v||v.length===0);
 
-  // â”€â”€ Actions de nettoyage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Actions de nettoyage ──────────────────────────────────────────
   const actions = [
     {
       id:"eps-test",
-      icon:"ðŸ“‹", titre:"Ã‰preuves de test",
-      desc:`${epsTest.length} Ã©preuve${epsTest.length>1?"s":""} dÃ©tectÃ©e${epsTest.length>1?"s":""} comme fictive${epsTest.length>1?"s":""}`,
+      icon:"📋", titre:"Épreuves de test",
+      desc:`${epsTest.length} épreuve${epsTest.length>1?"s":""} détectée${epsTest.length>1?"s":""} comme fictive${epsTest.length>1?"s":""}`,
       count: epsTest.length,
       danger: true,
       exec: async()=>{
@@ -2382,23 +2381,23 @@ function EnsClean({ data, setData, showToast }) {
         }
         setData(prev=>({...prev, epreuves:(prev.epreuves||[]).filter(e=>!epsTest.find(t=>t.id===e.id))}));
         setLoading(false);
-        showToast(ok ? `âœ“ ${epsTest.length} Ã©preuve${epsTest.length>1?"s":""} supprimÃ©e${epsTest.length>1?"s":""}` : "âš  Erreurs partielles", ok);
+        showToast(ok ? `✓ ${epsTest.length} épreuve${epsTest.length>1?"s":""} supprimée${epsTest.length>1?"s":""}` : "⚠ Erreurs partielles", ok);
         setResults({done:"eps-test", count:epsTest.length});
       }
     },
     {
       id:"prog-vides",
-      icon:"ðŸ“–", titre:"Progressions vides",
-      desc:`${progVides.length} entrÃ©e${progVides.length>1?"s":""} prog_suivi sans leÃ§ons cochÃ©es`,
+      icon:"📖", titre:"Progressions vides",
+      desc:`${progVides.length} entrée${progVides.length>1?"s":""} prog_suivi sans leçons cochées`,
       count: progVides.length,
       danger: false,
       exec: async()=>{
         setLoading(true);
         let ok = true;
         for(const [key] of progVides) {
-          // Split sur le PREMIER sÃ©parateur seulement : une classe peut elle-mÃªme
-          // contenir "||dig" (clÃ© digitalisation), qu'il ne faut jamais tronquer
-          // sous peine de cibler/supprimer la mauvaise ligne (perte de vraies donnÃ©es).
+          // Split sur le PREMIER séparateur seulement : une classe peut elle-même
+          // contenir "||dig" (clé digitalisation), qu'il ne faut jamais tronquer
+          // sous peine de cibler/supprimer la mauvaise ligne (perte de vraies données).
           const sep = key.indexOf("||");
           const ens_id = key.slice(0, sep);
           const classe = key.slice(sep + 2);
@@ -2411,14 +2410,14 @@ function EnsClean({ data, setData, showToast }) {
           return {...prev, prog:newProg};
         });
         setLoading(false);
-        showToast(ok ? `âœ“ ${progVides.length} entrÃ©e${progVides.length>1?"s":""} nettoyÃ©e${progVides.length>1?"s":""}` : "âš  Erreurs partielles", ok);
+        showToast(ok ? `✓ ${progVides.length} entrée${progVides.length>1?"s":""} nettoyée${progVides.length>1?"s":""}` : "⚠ Erreurs partielles", ok);
         setResults({done:"prog-vides", count:progVides.length});
       }
     },
     {
       id:"tout-prog",
-      icon:"ðŸ”„", titre:"RÃ©initialiser toutes les progressions",
-      desc:"Supprime TOUTES les leÃ§ons cochÃ©es de TOUS les enseignants",
+      icon:"🔄", titre:"Réinitialiser toutes les progressions",
+      desc:"Supprime TOUTES les leçons cochées de TOUS les enseignants",
       count: progEntries.filter(([,v])=>v?.length>0).length,
       danger: true,
       exec: async()=>{
@@ -2426,14 +2425,14 @@ function EnsClean({ data, setData, showToast }) {
         const res = await sb.del("prog_suivi", "?ens_id=not.is.null"); // supprimer toutes les progressions
         setData(prev=>({...prev, prog:{}}));
         setLoading(false);
-        showToast(res ? "âœ“ Toutes les progressions rÃ©initialisÃ©es" : "âš  Erreur Supabase", res);
+        showToast(res ? "✓ Toutes les progressions réinitialisées" : "⚠ Erreur Supabase", res);
         setResults({done:"tout-prog", count:progEntries.length});
       }
     },
     {
       id:"tout-epreuves",
-      icon:"ðŸ“‹", titre:"Vider toutes les Ã©preuves",
-      desc:`Supprime les ${epreuves.length} Ã©preuve${epreuves.length>1?"s":""} de la base`,
+      icon:"📋", titre:"Vider toutes les épreuves",
+      desc:`Supprime les ${epreuves.length} épreuve${epreuves.length>1?"s":""} de la base`,
       count: epreuves.length,
       danger: true,
       exec: async()=>{
@@ -2441,7 +2440,7 @@ function EnsClean({ data, setData, showToast }) {
         const res = await sb.rpc("admin_delete_all_epreuves", {});
         setData(prev=>({...prev, epreuves:[]}));
         setLoading(false);
-        showToast(res ? `âœ“ ${epreuves.length} Ã©preuve${epreuves.length>1?"s":""} supprimÃ©e${epreuves.length>1?"s":""}` : "âš  Erreur Supabase", res);
+        showToast(res ? `✓ ${epreuves.length} épreuve${epreuves.length>1?"s":""} supprimée${epreuves.length>1?"s":""}` : "⚠ Erreur Supabase", res);
         setResults({done:"tout-epreuves", count:epreuves.length});
       }
     },
@@ -2451,20 +2450,20 @@ function EnsClean({ data, setData, showToast }) {
     <div style={{padding:"20px", display:"flex", flexDirection:"column", gap:16}}>
 
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 20px"}}>
-        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>ðŸ§¹ Nettoyage des donnÃ©es</h2>
+        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>🧹 Nettoyage des données</h2>
         <p style={{fontSize:12, color:C.txtMuted, margin:0}}>
-          Supprime les donnÃ©es fictives, de test ou non dÃ©sirÃ©es de la base Supabase.
-          <strong style={{color:C.red}}> Actions irrÃ©versibles.</strong>
+          Supprime les données fictives, de test ou non désirées de la base Supabase.
+          <strong style={{color:C.red}}> Actions irréversibles.</strong>
         </p>
       </div>
 
-      {/* Ã‰tat actuel */}
+      {/* État actuel */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px"}}>
-        <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:12}}>ðŸ“Š Ã‰tat actuel de la base</div>
+        <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:12}}>📊 État actuel de la base</div>
         <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(3,1fr)", gap:10}}>
           {[
-            {label:"Ã‰preuves total",   val:epreuves.length,      col:epreuves.length>0?C.amber:C.green},
-            {label:"Ã‰preuves test",    val:epsTest.length,       col:epsTest.length>0?C.red:C.green},
+            {label:"Épreuves total",   val:epreuves.length,      col:epreuves.length>0?C.amber:C.green},
+            {label:"Épreuves test",    val:epsTest.length,       col:epsTest.length>0?C.red:C.green},
             {label:"Progressions",     val:progEntries.length,   col:C.blue},
           ].map((k,i)=>(
             <div key={i} style={{textAlign:"center", padding:"12px 8px", background:"#f8fafc", borderRadius:9, border:`1px solid ${C.border}`}}>
@@ -2485,7 +2484,7 @@ function EnsClean({ data, setData, showToast }) {
                 <span style={{fontSize:20}}>{action.icon}</span>
                 <span style={{fontSize:14, fontWeight:700, color:C.txt}}>{action.titre}</span>
                 {action.danger && <span style={{fontSize:9, padding:"1px 7px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700}}>DANGER</span>}
-                {done && <span style={{fontSize:9, padding:"1px 7px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>âœ“ FAIT</span>}
+                {done && <span style={{fontSize:9, padding:"1px 7px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>✓ FAIT</span>}
               </div>
               <div style={{fontSize:12, color:C.txtMuted}}>{action.desc}</div>
             </div>
@@ -2500,7 +2499,7 @@ function EnsClean({ data, setData, showToast }) {
                 color:done?C.green:action.danger?C.red:C.green,
                 fontFamily:"inherit", flexShrink:0, opacity:(action.count===0||done)?.5:1,
               }}>
-              {done ? "âœ“ TerminÃ©" : loading ? "â€¦" : action.count===0 ? "Rien Ã  faire" : "ExÃ©cuter"}
+              {done ? "✓ Terminé" : loading ? "…" : action.count===0 ? "Rien à faire" : "Exécuter"}
             </button>
           </div>
         );
@@ -2510,11 +2509,11 @@ function EnsClean({ data, setData, showToast }) {
       {confirm && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
-            <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>âš ï¸</div>
+            <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>⚠️</div>
             <h3 style={{fontSize:16,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>{confirm.titre}</h3>
             <p style={{fontSize:13,color:C.txtMuted,textAlign:"center",marginBottom:24,lineHeight:1.5}}>
               {confirm.desc}<br/>
-              <strong style={{color:C.red}}>Cette action est irrÃ©versible.</strong>
+              <strong style={{color:C.red}}>Cette action est irréversible.</strong>
             </p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setConfirm(null)}
@@ -2523,7 +2522,7 @@ function EnsClean({ data, setData, showToast }) {
               </button>
               <button onClick={()=>{setConfirm(null);confirm.exec();}}
                 style={{flex:1,padding:"11px",borderRadius:9,border:"none",background:C.red,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                âœ“ Confirmer
+                ✓ Confirmer
               </button>
             </div>
           </div>
@@ -2540,7 +2539,7 @@ function EnsListe({ data, onSelect }) {
 
   // Fallback : si Supabase ne retourne pas les utilisateurs, utiliser DEMO_ACCOUNTS
   // Source des enseignants : fusionner Supabase + ENS_CLASSES_REF
-  // Si un enseignant Supabase n'a pas de classes â†’ utiliser ENS_CLASSES_REF comme fallback
+  // Si un enseignant Supabase n'a pas de classes → utiliser ENS_CLASSES_REF comme fallback
   const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice");
   const sourceData = supabaseEns.length > 0
     // Enrichir les users Supabase avec ENS_CLASSES_REF si classes vides
@@ -2582,10 +2581,10 @@ function EnsListe({ data, onSelect }) {
       {/* KPIs globaux */}
       <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)", gap:10}}>
         {[
-          {label:"Enseignants",       val:enseignants.length, emoji:"ðŸ‘¥", col:C.green,  bg:C.greenPale},
-          {label:"Couverture moyenne",val:`${tauxMoyen}%`,    emoji:"ðŸ“Š", col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen)},
-          {label:"Objectif atteint â‰¥75%", val:enseignants.filter(e=>e.taux>=75).length, emoji:"âœ…", col:C.green, bg:C.greenPale},
-          {label:"En alerte <50%",   val:alertes, emoji:"âš ï¸", col:alertes>0?C.red:C.green, bg:alertes>0?C.redPale:C.greenPale},
+          {label:"Enseignants",       val:enseignants.length, emoji:"👥", col:C.green,  bg:C.greenPale},
+          {label:"Couverture moyenne",val:`${tauxMoyen}%`,    emoji:"📊", col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen)},
+          {label:"Objectif atteint ≥75%", val:enseignants.filter(e=>e.taux>=75).length, emoji:"✅", col:C.green, bg:C.greenPale},
+          {label:"En alerte <50%",   val:alertes, emoji:"⚠️", col:alertes>0?C.red:C.green, bg:alertes>0?C.redPale:C.greenPale},
         ].map((k,i)=>(
           <div key={i} style={{background:k.bg, borderRadius:11, border:`1px solid ${C.border}`, padding:"14px 16px"}}>
             <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
@@ -2599,9 +2598,9 @@ function EnsListe({ data, onSelect }) {
 
       {/* Barre de recherche */}
       <div style={{position:"relative"}}>
-        <span style={{position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14}}>ðŸ”</span>
+        <span style={{position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14}}>🔍</span>
         <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Rechercher un enseignantâ€¦"
+          placeholder="Rechercher un enseignant…"
           style={{width:"100%", padding:"10px 14px 10px 36px", border:`1px solid ${C.border}`, borderRadius:10, fontSize:13, color:C.txt, background:"#f8fafc", outline:"none", fontFamily:"inherit"}}
           onFocus={e=>{e.target.style.borderColor=C.green; e.target.style.background=C.white;}}
           onBlur={e=>{e.target.style.borderColor=C.border; e.target.style.background="#f8fafc";}}/>
@@ -2610,15 +2609,15 @@ function EnsListe({ data, onSelect }) {
       {/* Tableau enseignants */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden"}}>
         <div style={{padding:"12px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-          <h3 style={{margin:0, fontSize:13, fontWeight:700, color:C.txt}}>ðŸ‘¥ Tous les enseignants SVTEEHB</h3>
+          <h3 style={{margin:0, fontSize:13, fontWeight:700, color:C.txt}}>👥 Tous les enseignants SVTEEHB</h3>
           <span style={{fontSize:11, color:C.txtMuted}}>{enseignants.length} enseignant{enseignants.length>1?"s":""}</span>
         </div>
 
         <div style={{display:"flex", flexDirection:"column"}}>
           {enseignants.length === 0 ? (
             <div style={{padding:"40px", textAlign:"center", color:C.txtLight}}>
-              <div style={{fontSize:32, marginBottom:8}}>ðŸ”</div>
-              Aucun enseignant trouvÃ©
+              <div style={{fontSize:32, marginBottom:8}}>🔍</div>
+              Aucun enseignant trouvé
             </div>
           ) : enseignants.map((ens, i) => {
             const alerte = ens.taux < 50;
@@ -2642,20 +2641,20 @@ function EnsListe({ data, onSelect }) {
                 <div style={{flex:1, minWidth:0}}>
                   <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:4}}>
                     <span style={{fontSize:13, fontWeight:700, color:C.txt, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{ens.nom}</span>
-                    {alerte && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700, flexShrink:0}}>âš  Alerte</span>}
-                    {bon    && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700, flexShrink:0}}>âœ“ Objectif</span>}
-                    {ens.epAttente>0 && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.amberPale, color:C.amber, fontWeight:700, flexShrink:0}}>â³ {ens.epAttente} Ã©preuve{ens.epAttente>1?"s":""}</span>}
+                    {alerte && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700, flexShrink:0}}>⚠ Alerte</span>}
+                    {bon    && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700, flexShrink:0}}>✓ Objectif</span>}
+                    {ens.epAttente>0 && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.amberPale, color:C.amber, fontWeight:700, flexShrink:0}}>⏳ {ens.epAttente} épreuve{ens.epAttente>1?"s":""}</span>}
                   </div>
                   <div style={{display:"flex", alignItems:"center", gap:8}}>
                     <div style={{flex:1, maxWidth:200}}><ProgBar value={ens.taux}/></div>
                     <span style={{fontSize:12, fontWeight:800, color:taux2col(ens.taux), minWidth:36}}>{ens.taux}%</span>
-                    <span style={{fontSize:11, color:C.txtMuted}}>{ens.totalFait}/{ens.totalRef} leÃ§ons</span>
-                    <span style={{fontSize:11, color:C.txtMuted}}>Â· {(ens.classes||[]).length} classe{(ens.classes||[]).length>1?"s":""}</span>
+                    <span style={{fontSize:11, color:C.txtMuted}}>{ens.totalFait}/{ens.totalRef} leçons</span>
+                    <span style={{fontSize:11, color:C.txtMuted}}>· {(ens.classes||[]).length} classe{(ens.classes||[]).length>1?"s":""}</span>
                   </div>
                 </div>
 
-                {/* FlÃ¨che */}
-                <div style={{color:C.txtLight, fontSize:16, flexShrink:0}}>â€º</div>
+                {/* Flèche */}
+                <div style={{color:C.txtLight, fontSize:16, flexShrink:0}}>›</div>
               </div>
             );
           })}
@@ -2665,7 +2664,7 @@ function EnsListe({ data, onSelect }) {
   );
 }
 
-// â”€â”€ NIVEAU 2 : DÃ©tail d'un enseignant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── NIVEAU 2 : Détail d'un enseignant ─────────────────────────────────
 function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
   const [trim, setTrim] = useState(0);
 
@@ -2688,7 +2687,7 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
         lfTrim = ((data?.prog||{})[key]||[]).filter(n=>n>=range[0]&&n<=range[1]).length;
       }
     }
-    // tpPrevu/tpFait limitÃ©s Ã  la mÃªme plage que lpTrim/lfTrim (sinon incohÃ©rent avec le trimestre affichÃ©)
+    // tpPrevu/tpFait limités à la même plage que lpTrim/lfTrim (sinon incohérent avec le trimestre affiché)
     const tpAll   = meta?.tp||[];
     const tpPrevu = range ? tpAll.filter(n=>n>=range[0]&&n<=range[1]).length : tpAll.length;
     const tpFait  = tpAll.filter(n => ((data?.prog||{})[key]||[]).includes(n) && (!range || (n>=range[0]&&n<=range[1]))).length;
@@ -2713,10 +2712,10 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
       <div style={{display:"flex", alignItems:"center", gap:8}}>
         <button onClick={onBack}
           style={{padding:"6px 12px", background:C.white, border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, color:C.txtMuted, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:5}}>
-          â† Retour
+          ← Retour
         </button>
         <span style={{fontSize:12, color:C.txtMuted}}>Enseignants</span>
-        <span style={{fontSize:12, color:C.txtMuted}}>â€º</span>
+        <span style={{fontSize:12, color:C.txtMuted}}>›</span>
         <span style={{fontSize:12, fontWeight:700, color:C.txt}}>{ens.nom}</span>
       </div>
 
@@ -2727,11 +2726,11 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
           <div style={{flex:1}}>
             <div style={{fontSize:17, fontWeight:800, color:C.txt}}>{ens.nom}</div>
             <div style={{fontSize:12, color:C.txtMuted, marginTop:2}}>
-              Enseignant SVTEEHB Â· {classes.length} classe{classes.length>1?"s":""} Â· {classes.reduce((s,c)=>s+c.ef,0)} Ã©lÃ¨ves
+              Enseignant SVTEEHB · {classes.length} classe{classes.length>1?"s":""} · {classes.reduce((s,c)=>s+c.ef,0)} élèves
             </div>
             {coursActuel && (
               <div style={{marginTop:4, fontSize:11, color:C.green, fontWeight:700}}>
-                ðŸŸ¢ En cours : {coursActuel}
+                🟢 En cours : {coursActuel}
               </div>
             )}
           </div>
@@ -2768,10 +2767,10 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                   </div>
                   <div>
                     <div style={{fontSize:13, fontWeight:800, color:C.txt}}>{c.cl}</div>
-                    <div style={{fontSize:10, color:C.txtMuted}}>{c.ef} Ã©lÃ¨ves Â· {c.meta?.vh||0}h/sem</div>
+                    <div style={{fontSize:10, color:C.txtMuted}}>{c.ef} élèves · {c.meta?.vh||0}h/sem</div>
                   </div>
-                  {alerte && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700}}>âš  En retard</span>}
-                  {bon    && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>âœ“ Objectif</span>}
+                  {alerte && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700}}>⚠ En retard</span>}
+                  {bon    && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>✓ Objectif</span>}
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:20, fontWeight:900, color:taux2col(c.tauxTrim)}}>{c.tauxTrim}%</div>
@@ -2779,18 +2778,18 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                 </div>
               </div>
 
-              {/* MÃ©triques */}
+              {/* Métriques */}
               <div style={{padding:"10px 16px"}}>
                 <ProgBar value={c.tauxTrim} h={6}/>
                 <div style={{display:"flex", gap:12, marginTop:10, flexWrap:"wrap"}}>
                   <div style={{display:"flex", gap:4, alignItems:"center"}}>
-                    <span style={{fontSize:10, color:C.txtMuted}}>LeÃ§ons :</span>
+                    <span style={{fontSize:10, color:C.txtMuted}}>Leçons :</span>
                     <span style={{fontSize:11, fontWeight:700, color:C.txt}}>{c.lfTrim}</span>
                     <span style={{fontSize:10, color:C.txtMuted}}>/ {c.lpTrim}</span>
                   </div>
                   <div style={{display:"flex", gap:4, alignItems:"center"}}>
                     <span style={{fontSize:10, color:C.txtMuted}}>Heures dues :</span>
-                    <span style={{fontSize:11, fontWeight:700, color:C.txt}}>{c.meta?.hd||"â€”"}</span>
+                    <span style={{fontSize:11, fontWeight:700, color:C.txt}}>{c.meta?.hd||"—"}</span>
                   </div>
                   {c.tpPrevu > 0 && (
                     <div style={{display:"flex", gap:4, alignItems:"center"}}>
@@ -2798,12 +2797,12 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                       <span style={{fontSize:11, fontWeight:700, color:c.tpFait===c.tpPrevu?C.green:C.amber}}>{c.tpFait}/{c.tpPrevu}</span>
                     </div>
                   )}
-                  {/* Ã‰preuves */}
+                  {/* Épreuves */}
                   {c.eps.length > 0 && (
                     <div style={{display:"flex", gap:4, alignItems:"center"}}>
-                      <span style={{fontSize:10, color:C.txtMuted}}>Ã‰preuves :</span>
+                      <span style={{fontSize:10, color:C.txtMuted}}>Épreuves :</span>
                       {c.eps.map((ep,ei)=>{
-                        const cfg = {attente:{bg:C.amberPale,col:C.amber,label:"â³"},validee:{bg:C.greenPale,col:C.green,label:"âœ…"},rejetee:{bg:C.redPale,col:C.red,label:"âŒ"}};
+                        const cfg = {attente:{bg:C.amberPale,col:C.amber,label:"⏳"},validee:{bg:C.greenPale,col:C.green,label:"✅"},rejetee:{bg:C.redPale,col:C.red,label:"❌"}};
                         const s = cfg[ep.statut]||cfg.attente;
                         return <span key={ei} style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:s.bg, color:s.col, fontWeight:700}}>{s.label} {ep.trim} {ep.ep}</span>;
                       })}
@@ -2815,7 +2814,7 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                 <div style={{display:"flex", gap:8, marginTop:10}}>
                   <button onClick={()=>onViewClass(c.cl)}
                     style={{flex:1, padding:"7px 0", background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", color:C.green, fontFamily:"inherit"}}>
-                    ðŸ“– Voir les leÃ§ons
+                    📖 Voir les leçons
                   </button>
                 </div>
               </div>
@@ -2824,10 +2823,10 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
         })}
       </div>
 
-      {/* EDT rÃ©sumÃ© */}
+      {/* EDT résumé */}
       <div style={{background:C.white, borderRadius:11, border:`1px solid ${C.border}`, overflow:"hidden"}}>
         <div style={{padding:"12px 16px", borderBottom:`1px solid ${C.border}`, fontSize:12, fontWeight:700, color:C.txt}}>
-          ðŸ—“ Emploi du temps SVTEEHB
+          🗓 Emploi du temps SVTEEHB
         </div>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%", borderCollapse:"collapse", fontSize:11}}>
@@ -2866,7 +2865,7 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
   );
 }
 
-// â”€â”€ NIVEAU 3 : LeÃ§ons d'une classe (lecture seule pour l'animatrice) â”€â”€
+// ── NIVEAU 3 : Leçons d'une classe (lecture seule pour l'animatrice) ──
 function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
   const [trim, setTrim] = useState(0);
   const [search, setSearch] = useState("");
@@ -2927,18 +2926,18 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
         }
       }
       setSaving(false);
-      if(ok) showToast("âœ“ Progression mise Ã  jour");
-      else showToast("âš  Erreur",false);
+      if(ok) showToast("✓ Progression mise à jour");
+      else showToast("⚠ Erreur",false);
     },600);
   },[data,ens,cl,progKey]);
 
-  // ClÃ© et timer dÃ©diÃ©s Ã  la digitalisation (indÃ©pendants de toggleLecon)
+  // Clé et timer dédiés à la digitalisation (indépendants de toggleLecon)
   const digKey   = `${ens.id}||${cl}||dig`;
   const digFaites = (data?.prog||{})[digKey]||[];
   const digTimer = useRef(null);
 
   const toggleDigital = useCallback(async(n, e)=>{
-    e.stopPropagation(); // ne pas dÃ©clencher toggleLecon sur la mÃªme ligne
+    e.stopPropagation(); // ne pas déclencher toggleLecon sur la même ligne
     const current = [...((data?.prog||{})[digKey]||[])];
     const newDig  = current.includes(n) ? current.filter(x=>x!==n) : [...current,n];
     setData(prev=>({...prev, prog:{...prev.prog, [digKey]:newDig}}));
@@ -2963,8 +2962,8 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
         }
       }
       setSaving(false);
-      if(ok) showToast("âœ“ Digitalisation mise Ã  jour");
-      else showToast("âš  Erreur sauvegarde digitalisation",false);
+      if(ok) showToast("✓ Digitalisation mise à jour");
+      else showToast("⚠ Erreur sauvegarde digitalisation",false);
     },600);
   },[data,ens,cl,digKey]);
 
@@ -2975,23 +2974,23 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
       <div style={{display:"flex", alignItems:"center", gap:8}}>
         <button onClick={onBack}
           style={{padding:"6px 12px", background:C.white, border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, color:C.txtMuted, cursor:"pointer", fontFamily:"inherit"}}>
-          â† {ens.nom}
+          ← {ens.nom}
         </button>
-        <span style={{fontSize:12, color:C.txtMuted}}>â€º</span>
+        <span style={{fontSize:12, color:C.txtMuted}}>›</span>
         <span style={{fontSize:12, fontWeight:700, color:C.txt}}>{cl}</span>
-        {saving && <Pill ch="ðŸ”„ Sauvegardeâ€¦" color={C.blue}/>}
+        {saving && <Pill ch="🔄 Sauvegarde…" color={C.blue}/>}
       </div>
 
       {/* Header */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px"}}>
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10}}>
           <div>
-            <div style={{fontSize:15, fontWeight:800, color:C.txt}}>{cl} â€” {PROGRAMMES_LABELS[code]||code||"Programme"}</div>
-            <div style={{fontSize:11, color:C.txtMuted, marginTop:3}}>{ens.nom} Â· {meta?.vh||0}h/sem Â· {meta?.hd||0}h annuelles</div>
+            <div style={{fontSize:15, fontWeight:800, color:C.txt}}>{cl} — {PROGRAMMES_LABELS[code]||code||"Programme"}</div>
+            <div style={{fontSize:11, color:C.txtMuted, marginTop:3}}>{ens.nom} · {meta?.vh||0}h/sem · {meta?.hd||0}h annuelles</div>
           </div>
           <div style={{textAlign:"right", display:"flex", flexDirection:"column", gap:4}}>
             <div style={{fontSize:24, fontWeight:900, color:taux2col(taux)}}>{taux}%</div>
-            <div style={{fontSize:10, color:C.txtMuted}}>{totalFait}/{totalRef} leÃ§ons</div>
+            <div style={{fontSize:10, color:C.txtMuted}}>{totalFait}/{totalRef} leçons</div>
             {(() => {
               const digTotal = lecons.filter(l=>l.d===1 && (!range || (l.n>=range[0]&&l.n<=range[1]))).length;
               const digFait  = digFaites.filter(n=>{ const l=lecons.find(x=>x.n===n); return l&&l.d===1&&(!range||(n>=range[0]&&n<=range[1])); }).length;
@@ -2999,7 +2998,7 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
                 <div style={{display:"inline-flex", alignItems:"center", gap:5, padding:"2px 8px", borderRadius:20,
                   background:digFait>0?"#eff6ff":"#f8fafc", border:`1px solid ${digFait>0?"#bfdbfe":"#e2e8f0"}`,
                   fontSize:10, fontWeight:700, color:digFait>0?"#0369a1":"#94a3b8"}}>
-                  ðŸ’» {digFait}/{digTotal} digital
+                  💻 {digFait}/{digTotal} digital
                 </div>
               ) : null;
             })()}
@@ -3018,12 +3017,12 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
 
       {/* Recherche */}
       <input value={search} onChange={e=>setSearch(e.target.value)}
-        placeholder="ðŸ” Rechercher une leÃ§onâ€¦"
+        placeholder="🔍 Rechercher une leçon…"
         style={{padding:"8px 14px", border:`1px solid ${C.border}`, borderRadius:9, fontSize:12, color:C.txt, background:"#f8fafc", outline:"none", fontFamily:"inherit"}}
         onFocus={e=>{e.target.style.borderColor=C.green; e.target.style.background=C.white;}}
         onBlur={e=>{e.target.style.borderColor=C.border; e.target.style.background="#f8fafc";}}/>
 
-      {/* LeÃ§ons par sÃ©quence */}
+      {/* Leçons par séquence */}
       {seqs.map(seq=>{
         const leconsSec = filtered.filter(l=>(l.seq||l.s)===seq);
         const secFait = leconsSec.filter(l=>faites.includes(l.n)).length;
@@ -3033,7 +3032,7 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
             <div style={{padding:"10px 14px", background:"#f8fafc", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
               <div>
                 <div style={{fontSize:12, fontWeight:700, color:C.txt}}>{seq}</div>
-                <div style={{fontSize:10, color:C.txtMuted}}>{secFait}/{leconsSec.length} dispensÃ©es</div>
+                <div style={{fontSize:10, color:C.txtMuted}}>{secFait}/{leconsSec.length} dispensées</div>
               </div>
               <div style={{display:"flex", alignItems:"center", gap:8}}>
                 <div style={{width:80}}><ProgBar value={secTaux}/></div>
@@ -3043,27 +3042,27 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
             {leconsSec.map((l,li)=>{
               const done      = faites.includes(l.n);
               const isTP      = meta?.tp?.includes(l.n);
-              const isDigital = l.d===1; // leÃ§on disponible en version digitalisÃ©e
-              const digDone   = digFaites.includes(l.n); // ressource digitale utilisÃ©e
+              const isDigital = l.d===1; // leçon disponible en version digitalisée
+              const digDone   = digFaites.includes(l.n); // ressource digitale utilisée
               return (
                 <div key={l.n} onClick={()=>toggleLecon(l.n)}
                   style={{display:"flex", alignItems:"center", gap:12, padding:"9px 14px", borderTop:li>0?`1px solid ${C.border}`:"none", cursor:"pointer", background:done?"rgba(22,163,74,.04)":"transparent", transition:"background .12s"}}
                   onMouseEnter={e=>{if(!done)e.currentTarget.style.background="#f8fafc";}}
                   onMouseLeave={e=>e.currentTarget.style.background=done?"rgba(22,163,74,.04)":"transparent"}>
-                  {/* Checkbox principale â€” dispensÃ©e */}
+                  {/* Checkbox principale — dispensée */}
                   <div style={{width:20, height:20, borderRadius:6, border:`2px solid ${done?C.green:C.border}`, background:done?C.green:"transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-                    {done && <span style={{color:"#fff", fontSize:12, fontWeight:900}}>âœ“</span>}
+                    {done && <span style={{color:"#fff", fontSize:12, fontWeight:900}}>✓</span>}
                   </div>
                   <span style={{width:22, textAlign:"center", fontSize:11, fontWeight:700, color:done?C.green:C.txtLight}}>{l.n}</span>
                   <span style={{flex:1, fontSize:12, fontWeight:done?600:400, color:done?C.txt:C.txtMuted}}>{l.t}</span>
                   <div style={{display:"flex", gap:5, alignItems:"center"}}>
                     {isTP && <Pill ch="TP" color={C.blue}/>}
-                    {done && <Pill ch="âœ“" color={C.green}/>}
-                    {/* Bouton de bascule digital â€” visible uniquement pour les leÃ§ons digitalisÃ©es */}
+                    {done && <Pill ch="✓" color={C.green}/>}
+                    {/* Bouton de bascule digital — visible uniquement pour les leçons digitalisées */}
                     {isDigital && (
                       <button
                         onClick={(e)=>toggleDigital(l.n, e)}
-                        title={digDone ? "Marquer comme non utilisÃ© en digital" : "Marquer comme utilisÃ© en digital"}
+                        title={digDone ? "Marquer comme non utilisé en digital" : "Marquer comme utilisé en digital"}
                         style={{
                           display:"inline-flex", alignItems:"center", gap:4,
                           padding:"2px 8px", borderRadius:20, fontSize:10, fontWeight:700,
@@ -3073,7 +3072,7 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
                           color:digDone?"#0369a1":"#94a3b8",
                           transition:"all .15s",
                         }}>
-                        ðŸ’» {digDone?"Dig âœ“":"Dig"}
+                        💻 {digDone?"Dig ✓":"Dig"}
                       </button>
                     )}
                   </div>
@@ -3089,9 +3088,9 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// VUE ENSEIGNANT â€” dÃ©tail par classe + cochage leÃ§ons
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// VUE ENSEIGNANT — détail par classe + cochage leçons
+// ═══════════════════════════════════════════════════
 function ViewTeacher({ ens, data, setData, isAdmin }) {
   const {isMobile} = useDevice();
   const [selClasse, setSelClasse] = useState(null);
@@ -3105,7 +3104,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
 
   const classes = (ens.classes || []);
 
-  // SÃ©lection auto premiÃ¨re classe
+  // Sélection auto première classe
   useEffect(() => { if (classes.length && !selClasse) setSelClasse(classes[0]); }, [classes]);
 
   const progKey = selClasse ? `${ens.id}||${selClasse}` : null;
@@ -3117,13 +3116,13 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   const programme = code ? buildLecons(code) : [];
 
   function buildLecons(code) {
-    // GÃ©nÃ¨re les leÃ§ons depuis PROG_META/PROG_MAP
-    // DonnÃ©es inline compactes issues du prototype pour chaque code
+    // Génère les leçons depuis PROG_META/PROG_MAP
+    // Données inline compactes issues du prototype pour chaque code
     return LECONS_DATA[code] || [];
   }
 
   // Filtrage par trimestre
-  // trim est un Number (0/1/2/3) â€” getTrimRange attend "T1"/"T2"/"T3"
+  // trim est un Number (0/1/2/3) — getTrimRange attend "T1"/"T2"/"T3"
   const trimKey = trim > 0 ? ["T1","T2","T3"][trim-1] : null;
   const trimRange = (trimKey && code) ? getTrimRange(code, trimKey) : null;
   const leconsFiltered = programme.filter(l => {
@@ -3142,17 +3141,17 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   const digTotal = programme.filter(l=>l.d===1).length;
   const digFaitCount = digFaitesVT.filter(n=>{ const l=programme.find(x=>x.n===n); return l&&l.d===1; }).length;
 
-  // SÃ©quences uniques pour le rÃ©sumÃ©
+  // Séquences uniques pour le résumé
   const seqs = [...new Set(leconsFiltered.map(l => (l.seq||l.s)))];
 
-  // Toggle leÃ§on (cochage)
+  // Toggle leçon (cochage)
   const toggleLecon = useCallback(async (n) => {
     if (isAdmin) return; // animateur ne coche pas
     const key = `${ens.id}||${selClasse}`;
     const current = [...((data?.prog||{})[key] || [])];
     const newFaites = current.includes(n) ? current.filter(x => x !== n) : [...current, n];
 
-    // Mise Ã  jour optimiste
+    // Mise à jour optimiste
     setData(prev => ({ ...prev, prog: { ...prev.prog, [key]: newFaites } }));
 
     // Debounce sync Supabase (500ms)
@@ -3178,11 +3177,11 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
         }
       }
       setSaving(false);
-      showToast(ok ? "âœ“ Progression sauvegardÃ©e" : "âš  Erreur de sauvegarde", ok);
+      showToast(ok ? "✓ Progression sauvegardée" : "⚠ Erreur de sauvegarde", ok);
     }, 500);
   }, [data, ens, selClasse, isAdmin]);
 
-  // Toggle digital â€” mÃªme mÃ©canique que toggleLecon mais sur la clÃ© ||dig
+  // Toggle digital — même mécanique que toggleLecon mais sur la clé ||dig
   const digTimerVT = useRef(null);
   useEffect(()=>()=>{ if(digTimerVT.current) clearTimeout(digTimerVT.current); },[]);
   const toggleDigitalVT = useCallback(async (n, e) => {
@@ -3213,7 +3212,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
         }
       }
       setSaving(false);
-      showToast(ok ? "âœ“ Digitalisation mise Ã  jour" : "âš  Erreur de sauvegarde", ok);
+      showToast(ok ? "✓ Digitalisation mise à jour" : "⚠ Erreur de sauvegarde", ok);
     }, 500);
   }, [data, ens, selClasse]);
 
@@ -3225,8 +3224,8 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   if (!classes.length) {
     return (
       <div style={{ textAlign:"center",padding:"60px 24px",color:C.txtMuted }}>
-        <div style={{ fontSize:40,marginBottom:12 }}>ðŸ“­</div>
-        <div style={{ fontSize:14,fontWeight:600 }}>Aucune classe assignÃ©e Ã  {ens.nom}</div>
+        <div style={{ fontSize:40,marginBottom:12 }}>📭</div>
+        <div style={{ fontSize:14,fontWeight:600 }}>Aucune classe assignée à {ens.nom}</div>
       </div>
     );
   }
@@ -3235,7 +3234,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
     <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
       {toast && <Toast msg={toast.msg} ok={toast.ok}/>}
 
-      {/* SÃ©lecteur de classes */}
+      {/* Sélecteur de classes */}
       <div style={{ display:"flex",gap:8,flexWrap:"wrap",alignItems:"center" }}>
         <span style={{ fontSize:12,color:C.txtMuted,fontWeight:600 }}>Classe :</span>
         {classes.map(cl => {
@@ -3257,14 +3256,14 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
 
       {selClasse && (
         <>
-          {/* Stats classe sÃ©lectionnÃ©e */}
+          {/* Stats classe sélectionnée */}
           <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:10 }}>
             {[
-              { label:"LeÃ§ons dispensÃ©es", val:totalFait, sub:`/ ${totalRef} prÃ©vues`, col:taux2col(tauxCouv), emoji:"âœ…" },
-              { label:"Couverture", val:`${tauxCouv}%`, sub:tauxCouv>=75?"Objectif atteint âœ“":"Sous l'objectif", col:taux2col(tauxCouv), emoji:"ðŸ“Š" },
-              { label:"TP effectuÃ©s", val:tpFait, sub:`/ ${tpTotal} prÃ©vus`, col:C.blue, emoji:"ðŸ”¬" },
-              ...(digTotal>0 ? [{ label:"Ressources digitales", val:digFaitCount, sub:`/ ${digTotal} disponibles`, col:"#0369a1", emoji:"ðŸ’»" }] : []),
-              { label:"Volume horaire", val:meta?`${meta.vh}h/sem`:"â€”", sub:meta?`${meta.hd}h annuelles`:"", col:C.purple, emoji:"â±" },
+              { label:"Leçons dispensées", val:totalFait, sub:`/ ${totalRef} prévues`, col:taux2col(tauxCouv), emoji:"✅" },
+              { label:"Couverture", val:`${tauxCouv}%`, sub:tauxCouv>=75?"Objectif atteint ✓":"Sous l'objectif", col:taux2col(tauxCouv), emoji:"📊" },
+              { label:"TP effectués", val:tpFait, sub:`/ ${tpTotal} prévus`, col:C.blue, emoji:"🔬" },
+              ...(digTotal>0 ? [{ label:"Ressources digitales", val:digFaitCount, sub:`/ ${digTotal} disponibles`, col:"#0369a1", emoji:"💻" }] : []),
+              { label:"Volume horaire", val:meta?`${meta.vh}h/sem`:"—", sub:meta?`${meta.hd}h annuelles`:"", col:C.purple, emoji:"⏱" },
             ].map((s,i) => (
               <div key={i} style={{ background:C.white,borderRadius:10,border:`1px solid ${C.border}`,padding:"12px 14px" }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4 }}>
@@ -3280,7 +3279,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
           {/* Barre de progression globale */}
           <div style={{ background:C.white,borderRadius:10,border:`1px solid ${C.border}`,padding:"14px 16px" }}>
             <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
-              <span style={{ fontSize:12,fontWeight:700,color:C.txt }}>{selClasse} â€” {PROGRAMMES_LABELS[code] || code}</span>
+              <span style={{ fontSize:12,fontWeight:700,color:C.txt }}>{selClasse} — {PROGRAMMES_LABELS[code] || code}</span>
               <span style={{ fontSize:13,fontWeight:800,color:taux2col(tauxCouv) }}>{tauxCouv}%</span>
             </div>
             <ProgBar value={tauxCouv} h={10}/>
@@ -3298,7 +3297,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
               ))}
             </div>
             {/* Recherche */}
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ðŸ” Rechercher une leÃ§onâ€¦"
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher une leçon…"
               style={{ padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.txt,background:"#f8fafc",outline:"none",fontFamily:"inherit",flex:1,minWidth:160 }}
               onFocus={e=>{ e.target.style.borderColor=C.green; e.target.style.background=C.white; }}
               onBlur={e=>{ e.target.style.borderColor=C.border; e.target.style.background="#f8fafc"; }}/>
@@ -3308,11 +3307,11 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
               Seulement faites
             </label>
             {/* Indicateur sauvegarde */}
-            {saving && <Pill ch="ðŸ”„ Sauvegardeâ€¦" color={C.blue}/>}
-            {!isAdmin && <Pill ch="âœï¸ Cliquez sur une leÃ§on pour la cocher/dÃ©cocher" color={C.txtMuted}/>}
+            {saving && <Pill ch="🔄 Sauvegarde…" color={C.blue}/>}
+            {!isAdmin && <Pill ch="✏️ Cliquez sur une leçon pour la cocher/décocher" color={C.txtMuted}/>}
           </div>
 
-          {/* Liste des leÃ§ons par sÃ©quence */}
+          {/* Liste des leçons par séquence */}
           <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
             {seqs.map(seq => {
               const lecons = leconsFiltered.filter(l => (l.seq||l.s) === seq);
@@ -3321,23 +3320,23 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
               const seqTotal = lecons.length;
               return (
                 <div key={seq} style={{ background:C.white,borderRadius:11,border:`1px solid ${C.border}`,overflow:"hidden" }}>
-                  {/* Header sÃ©quence */}
+                  {/* Header séquence */}
                   <div style={{ padding:"10px 14px",background:"#f8fafc",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:12,fontWeight:700,color:C.txt }}>{seq}</div>
-                      <div style={{ fontSize:10,color:C.txtMuted,marginTop:2 }}>{seqFait}/{seqTotal} leÃ§ons dispensÃ©es</div>
+                      <div style={{ fontSize:10,color:C.txtMuted,marginTop:2 }}>{seqFait}/{seqTotal} leçons dispensées</div>
                     </div>
                     <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                       <div style={{ width:80 }}><ProgBar value={seqTotal>0?Math.min(100, Math.round(seqFait/seqTotal*100)):0}/></div>
                       <span style={{ fontSize:11,fontWeight:700,color:taux2col(seqTotal>0?Math.min(100, Math.round(seqFait/seqTotal*100)):0),minWidth:30,textAlign:"right" }}>{seqTotal>0?Math.min(100, Math.round(seqFait/seqTotal*100)):0}%</span>
                     </div>
                   </div>
-                  {/* LeÃ§ons */}
+                  {/* Leçons */}
                   <div>
                     {lecons.map((l, li) => {
                       const done = faites.includes(l.n);
                       const isTP = meta?.tp?.includes(l.n);
-                      const isInteg = /intÃ©gration/i.test(l.t);
+                      const isInteg = /intégration/i.test(l.t);
                       const isDigital = l.d===1;
                       const digDoneVT = digFaitesVT.includes(l.n);
                       return (
@@ -3347,9 +3346,9 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
                           onMouseLeave={e=>{ if(!isAdmin) e.currentTarget.style.background=done?"rgba(22,163,74,.04)":"transparent"; }}>
                           {/* Checkbox */}
                           <div style={{ width:20,height:20,borderRadius:6,border:`2px solid ${done?C.green:C.border}`,background:done?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .2s" }}>
-                            {done && <span style={{ color:"#fff",fontSize:12,fontWeight:800 }}>âœ“</span>}
+                            {done && <span style={{ color:"#fff",fontSize:12,fontWeight:800 }}>✓</span>}
                           </div>
-                          {/* NumÃ©ro */}
+                          {/* Numéro */}
                           <div style={{ width:24,textAlign:"center",fontSize:11,fontWeight:700,color:done?C.green:C.txtLight,flexShrink:0 }}>{l.n}</div>
                           {/* Titre */}
                           <div style={{ flex:1 }}>
@@ -3358,14 +3357,14 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
                           {/* Badges */}
                           <div style={{ display:"flex",gap:5,flexShrink:0,alignItems:"center" }}>
                             {isTP && <Pill ch="TP" color={C.blue}/>}
-                            {isInteg && <Pill ch="IntÃ©gration" color={C.amber}/>}
-                            {done && <Pill ch="âœ“ Fait" color={C.green}/>}
+                            {isInteg && <Pill ch="Intégration" color={C.amber}/>}
+                            {done && <Pill ch="✓ Fait" color={C.green}/>}
                             {isDigital && (
                               <button onClick={(e)=>toggleDigitalVT(l.n,e)}
-                                title={digDoneVT?"Retirer la ressource digitale":"Marquer comme utilisÃ© en digital"}
+                                title={digDoneVT?"Retirer la ressource digitale":"Marquer comme utilisé en digital"}
                                 style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,
                                   border:`1.5px solid ${digDoneVT?"#0369a1":"#cbd5e1"}`,background:digDoneVT?"#eff6ff":"transparent",color:digDoneVT?"#0369a1":"#94a3b8",transition:"all .15s" }}>
-                                ðŸ’» {digDoneVT?"Dig âœ“":"Dig"}
+                                💻 {digDoneVT?"Dig ✓":"Dig"}
                               </button>
                             )}
                           </div>
@@ -3378,8 +3377,8 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
             })}
             {leconsFiltered.length === 0 && (
               <div style={{ textAlign:"center",padding:"40px",color:C.txtMuted }}>
-                <div style={{ fontSize:32,marginBottom:8 }}>ðŸ”</div>
-                <div style={{ fontSize:13 }}>Aucune leÃ§on trouvÃ©e avec ces filtres</div>
+                <div style={{ fontSize:32,marginBottom:8 }}>🔍</div>
+                <div style={{ fontSize:13 }}>Aucune leçon trouvée avec ces filtres</div>
               </div>
             )}
           </div>
@@ -3389,701 +3388,701 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// DONNÃ‰ES LEÃ‡ONS (subset compact â€” les 12 programmes)
-// On gÃ©nÃ¨re les leÃ§ons depuis les donnÃ©es embarquÃ©es du prototype
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// DONNÉES LEÇONS (subset compact — les 12 programmes)
+// On génère les leçons depuis les données embarquées du prototype
+// ═══════════════════════════════════════════════════
 
 const LECONS_DATA = {
   "TERM_D": [
-    {n:1,s:"SÃ‰Q 1",t:"Ã‰changes d'eau",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"InterprÃ©tation des Ã©changes d'eau",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Ã‰changes des substances dissoutes, des particules",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 1",t:"Structure d'une fibre musculaire squelettique striÃ©e",c:1,d:1},
-    {n:6,s:"SÃ‰Q 1",t:"MÃ©canisme de la contraction musculaire",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Voies de restauration de l'ATP",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"Structures et rÃ´les des gonades chez les mammifÃ¨res",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Structures et rÃ´les des gonades chez les spermaphytes",c:1,d:1},
-    {n:11,s:"SÃ‰Q 2",t:"La mÃ©iose",c:1,d:1},
-    {n:12,s:"SÃ‰Q 2",t:"GamÃ©togenÃ¨se chez les mammifÃ¨res",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"GamÃ©togenÃ¨se chez les spermaphytes",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"FÃ©condation chez les mammifÃ¨res",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"FÃ©condation chez les spermaphytes",c:1,d:1},
-    {n:16,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 3",t:"Monohybridisme avec dominance",c:1,d:1},
-    {n:18,s:"SÃ‰Q 3",t:"Monohybridisme avec dominance intermÃ©diaire",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Monohybridisme gonosomal",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Dihybridisme",c:1,d:1},
-    {n:21,s:"SÃ‰Q 4",t:"Trihybridisme",c:1,d:1},
-    {n:22,s:"SÃ‰Q 4",t:"Brassage intrachromosomique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 4",t:"Quelques exceptions Ã  la monogÃ©nie",c:1,d:1},
-    {n:24,s:"SÃ‰Q 4",t:"Origine des nouveaux allÃ¨les",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"Notion d'arbre gÃ©nÃ©alogique",c:1,d:1},
-    {n:26,s:"SÃ‰Q 5",t:"Transmissions autosomiques",c:1,d:1},
-    {n:27,s:"SÃ‰Q 5",t:"Transmissions gonosomiques",c:1,d:1},
-    {n:28,s:"SÃ‰Q 5",t:"Ã‰valuation d'un risque gÃ©nÃ©tique",c:1,d:0},
-    {n:29,s:"SÃ‰Q 5",t:"Applications et implications des connaissances",c:1,d:1},
-    {n:30,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:31,s:"SÃ‰Q 6",t:"Structure du tissu nerveux",c:1,d:1},
-    {n:32,s:"SÃ‰Q 6",t:"RÃ©flexes innÃ©s (rÃ©flexe mÃ©dullaire)",c:1,d:1},
-    {n:33,s:"SÃ‰Q 6",t:"RÃ©flexes innÃ©s (rÃ©flexe myotatique)",c:1,d:1},
-    {n:34,s:"SÃ‰Q 6",t:"RÃ©flexes acquis",c:1,d:1},
-    {n:35,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SÃ‰Q 6",t:"Le potentiel de repos",c:1,d:1},
-    {n:37,s:"SÃ‰Q 7",t:"Le potentiel d'action",c:1,d:1},
-    {n:38,s:"SÃ‰Q 7",t:"Naissance du potentiel d'action",c:1,d:1},
-    {n:39,s:"SÃ‰Q 7",t:"Propagation du potentiel d'action",c:1,d:1},
-    {n:40,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:41,s:"SÃ‰Q 7",t:"Synapse : Structure",c:1,d:1},
-    {n:42,s:"SÃ‰Q 7",t:"Synapse : Fonctionnement",c:1,d:1},
-    {n:43,s:"SÃ‰Q 8",t:"L'intÃ©gration neuronale",c:1,d:1},
-    {n:44,s:"SÃ‰Q 8",t:"Effets de certaines substances",c:1,d:1},
-    {n:45,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:46,s:"SÃ‰Q 8",t:"Les diffÃ©rentes aires de l'encÃ©phale",c:1,d:1},
-    {n:47,s:"SÃ‰Q 8",t:"Quelques aspects de la motricitÃ© dirigÃ©e",c:1,d:1},
-    {n:48,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:49,s:"SÃ‰Q 9",t:"Origine des cellules immunitaires",c:1,d:1},
-    {n:50,s:"SÃ‰Q 9",t:"Structure de reconnaissance du non-soi",c:1,d:1},
-    {n:51,s:"SÃ‰Q 9",t:"MÃ©canisme de la rÃ©ponse immunitaire non spÃ©cifique",c:1,d:1},
-    {n:52,s:"SÃ‰Q 9",t:"MÃ©canisme de la rÃ©ponse immunitaire spÃ©cifique",c:1,d:1},
-    {n:53,s:"SÃ‰Q 9",t:"MÃ©moire immunitaire",c:1,d:1},
-    {n:54,s:"SÃ‰Q 9",t:"Maladies auto-immunes",c:1,d:1},
-    {n:55,s:"SÃ‰Q 10",t:"PandÃ©mies et leurs consÃ©quences",c:1,d:1},
-    {n:56,s:"SÃ‰Q 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:57,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez l'homme (1)",c:1,d:1},
-    {n:58,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez l'homme (2)",c:1,d:1},
-    {n:59,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez la femme (1)",c:1,d:1},
-    {n:60,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez la femme (2)",c:1,d:1},
-    {n:61,s:"SÃ‰Q 11",t:"RÃ©gulation du taux d'hormones sexuelles chez la femme (3)",c:1,d:1},
-    {n:62,s:"SÃ‰Q 11",t:"MaÃ®trise de la reproduction",c:1,d:1},
-    {n:63,s:"SÃ‰Q 11",t:"DÃ©rÃ¨glements des hormones sexuelles",c:1,d:1},
-    {n:64,s:"SÃ‰Q 11",t:"StÃ©rilitÃ©",c:1,d:1},
-    {n:65,s:"SÃ‰Q 11",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:66,s:"SÃ‰Q 11",t:"GlycÃ©mie : mesure et causes",c:1,d:1},
-    {n:67,s:"SÃ‰Q 12",t:"GlycÃ©mie : rÃ©gulation",c:1,d:1},
-    {n:68,s:"SÃ‰Q 12",t:"GlycÃ©mie : consÃ©quences",c:1,d:1},
-    {n:69,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : dÃ©finition et mesure",c:1,d:1},
-    {n:70,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : rÃ©gulation nerveuse",c:1,d:1},
-    {n:71,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : rÃ©gulation hormonale",c:1,d:1},
-    {n:72,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : consÃ©quences",c:1,d:1},
-    {n:73,s:"SÃ‰Q 13",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:74,s:"SÃ‰Q 13",t:"ArrÃªt cardiaque",c:1,d:1},
-    {n:75,s:"SÃ‰Q 13",t:"Ã‰touffement total",c:1,d:1},
-    {n:76,s:"SÃ‰Q 13",t:"Perte de connaissance",c:1,d:1},
-    {n:77,s:"SÃ‰Q 13",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:78,s:"SÃ‰Q 13",t:"Plancher ocÃ©anique : morphologie",c:1,d:1},
-    {n:79,s:"SÃ‰Q 14",t:"Plancher ocÃ©anique : fonctionnement d'un rift",c:1,d:1},
-    {n:80,s:"SÃ‰Q 14",t:"Plancher ocÃ©anique : mouvements de convergence",c:1,d:1},
-    {n:81,s:"SÃ‰Q 14",t:"Plancher ocÃ©anique : mouvements de coulissage",c:1,d:1},
-    {n:82,s:"SÃ‰Q 14",t:"Catastrophes naturelles associÃ©es aux mouvements des plaques",c:1,d:1},
-    {n:83,s:"SÃ‰Q 14",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:84,s:"SÃ‰Q 14",t:"Les preuves de l'Ã©volution de l'Homme",c:1,d:1},
-    {n:85,s:"SÃ‰Q 15",t:"Les critÃ¨res de l'hominisation",c:1,d:1},
-    {n:86,s:"SÃ‰Q 15",t:"CapacitÃ© d'adaptation de l'Homme",c:1,d:1},
-    {n:87,s:"SÃ‰Q 15",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:88,s:"SÃ‰Q 15",t:"Transformation et conservation des fruits (mangue, tomate)",c:1,d:1},
-    {n:89,s:"SÃ‰Q 15",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:90,s:"SÃ‰Q 15",t:"Insectes comestibles et lutte biologique",c:1,d:1},
-    {n:91,s:"SÃ‰Q 16",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:92,s:"SÃ‰Q 16",t:"Production des biocarburants",c:1,d:1},
-    {n:93,s:"SÃ‰Q 16",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:94,s:"SÃ‰Q 16",t:"Valorisation des dÃ©chets papiers",c:1,d:1},
-    {n:95,s:"SÃ‰Q 16",t:"Valorisation des dÃ©chets plastiques",c:1,d:1},
-    {n:96,s:"SÃ‰Q 16",t:"Valorisation des dÃ©chets plastiques (suite)",c:1,d:1},
-    {n:97,s:"SÃ‰Q 17",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Échanges d'eau",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Interprétation des échanges d'eau",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Échanges des substances dissoutes, des particules",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 1",t:"Structure d'une fibre musculaire squelettique striée",c:1,d:1},
+    {n:6,s:"SÉQ 1",t:"Mécanisme de la contraction musculaire",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Voies de restauration de l'ATP",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"Structures et rôles des gonades chez les mammifères",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Structures et rôles des gonades chez les spermaphytes",c:1,d:1},
+    {n:11,s:"SÉQ 2",t:"La méiose",c:1,d:1},
+    {n:12,s:"SÉQ 2",t:"Gamétogenèse chez les mammifères",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Gamétogenèse chez les spermaphytes",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Fécondation chez les mammifères",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Fécondation chez les spermaphytes",c:1,d:1},
+    {n:16,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 3",t:"Monohybridisme avec dominance",c:1,d:1},
+    {n:18,s:"SÉQ 3",t:"Monohybridisme avec dominance intermédiaire",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Monohybridisme gonosomal",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Dihybridisme",c:1,d:1},
+    {n:21,s:"SÉQ 4",t:"Trihybridisme",c:1,d:1},
+    {n:22,s:"SÉQ 4",t:"Brassage intrachromosomique",c:1,d:1},
+    {n:23,s:"SÉQ 4",t:"Quelques exceptions à la monogénie",c:1,d:1},
+    {n:24,s:"SÉQ 4",t:"Origine des nouveaux allèles",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Notion d'arbre généalogique",c:1,d:1},
+    {n:26,s:"SÉQ 5",t:"Transmissions autosomiques",c:1,d:1},
+    {n:27,s:"SÉQ 5",t:"Transmissions gonosomiques",c:1,d:1},
+    {n:28,s:"SÉQ 5",t:"Évaluation d'un risque génétique",c:1,d:0},
+    {n:29,s:"SÉQ 5",t:"Applications et implications des connaissances",c:1,d:1},
+    {n:30,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:31,s:"SÉQ 6",t:"Structure du tissu nerveux",c:1,d:1},
+    {n:32,s:"SÉQ 6",t:"Réflexes innés (réflexe médullaire)",c:1,d:1},
+    {n:33,s:"SÉQ 6",t:"Réflexes innés (réflexe myotatique)",c:1,d:1},
+    {n:34,s:"SÉQ 6",t:"Réflexes acquis",c:1,d:1},
+    {n:35,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SÉQ 6",t:"Le potentiel de repos",c:1,d:1},
+    {n:37,s:"SÉQ 7",t:"Le potentiel d'action",c:1,d:1},
+    {n:38,s:"SÉQ 7",t:"Naissance du potentiel d'action",c:1,d:1},
+    {n:39,s:"SÉQ 7",t:"Propagation du potentiel d'action",c:1,d:1},
+    {n:40,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:41,s:"SÉQ 7",t:"Synapse : Structure",c:1,d:1},
+    {n:42,s:"SÉQ 7",t:"Synapse : Fonctionnement",c:1,d:1},
+    {n:43,s:"SÉQ 8",t:"L'intégration neuronale",c:1,d:1},
+    {n:44,s:"SÉQ 8",t:"Effets de certaines substances",c:1,d:1},
+    {n:45,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:46,s:"SÉQ 8",t:"Les différentes aires de l'encéphale",c:1,d:1},
+    {n:47,s:"SÉQ 8",t:"Quelques aspects de la motricité dirigée",c:1,d:1},
+    {n:48,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:49,s:"SÉQ 9",t:"Origine des cellules immunitaires",c:1,d:1},
+    {n:50,s:"SÉQ 9",t:"Structure de reconnaissance du non-soi",c:1,d:1},
+    {n:51,s:"SÉQ 9",t:"Mécanisme de la réponse immunitaire non spécifique",c:1,d:1},
+    {n:52,s:"SÉQ 9",t:"Mécanisme de la réponse immunitaire spécifique",c:1,d:1},
+    {n:53,s:"SÉQ 9",t:"Mémoire immunitaire",c:1,d:1},
+    {n:54,s:"SÉQ 9",t:"Maladies auto-immunes",c:1,d:1},
+    {n:55,s:"SÉQ 10",t:"Pandémies et leurs conséquences",c:1,d:1},
+    {n:56,s:"SÉQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:57,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez l'homme (1)",c:1,d:1},
+    {n:58,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez l'homme (2)",c:1,d:1},
+    {n:59,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez la femme (1)",c:1,d:1},
+    {n:60,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez la femme (2)",c:1,d:1},
+    {n:61,s:"SÉQ 11",t:"Régulation du taux d'hormones sexuelles chez la femme (3)",c:1,d:1},
+    {n:62,s:"SÉQ 11",t:"Maîtrise de la reproduction",c:1,d:1},
+    {n:63,s:"SÉQ 11",t:"Dérèglements des hormones sexuelles",c:1,d:1},
+    {n:64,s:"SÉQ 11",t:"Stérilité",c:1,d:1},
+    {n:65,s:"SÉQ 11",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:66,s:"SÉQ 11",t:"Glycémie : mesure et causes",c:1,d:1},
+    {n:67,s:"SÉQ 12",t:"Glycémie : régulation",c:1,d:1},
+    {n:68,s:"SÉQ 12",t:"Glycémie : conséquences",c:1,d:1},
+    {n:69,s:"SÉQ 12",t:"Pression artérielle : définition et mesure",c:1,d:1},
+    {n:70,s:"SÉQ 12",t:"Pression artérielle : régulation nerveuse",c:1,d:1},
+    {n:71,s:"SÉQ 12",t:"Pression artérielle : régulation hormonale",c:1,d:1},
+    {n:72,s:"SÉQ 12",t:"Pression artérielle : conséquences",c:1,d:1},
+    {n:73,s:"SÉQ 13",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:74,s:"SÉQ 13",t:"Arrêt cardiaque",c:1,d:1},
+    {n:75,s:"SÉQ 13",t:"Étouffement total",c:1,d:1},
+    {n:76,s:"SÉQ 13",t:"Perte de connaissance",c:1,d:1},
+    {n:77,s:"SÉQ 13",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:78,s:"SÉQ 13",t:"Plancher océanique : morphologie",c:1,d:1},
+    {n:79,s:"SÉQ 14",t:"Plancher océanique : fonctionnement d'un rift",c:1,d:1},
+    {n:80,s:"SÉQ 14",t:"Plancher océanique : mouvements de convergence",c:1,d:1},
+    {n:81,s:"SÉQ 14",t:"Plancher océanique : mouvements de coulissage",c:1,d:1},
+    {n:82,s:"SÉQ 14",t:"Catastrophes naturelles associées aux mouvements des plaques",c:1,d:1},
+    {n:83,s:"SÉQ 14",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:84,s:"SÉQ 14",t:"Les preuves de l'évolution de l'Homme",c:1,d:1},
+    {n:85,s:"SÉQ 15",t:"Les critères de l'hominisation",c:1,d:1},
+    {n:86,s:"SÉQ 15",t:"Capacité d'adaptation de l'Homme",c:1,d:1},
+    {n:87,s:"SÉQ 15",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:88,s:"SÉQ 15",t:"Transformation et conservation des fruits (mangue, tomate)",c:1,d:1},
+    {n:89,s:"SÉQ 15",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:90,s:"SÉQ 15",t:"Insectes comestibles et lutte biologique",c:1,d:1},
+    {n:91,s:"SÉQ 16",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:92,s:"SÉQ 16",t:"Production des biocarburants",c:1,d:1},
+    {n:93,s:"SÉQ 16",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:94,s:"SÉQ 16",t:"Valorisation des déchets papiers",c:1,d:1},
+    {n:95,s:"SÉQ 16",t:"Valorisation des déchets plastiques",c:1,d:1},
+    {n:96,s:"SÉQ 16",t:"Valorisation des déchets plastiques (suite)",c:1,d:1},
+    {n:97,s:"SÉQ 17",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "PREM_D": [
-    {n:1,s:"SEQ 1",t:"Cellules animale et vÃ©gÃ©tale vues au microscope",c:1,d:1},
-    {n:2,s:"SEQ 1",t:"Ultrastructures et rÃ´les des organites",c:1,d:1},
+    {n:1,s:"SEQ 1",t:"Cellules animale et végétale vues au microscope",c:1,d:1},
+    {n:2,s:"SEQ 1",t:"Ultrastructures et rôles des organites",c:1,d:1},
     {n:3,s:"SEQ 1",t:"Structure et composition chimique d'un chromosome",c:1,d:1},
-    {n:4,s:"SEQ 1",t:"L'ADN, support de l'information gÃ©nÃ©tique",c:1,d:1},
+    {n:4,s:"SEQ 1",t:"L'ADN, support de l'information génétique",c:1,d:1},
     {n:5,s:"SEQ 1",t:"Division cellulaire",c:1,d:1},
-    {n:6,s:"SEQ 1",t:"Cycle cellulaire et rÃ´les de la mitose",c:1,d:1},
-    {n:7,s:"SEQ 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:8,s:"SEQ 2",t:"Le renouvellement permanent des molÃ©cules",c:1,d:1},
-    {n:9,s:"SEQ 2",t:"La biosynthÃ¨se des protÃ©ines : la transcription",c:1,d:1},
-    {n:10,s:"SEQ 2",t:"BiosynthÃ¨se des protÃ©ines : la traduction",c:1,d:1},
-    {n:11,s:"SEQ 2",t:"BiosynthÃ¨se des protÃ©ines : le devenir des protÃ©ines",c:1,d:1},
-    {n:12,s:"SEQ 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SEQ 2",t:"GÃ©nie gÃ©nÃ©tique : caractÃ©ristiques des plantes transgÃ©niques",c:1,d:1},
-    {n:14,s:"SEQ 2",t:"GÃ©nie gÃ©nÃ©tique : technique d'obtention",c:1,d:1},
-    {n:15,s:"SEQ 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:16,s:"SEQ 3",t:"Relation entre l'Ã©quipement enzymatique et les rÃ©actions",c:1,d:1},
-    {n:17,s:"SEQ 3",t:"CaractÃ©ristiques de l'activitÃ© enzymatique",c:1,d:1},
-    {n:18,s:"SEQ 3",t:"Relation entre structure et fonction de la protÃ©ine",c:1,d:1},
+    {n:6,s:"SEQ 1",t:"Cycle cellulaire et rôles de la mitose",c:1,d:1},
+    {n:7,s:"SEQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:8,s:"SEQ 2",t:"Le renouvellement permanent des molécules",c:1,d:1},
+    {n:9,s:"SEQ 2",t:"La biosynthèse des protéines : la transcription",c:1,d:1},
+    {n:10,s:"SEQ 2",t:"Biosynthèse des protéines : la traduction",c:1,d:1},
+    {n:11,s:"SEQ 2",t:"Biosynthèse des protéines : le devenir des protéines",c:1,d:1},
+    {n:12,s:"SEQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SEQ 2",t:"Génie génétique : caractéristiques des plantes transgéniques",c:1,d:1},
+    {n:14,s:"SEQ 2",t:"Génie génétique : technique d'obtention",c:1,d:1},
+    {n:15,s:"SEQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:16,s:"SEQ 3",t:"Relation entre l'équipement enzymatique et les réactions",c:1,d:1},
+    {n:17,s:"SEQ 3",t:"Caractéristiques de l'activité enzymatique",c:1,d:1},
+    {n:18,s:"SEQ 3",t:"Relation entre structure et fonction de la protéine",c:1,d:1},
     {n:19,s:"SEQ 3",t:"Quelques applications de la catalyse enzymatique",c:1,d:1},
-    {n:20,s:"SEQ 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SEQ 3",t:"Ã‰valuation de la dÃ©pense Ã©nergÃ©tique",c:1,d:0},
-    {n:22,s:"SEQ 4",t:"Facteurs de variation de la dÃ©pense Ã©nergÃ©tique",c:1,d:1},
-    {n:23,s:"SEQ 4",t:"Le mÃ©tabolisme de base",c:1,d:1},
-    {n:24,s:"SEQ 4",t:"Les apports Ã©nergÃ©tiques",c:1,d:1},
-    {n:25,s:"SEQ 4",t:"DÃ©penses Ã©nergÃ©tiques produites par la respiration",c:1,d:1},
-    {n:26,s:"SEQ 4",t:"Le mÃ©canisme de la respiration",c:1,d:1},
-    {n:27,s:"SEQ 4",t:"DÃ©penses Ã©nergÃ©tiques produites par la fermentation",c:1,d:1},
-    {n:28,s:"SEQ 4",t:"Les mÃ©canismes de la fermentation",c:1,d:1},
-    {n:29,s:"SEQ 5",t:"Rendement Ã©nergÃ©tique de la respiration et de la fermentation",c:1,d:1},
-    {n:30,s:"SEQ 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:31,s:"SEQ 5",t:"Le captage de l'Ã©nergie lumineuse",c:1,d:1},
-    {n:32,s:"SEQ 5",t:"MÃ©canisme de la photosynthÃ¨se : la phase chimique",c:1,d:1},
-    {n:33,s:"SEQ 5",t:"MÃ©canisme de la photosynthÃ¨se : la phase photochimique",c:1,d:1},
-    {n:34,s:"SEQ 5",t:"Importance de la photosynthÃ¨se",c:1,d:1},
-    {n:35,s:"SEQ 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SEQ 6",t:"Organisation d'un Ã©cosystÃ¨me",c:1,d:1},
-    {n:37,s:"SEQ 6",t:"Le flux et la dissipation de l'Ã©nergie",c:1,d:1},
-    {n:38,s:"SEQ 6",t:"Le cycle biogÃ©ochimique du carbone (rÃ©servoirs)",c:1,d:1},
-    {n:39,s:"SEQ 6",t:"Le cycle biogÃ©ochimique du carbone (modifications)",c:1,d:1},
-    {n:40,s:"SEQ 6",t:"Le cycle biogÃ©ochimique de l'azote",c:1,d:1},
-    {n:41,s:"SEQ 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:20,s:"SEQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SEQ 3",t:"Évaluation de la dépense énergétique",c:1,d:0},
+    {n:22,s:"SEQ 4",t:"Facteurs de variation de la dépense énergétique",c:1,d:1},
+    {n:23,s:"SEQ 4",t:"Le métabolisme de base",c:1,d:1},
+    {n:24,s:"SEQ 4",t:"Les apports énergétiques",c:1,d:1},
+    {n:25,s:"SEQ 4",t:"Dépenses énergétiques produites par la respiration",c:1,d:1},
+    {n:26,s:"SEQ 4",t:"Le mécanisme de la respiration",c:1,d:1},
+    {n:27,s:"SEQ 4",t:"Dépenses énergétiques produites par la fermentation",c:1,d:1},
+    {n:28,s:"SEQ 4",t:"Les mécanismes de la fermentation",c:1,d:1},
+    {n:29,s:"SEQ 5",t:"Rendement énergétique de la respiration et de la fermentation",c:1,d:1},
+    {n:30,s:"SEQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:31,s:"SEQ 5",t:"Le captage de l'énergie lumineuse",c:1,d:1},
+    {n:32,s:"SEQ 5",t:"Mécanisme de la photosynthèse : la phase chimique",c:1,d:1},
+    {n:33,s:"SEQ 5",t:"Mécanisme de la photosynthèse : la phase photochimique",c:1,d:1},
+    {n:34,s:"SEQ 5",t:"Importance de la photosynthèse",c:1,d:1},
+    {n:35,s:"SEQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SEQ 6",t:"Organisation d'un écosystème",c:1,d:1},
+    {n:37,s:"SEQ 6",t:"Le flux et la dissipation de l'énergie",c:1,d:1},
+    {n:38,s:"SEQ 6",t:"Le cycle biogéochimique du carbone (réservoirs)",c:1,d:1},
+    {n:39,s:"SEQ 6",t:"Le cycle biogéochimique du carbone (modifications)",c:1,d:1},
+    {n:40,s:"SEQ 6",t:"Le cycle biogéochimique de l'azote",c:1,d:1},
+    {n:41,s:"SEQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
     {n:42,s:"SEQ 6",t:"Le soi",c:1,d:1},
     {n:43,s:"SEQ 7",t:"Le non-soi",c:1,d:1},
     {n:44,s:"SEQ 7",t:"Les principales cellules immunitaires",c:1,d:1},
     {n:45,s:"SEQ 7",t:"Le virus et son mode d'action",c:1,d:1},
     {n:46,s:"SEQ 7",t:"La multiplication du virus",c:1,d:1},
-    {n:47,s:"SEQ 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:48,s:"SEQ 7",t:"La sexualitÃ© prÃ©coce et ses consÃ©quences",c:1,d:1},
-    {n:49,s:"SEQ 7",t:"Les mutilations gÃ©nitales",c:1,d:1},
-    {n:50,s:"SEQ 8",t:"La prise des stupÃ©fiants",c:1,d:1},
-    {n:51,s:"SEQ 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:52,s:"SEQ 8",t:"L'alimentation Ã©quilibrÃ©e : dÃ©finition",c:1,d:1},
-    {n:53,s:"SEQ 8",t:"L'alimentation Ã©quilibrÃ©e : un menu Ã©quilibrÃ©",c:1,d:1},
-    {n:54,s:"SEQ 8",t:"Les consÃ©quences de la mauvaise alimentation",c:1,d:1},
-    {n:55,s:"SEQ 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:56,s:"SEQ 8",t:"L'origine de l'Ã©nergie reÃ§ue par la planÃ¨te",c:1,d:1},
-    {n:57,s:"SEQ 9",t:"Le devenir du rayonnement solaire (albÃ©do)",c:1,d:1},
+    {n:47,s:"SEQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:48,s:"SEQ 7",t:"La sexualité précoce et ses conséquences",c:1,d:1},
+    {n:49,s:"SEQ 7",t:"Les mutilations génitales",c:1,d:1},
+    {n:50,s:"SEQ 8",t:"La prise des stupéfiants",c:1,d:1},
+    {n:51,s:"SEQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:52,s:"SEQ 8",t:"L'alimentation équilibrée : définition",c:1,d:1},
+    {n:53,s:"SEQ 8",t:"L'alimentation équilibrée : un menu équilibré",c:1,d:1},
+    {n:54,s:"SEQ 8",t:"Les conséquences de la mauvaise alimentation",c:1,d:1},
+    {n:55,s:"SEQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:56,s:"SEQ 8",t:"L'origine de l'énergie reçue par la planète",c:1,d:1},
+    {n:57,s:"SEQ 9",t:"Le devenir du rayonnement solaire (albédo)",c:1,d:1},
     {n:58,s:"SEQ 9",t:"Le devenir du rayonnement solaire (bilan radiatif)",c:1,d:1},
     {n:59,s:"SEQ 9",t:"L'effet de serre",c:1,d:1},
-    {n:60,s:"SEQ 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:61,s:"SEQ 9",t:"Les causes de l'inÃ©gale rÃ©partition",c:1,d:1},
-    {n:62,s:"SEQ 9",t:"Les mouvements atmosphÃ©riques",c:1,d:1},
-    {n:63,s:"SEQ 9",t:"Les mouvements ocÃ©aniques",c:1,d:1},
-    {n:64,s:"SEQ 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:65,s:"SEQ 10",t:"L'altÃ©ration des roches",c:1,d:1},
-    {n:66,s:"SEQ 10",t:"Le devenir des produits d'altÃ©ration",c:1,d:1},
-    {n:67,s:"SEQ 10",t:"SÃ©dimentation",c:1,d:1},
-    {n:68,s:"SEQ 10",t:"DiagenÃ¨se et roches sÃ©dimentaires",c:1,d:1},
-    {n:69,s:"SEQ 10",t:"SÃ©ries et cycles sÃ©dimentaires",c:1,d:1},
+    {n:60,s:"SEQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:61,s:"SEQ 9",t:"Les causes de l'inégale répartition",c:1,d:1},
+    {n:62,s:"SEQ 9",t:"Les mouvements atmosphériques",c:1,d:1},
+    {n:63,s:"SEQ 9",t:"Les mouvements océaniques",c:1,d:1},
+    {n:64,s:"SEQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:65,s:"SEQ 10",t:"L'altération des roches",c:1,d:1},
+    {n:66,s:"SEQ 10",t:"Le devenir des produits d'altération",c:1,d:1},
+    {n:67,s:"SEQ 10",t:"Sédimentation",c:1,d:1},
+    {n:68,s:"SEQ 10",t:"Diagenèse et roches sédimentaires",c:1,d:1},
+    {n:69,s:"SEQ 10",t:"Séries et cycles sédimentaires",c:1,d:1},
     {n:70,s:"SEQ 10",t:"La chronologie relative",c:1,d:1},
-    {n:71,s:"SEQ 11",t:"La reconstitution des milieux sÃ©dimentaires",c:1,d:1},
-    {n:72,s:"SEQ 11",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:73,s:"SEQ 11",t:"Les Ã©lÃ©ments de sismologie (ondes)",c:1,d:1},
-    {n:74,s:"SEQ 11",t:"Les Ã©lÃ©ments de sismologie (comportement)",c:1,d:1},
-    {n:75,s:"SEQ 11",t:"La structure interne de la Terre (discontinuitÃ©s)",c:1,d:1},
+    {n:71,s:"SEQ 11",t:"La reconstitution des milieux sédimentaires",c:1,d:1},
+    {n:72,s:"SEQ 11",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:73,s:"SEQ 11",t:"Les éléments de sismologie (ondes)",c:1,d:1},
+    {n:74,s:"SEQ 11",t:"Les éléments de sismologie (comportement)",c:1,d:1},
+    {n:75,s:"SEQ 11",t:"La structure interne de la Terre (discontinuités)",c:1,d:1},
     {n:76,s:"SEQ 11",t:"La structure interne de la Terre (composition)",c:1,d:1},
-    {n:77,s:"SEQ 11",t:"L'Ã©nergie interne de la Terre",c:1,d:1},
-    {n:78,s:"SEQ 12",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:77,s:"SEQ 11",t:"L'énergie interne de la Terre",c:1,d:1},
+    {n:78,s:"SEQ 12",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "PREM_CTI": [
-    {n:1,s:"SEQ 1",t:"Rappels sur les rÃ´les des aliments et de la digestion",c:1,d:1},
+    {n:1,s:"SEQ 1",t:"Rappels sur les rôles des aliments et de la digestion",c:1,d:1},
     {n:2,s:"SEQ 1",t:"Rappel sur l'absorption intestinale et la circulation",c:1,d:1},
-    {n:3,s:"SEQ 1",t:"La respiration cellulaire : les Ã©tapes",c:1,d:1},
-    {n:4,s:"SEQ 1",t:"La respiration cellulaire : rÃ´le des transporteurs",c:1,d:1},
+    {n:3,s:"SEQ 1",t:"La respiration cellulaire : les étapes",c:1,d:1},
+    {n:4,s:"SEQ 1",t:"La respiration cellulaire : rôle des transporteurs",c:1,d:1},
     {n:5,s:"SEQ 1",t:"Quelques exemples de fermentation",c:1,d:1},
     {n:6,s:"SEQ 2",t:"Comparaison respiration-fermentation",c:1,d:1},
-    {n:7,s:"SEQ 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:8,s:"SEQ 2",t:"Ã‰valuation de la dÃ©pense Ã©nergÃ©tique",c:1,d:0},
-    {n:9,s:"SEQ 2",t:"Les facteurs de variation de la dÃ©pense Ã©nergÃ©tique",c:1,d:1},
-    {n:10,s:"SEQ 2",t:"Apports Ã©nergÃ©tiques des repas",c:1,d:1},
+    {n:7,s:"SEQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:8,s:"SEQ 2",t:"Évaluation de la dépense énergétique",c:1,d:0},
+    {n:9,s:"SEQ 2",t:"Les facteurs de variation de la dépense énergétique",c:1,d:1},
+    {n:10,s:"SEQ 2",t:"Apports énergétiques des repas",c:1,d:1},
     {n:11,s:"SEQ 3",t:"Crise cardiaque et AVC",c:1,d:1},
     {n:12,s:"SEQ 3",t:"Les moyens de lutte contre l'AVC",c:1,d:1},
-    {n:13,s:"SEQ 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:13,s:"SEQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
     {n:14,s:"SEQ 3",t:"Le soi et le non-soi",c:1,d:1},
     {n:15,s:"SEQ 3",t:"Les principales cellules immunitaires",c:1,d:1},
     {n:16,s:"SEQ 4",t:"La contamination par le VIH",c:1,d:1},
-    {n:17,s:"SEQ 4",t:"Les diffÃ©rentes phases de la maladie",c:1,d:1},
-    {n:18,s:"SEQ 4",t:"La prÃ©vention et le traitement",c:1,d:1},
-    {n:19,s:"SEQ 4",t:"Les causes et les consÃ©quences (IVG, alcoolismeâ€¦)",c:1,d:1},
+    {n:17,s:"SEQ 4",t:"Les différentes phases de la maladie",c:1,d:1},
+    {n:18,s:"SEQ 4",t:"La prévention et le traitement",c:1,d:1},
+    {n:19,s:"SEQ 4",t:"Les causes et les conséquences (IVG, alcoolisme…)",c:1,d:1},
     {n:20,s:"SEQ 4",t:"Les moyens de lutte",c:1,d:1},
-    {n:21,s:"SEQ 5",t:"Les diffÃ©rents groupes d'aliments simples",c:1,d:1},
-    {n:22,s:"SEQ 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:23,s:"SEQ 5",t:"Les mouvements atmosphÃ©riques",c:1,d:1},
-    {n:24,s:"SEQ 5",t:"Les mouvements ocÃ©aniques",c:1,d:1},
-    {n:25,s:"SEQ 5",t:"AltÃ©ration et Ã©rosion des roches",c:1,d:1},
-    {n:26,s:"SEQ 6",t:"Transport des produits d'altÃ©ration",c:1,d:1},
-    {n:27,s:"SEQ 6",t:"SÃ©dimentation et diagenÃ¨se",c:1,d:1},
-    {n:28,s:"SEQ 6",t:"Les roches sÃ©dimentaires et leur importance",c:1,d:1},
-    {n:29,s:"SEQ 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:21,s:"SEQ 5",t:"Les différents groupes d'aliments simples",c:1,d:1},
+    {n:22,s:"SEQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:23,s:"SEQ 5",t:"Les mouvements atmosphériques",c:1,d:1},
+    {n:24,s:"SEQ 5",t:"Les mouvements océaniques",c:1,d:1},
+    {n:25,s:"SEQ 5",t:"Altération et érosion des roches",c:1,d:1},
+    {n:26,s:"SEQ 6",t:"Transport des produits d'altération",c:1,d:1},
+    {n:27,s:"SEQ 6",t:"Sédimentation et diagenèse",c:1,d:1},
+    {n:28,s:"SEQ 6",t:"Les roches sédimentaires et leur importance",c:1,d:1},
+    {n:29,s:"SEQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
     {n:30,s:"SEQ 6",t:"La propagation des ondes sismiques",c:1,d:1},
     {n:31,s:"SEQ 7",t:"Les enveloppes internes du globe",c:1,d:1},
-    {n:32,s:"SEQ 7",t:"Les propriÃ©tÃ©s physicochimiques des enveloppes",c:1,d:1},
-    {n:33,s:"SEQ 7",t:"Origine de l'Ã©nergie interne",c:1,d:1},
-    {n:34,s:"SEQ 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SEQ 7",t:"La dÃ©rive des continents : les preuves",c:1,d:1},
-    {n:36,s:"SEQ 8",t:"La plaque lithosphÃ©rique",c:1,d:1},
+    {n:32,s:"SEQ 7",t:"Les propriétés physicochimiques des enveloppes",c:1,d:1},
+    {n:33,s:"SEQ 7",t:"Origine de l'énergie interne",c:1,d:1},
+    {n:34,s:"SEQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SEQ 7",t:"La dérive des continents : les preuves",c:1,d:1},
+    {n:36,s:"SEQ 8",t:"La plaque lithosphérique",c:1,d:1},
     {n:37,s:"SEQ 8",t:"Les mouvements des plaques",c:1,d:1},
-    {n:38,s:"SEQ 8",t:"La dissipation de l'Ã©nergie des Ã©cosystÃ¨mes",c:1,d:1},
-    {n:39,s:"SEQ 8",t:"Les modifications du rÃ©servoir de carbone",c:1,d:1},
+    {n:38,s:"SEQ 8",t:"La dissipation de l'énergie des écosystèmes",c:1,d:1},
+    {n:39,s:"SEQ 8",t:"Les modifications du réservoir de carbone",c:1,d:1},
     {n:40,s:"SEQ 8",t:"L'effet de serre",c:1,d:1},
-    {n:41,s:"SEQ 9",t:"RÃ´le de la couche d'ozone",c:1,d:1},
-    {n:42,s:"SEQ 9",t:"Les moyens de lutte contre le rÃ©chauffement climatique",c:1,d:1},
-    {n:43,s:"SEQ 9",t:"DÃ©finition et applications de la biotechnologie",c:1,d:1},
-    {n:44,s:"SEQ 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:41,s:"SEQ 9",t:"Rôle de la couche d'ozone",c:1,d:1},
+    {n:42,s:"SEQ 9",t:"Les moyens de lutte contre le réchauffement climatique",c:1,d:1},
+    {n:43,s:"SEQ 9",t:"Définition et applications de la biotechnologie",c:1,d:1},
+    {n:44,s:"SEQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "PREM_A": [
-    {n:1,s:"SÃ‰Q 1",t:"Les principaux constituants de la matiÃ¨re vivante",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Notion d'aliments simples et composÃ©s",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"RÃ´les des aliments",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 2",t:"La notion et les caractÃ©ristiques des caryotypes",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"L'hÃ©rÃ©ditÃ© hÃ©tÃ©rochromosomique",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Relation d'agressivitÃ© et de dominance chez l'Homme",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Relation Ã©motionnelle chez l'Homme",c:1,d:1},
-    {n:9,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:10,s:"SÃ‰Q 3",t:"Le soi, le non-soi et les cellules immunitaires",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Les dysfonctionnements : les allergies",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Les dÃ©ficiences : le VIH-Sida",c:1,d:1},
-    {n:13,s:"SÃ‰Q 4",t:"Les maladies nutritionnelles par carence",c:1,d:1},
-    {n:14,s:"SÃ‰Q 4",t:"Les maladies nutritionnelles par excÃ¨s",c:1,d:1},
-    {n:15,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:16,s:"SÃ‰Q 4",t:"MaÃ®trise de la reproduction",c:1,d:1},
-    {n:17,s:"SÃ‰Q 5",t:"Quelques comportements affectant la santÃ© reproductive",c:1,d:1},
-    {n:18,s:"SÃ‰Q 5",t:"VIH/Sida et grossesse",c:1,d:1},
-    {n:19,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:20,s:"SÃ‰Q 5",t:"L'assainissement de l'habitat",c:1,d:1},
-    {n:21,s:"SÃ‰Q 6",t:"Les dÃ©chets mÃ©nagers",c:1,d:1},
-    {n:22,s:"SÃ‰Q 6",t:"La pollution par les dÃ©chets mÃ©nagers",c:1,d:1},
-    {n:23,s:"SÃ‰Q 6",t:"Concept de biotechnologie et applications",c:1,d:1},
-    {n:24,s:"SÃ‰Q 6",t:"La production du biogaz",c:1,d:1},
-    {n:25,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Les principaux constituants de la matière vivante",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Notion d'aliments simples et composés",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Rôles des aliments",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 2",t:"La notion et les caractéristiques des caryotypes",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"L'hérédité hétérochromosomique",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Relation d'agressivité et de dominance chez l'Homme",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Relation émotionnelle chez l'Homme",c:1,d:1},
+    {n:9,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:10,s:"SÉQ 3",t:"Le soi, le non-soi et les cellules immunitaires",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Les dysfonctionnements : les allergies",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Les déficiences : le VIH-Sida",c:1,d:1},
+    {n:13,s:"SÉQ 4",t:"Les maladies nutritionnelles par carence",c:1,d:1},
+    {n:14,s:"SÉQ 4",t:"Les maladies nutritionnelles par excès",c:1,d:1},
+    {n:15,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:16,s:"SÉQ 4",t:"Maîtrise de la reproduction",c:1,d:1},
+    {n:17,s:"SÉQ 5",t:"Quelques comportements affectant la santé reproductive",c:1,d:1},
+    {n:18,s:"SÉQ 5",t:"VIH/Sida et grossesse",c:1,d:1},
+    {n:19,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:20,s:"SÉQ 5",t:"L'assainissement de l'habitat",c:1,d:1},
+    {n:21,s:"SÉQ 6",t:"Les déchets ménagers",c:1,d:1},
+    {n:22,s:"SÉQ 6",t:"La pollution par les déchets ménagers",c:1,d:1},
+    {n:23,s:"SÉQ 6",t:"Concept de biotechnologie et applications",c:1,d:1},
+    {n:24,s:"SÉQ 6",t:"La production du biogaz",c:1,d:1},
+    {n:25,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TERM_CTI": [
-    {n:1,s:"SÃ‰Q 1",t:"Cellule en microscopie optique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Cellule en microscopie Ã©lectronique",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Ã‰changes d'eau : l'osmose et la dialyse",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Ã‰changes de substances dissoutes",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Ã‰changes de particules",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"Structure des acides nuclÃ©iques",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"L'Ã©tude de la biosynthÃ¨se des protÃ©ines",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Structure, rÃ´le des gonades et mÃ©iose",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"GamÃ©togenÃ¨se et fÃ©condation",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:11,s:"SÃ‰Q 3",t:"Formes allÃ©liques et brassage interchromosomique (mono)",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Brassage interchromosomique (dihybridisme)",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Brassage intrachromosomique",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"HÃ©rÃ©ditÃ© autosomique",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"HÃ©rÃ©ditÃ© gonosomique et mutations",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 4",t:"Le tissu nerveux",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"Mise en Ã©vidence du potentiel de repos et d'action",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"La conduction du message nerveux",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"La notion de synapse",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"L'origine des cellules immunitaires",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Les mÃ©canismes de la rÃ©ponse non spÃ©cifique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"La rÃ©ponse Ã  mÃ©diation humorale",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Les maladies auto-immunes",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"Le VIH/Sida et ses consÃ©quences",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:27,s:"SÃ‰Q 6",t:"RÃ©gulation des hormones sexuelles chez l'homme",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"RÃ©gulation des hormones sexuelles chez la femme",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"L'infertilitÃ©",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"La glycÃ©mie : facteurs de variation",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"La glycÃ©mie : consÃ©quences",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"La pression artÃ©rielle : mesure",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"La pression artÃ©rielle : consÃ©quences",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SÃ‰Q 7",t:"DÃ©finitions et classification des catastrophes",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"La gestion des catastrophes",c:1,d:1},
-    {n:37,s:"SÃ‰Q 8",t:"Transformation des fruits : cas de la mangue",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Transformation des fruits : cas de la tomate",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Ã‰nergies renouvelables : biocarburants",c:1,d:1},
-    {n:40,s:"SÃ‰Q 8",t:"Ã‰nergies renouvelables : biocarburants (suite)",c:1,d:1},
-    {n:41,s:"SÃ‰Q 9",t:"Valorisation des dÃ©chets papiers",c:1,d:1},
-    {n:42,s:"SÃ‰Q 9",t:"Valorisation des dÃ©chets plastiques",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Cellule en microscopie optique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Cellule en microscopie électronique",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Échanges d'eau : l'osmose et la dialyse",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Échanges de substances dissoutes",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Échanges de particules",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"Structure des acides nucléiques",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"L'étude de la biosynthèse des protéines",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Structure, rôle des gonades et méiose",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"Gamétogenèse et fécondation",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:11,s:"SÉQ 3",t:"Formes alléliques et brassage interchromosomique (mono)",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Brassage interchromosomique (dihybridisme)",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Brassage intrachromosomique",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Hérédité autosomique",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Hérédité gonosomique et mutations",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 4",t:"Le tissu nerveux",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Mise en évidence du potentiel de repos et d'action",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"La conduction du message nerveux",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"La notion de synapse",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"L'origine des cellules immunitaires",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Les mécanismes de la réponse non spécifique",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"La réponse à médiation humorale",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Les maladies auto-immunes",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Le VIH/Sida et ses conséquences",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:27,s:"SÉQ 6",t:"Régulation des hormones sexuelles chez l'homme",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Régulation des hormones sexuelles chez la femme",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"L'infertilité",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"La glycémie : facteurs de variation",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"La glycémie : conséquences",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"La pression artérielle : mesure",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"La pression artérielle : conséquences",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SÉQ 7",t:"Définitions et classification des catastrophes",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"La gestion des catastrophes",c:1,d:1},
+    {n:37,s:"SÉQ 8",t:"Transformation des fruits : cas de la mangue",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Transformation des fruits : cas de la tomate",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Énergies renouvelables : biocarburants",c:1,d:1},
+    {n:40,s:"SÉQ 8",t:"Énergies renouvelables : biocarburants (suite)",c:1,d:1},
+    {n:41,s:"SÉQ 9",t:"Valorisation des déchets papiers",c:1,d:1},
+    {n:42,s:"SÉQ 9",t:"Valorisation des déchets plastiques",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TERM_A": [
-    {n:1,s:"SÃ‰Q 1",t:"Cellule en microscopie optique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Organisation de la cellule en microscopie Ã©lectronique",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Principaux organites cellulaires et leurs rÃ´les",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 1",t:"Structure des acides nuclÃ©iques et duplication",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (Ã©tapes)",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (relation)",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"De la diploÃ¯die Ã  l'haploÃ¯die : les Ã©tapes de la mÃ©iose",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"NÃ©cessitÃ© de la mÃ©iose dans la pÃ©rennisation",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:12,s:"SÃ‰Q 3",t:"Absorption intestinale",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Devenir et rÃ´le des Ã©lÃ©ments absorbÃ©s",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"Sort des rÃ©sidus de la digestion",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:16,s:"SÃ‰Q 4",t:"Constituants du sang et leurs rÃ´les",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"Milieu intÃ©rieur",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"NÃ©cessitÃ© du maintien de la constance",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Importance de l'Ã©limination urinaire",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SÃ‰Q 5",t:"RÃ´le du systÃ¨me nerveux dans les relations",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Comportements psychosociaux",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:24,s:"SÃ‰Q 5",t:"Grossesse",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"StÃ©rilitÃ©",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"La procrÃ©ation mÃ©dicalement assistÃ©e",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:28,s:"SÃ‰Q 6",t:"Dysfonctionnements du systÃ¨me immunitaire",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Le VIH-Sida et consÃ©quences socioculturelles",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:31,s:"SÃ‰Q 7",t:"DÃ©finition et classification des catastrophes",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"La gestion des catastrophes",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:34,s:"SÃ‰Q 7",t:"Transformation et conservation des fruits : la mangue",c:1,d:1},
-    {n:35,s:"SÃ‰Q 7",t:"Transformation et conservation des fruits : la tomate",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:37,s:"SÃ‰Q 8",t:"Valorisation des dÃ©chets papiers",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Valorisation des dÃ©chets plastiques",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Cellule en microscopie optique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Organisation de la cellule en microscopie électronique",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Principaux organites cellulaires et leurs rôles",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 1",t:"Structure des acides nucléiques et duplication",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (étapes)",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (relation)",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"De la diploïdie à l'haploïdie : les étapes de la méiose",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Nécessité de la méiose dans la pérennisation",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:12,s:"SÉQ 3",t:"Absorption intestinale",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Devenir et rôle des éléments absorbés",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Sort des résidus de la digestion",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:16,s:"SÉQ 4",t:"Constituants du sang et leurs rôles",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Milieu intérieur",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Nécessité du maintien de la constance",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Importance de l'élimination urinaire",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SÉQ 5",t:"Rôle du système nerveux dans les relations",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Comportements psychosociaux",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:24,s:"SÉQ 5",t:"Grossesse",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Stérilité",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"La procréation médicalement assistée",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:28,s:"SÉQ 6",t:"Dysfonctionnements du système immunitaire",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Le VIH-Sida et conséquences socioculturelles",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:31,s:"SÉQ 7",t:"Définition et classification des catastrophes",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"La gestion des catastrophes",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:34,s:"SÉQ 7",t:"Transformation et conservation des fruits : la mangue",c:1,d:1},
+    {n:35,s:"SÉQ 7",t:"Transformation et conservation des fruits : la tomate",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:37,s:"SÉQ 8",t:"Valorisation des déchets papiers",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Valorisation des déchets plastiques",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "SIX": [
-    {n:1,s:"SÃ‰Q 1",t:"Influence du climat sur la production vÃ©gÃ©tale",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Influence du sol sur la production vÃ©gÃ©tale",c:1,d:1},
-    {n:3,s:"SÃ‰Q 2",t:"Multiplication par voie sexuÃ©e des plantes",c:1,d:1},
-    {n:4,s:"SÃ‰Q 2",t:"Multiplication vÃ©gÃ©tative",c:1,d:1},
-    {n:5,s:"SÃ‰Q 2",t:"RÃ´le de la reproduction dans l'amÃ©lioration",c:1,d:1},
-    {n:6,s:"SÃ‰Q 3",t:"Sols et production vÃ©gÃ©tale (compost)",c:1,d:1},
-    {n:7,s:"SÃ‰Q 3",t:"Moyens de lutte contre les parasites",c:1,d:1},
-    {n:8,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 4",t:"RÃ´le des microorganismes : fermentations",c:1,d:1},
-    {n:10,s:"SÃ‰Q 4",t:"Transformation de quelques produits agricoles",c:1,d:1},
-    {n:11,s:"SÃ‰Q 4",t:"Technique d'extraction d'une huile vÃ©gÃ©tale",c:1,d:1},
-    {n:12,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SÃ‰Q 5",t:"Les caractÃ©ristiques de la matiÃ¨re",c:1,d:1},
-    {n:14,s:"SÃ‰Q 5",t:"Mesure et calcul de quelques caractÃ©ristiques",c:1,d:1},
-    {n:15,s:"SÃ‰Q 5",t:"Les propriÃ©tÃ©s physiques de la matiÃ¨re",c:1,d:1},
-    {n:16,s:"SÃ‰Q 5",t:"Les propriÃ©tÃ©s chimiques de la matiÃ¨re",c:1,d:1},
-    {n:17,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:18,s:"SÃ‰Q 6",t:"Notion d'Ã©nergie",c:1,d:1},
-    {n:19,s:"SÃ‰Q 6",t:"Formes et sources d'Ã©nergie",c:1,d:1},
-    {n:20,s:"SÃ‰Q 7",t:"Ã‰nergie et environnement",c:1,d:1},
-    {n:21,s:"SÃ‰Q 7",t:"Les modes de transferts de chaleur",c:1,d:1},
-    {n:22,s:"SÃ‰Q 8",t:"Notion de circuit Ã©lectrique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 9",t:"La lumiÃ¨re",c:1,d:1},
-    {n:24,s:"SÃ‰Q 10",t:"Ã‰nergie mÃ©canique",c:1,d:1},
-    {n:25,s:"SÃ‰Q 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:26,s:"SÃ‰Q 11",t:"La pubertÃ©, la fÃ©condation et la grossesse",c:1,d:1},
-    {n:27,s:"SÃ‰Q 11",t:"Les grossesses prÃ©coces",c:1,d:1},
-    {n:28,s:"SÃ‰Q 11",t:"Les pratiques culturelles nÃ©fastes",c:1,d:1},
-    {n:29,s:"SÃ‰Q 11",t:"Les IST et le VIH/SIDA",c:1,d:1},
-    {n:30,s:"SÃ‰Q 11",t:"HygiÃ¨ne des organes reproducteurs",c:1,d:1},
-    {n:31,s:"SÃ‰Q 11",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:32,s:"SÃ‰Q 12",t:"Les diffÃ©rentes catÃ©gories d'aliments",c:1,d:1},
-    {n:33,s:"SÃ‰Q 12",t:"Les maladies nutritionnelles de carence",c:1,d:1},
-    {n:34,s:"SÃ‰Q 12",t:"Les maladies nutritionnelles de l'excÃ¨s",c:1,d:1},
-    {n:35,s:"SÃ‰Q 12",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SÃ‰Q 13",t:"L'eau dans l'environnement",c:1,d:1},
-    {n:37,s:"SÃ‰Q 13",t:"La pollution de l'eau",c:1,d:1},
-    {n:38,s:"SÃ‰Q 13",t:"Lutte contre la pollution des eaux",c:1,d:1},
-    {n:39,s:"SÃ‰Q 13",t:"Les diffÃ©rents usages de l'eau",c:1,d:1},
-    {n:40,s:"SÃ‰Q 13",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:41,s:"SÃ‰Q 14",t:"La pollution des sols",c:1,d:1},
-    {n:42,s:"SÃ‰Q 14",t:"Les moyens de lutte contre la pollution des sols",c:1,d:1},
-    {n:43,s:"SÃ‰Q 14",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:44,s:"SÃ‰Q 15",t:"Les plantes mÃ©dicinales",c:1,d:1},
-    {n:45,s:"SÃ‰Q 15",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:46,s:"SÃ‰Q 16",t:"Technologie : dÃ©finition et dÃ©marche",c:1,d:1},
-    {n:47,s:"SÃ‰Q 17",t:"Objet technique",c:1,d:1},
-    {n:48,s:"SÃ‰Q 18",t:"Cahier des charges",c:1,d:1},
-    {n:49,s:"SÃ‰Q 19",t:"Notion de projet",c:1,d:1},
-    {n:50,s:"SÃ‰Q 19",t:"Exemple : fabrication d'un filtre",c:1,d:1},
-    {n:51,s:"SÃ‰Q 19",t:"Exemple : crÃ©ation d'un jardin potager",c:1,d:1},
-    {n:52,s:"SÃ‰Q 19",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Influence du climat sur la production végétale",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Influence du sol sur la production végétale",c:1,d:1},
+    {n:3,s:"SÉQ 2",t:"Multiplication par voie sexuée des plantes",c:1,d:1},
+    {n:4,s:"SÉQ 2",t:"Multiplication végétative",c:1,d:1},
+    {n:5,s:"SÉQ 2",t:"Rôle de la reproduction dans l'amélioration",c:1,d:1},
+    {n:6,s:"SÉQ 3",t:"Sols et production végétale (compost)",c:1,d:1},
+    {n:7,s:"SÉQ 3",t:"Moyens de lutte contre les parasites",c:1,d:1},
+    {n:8,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 4",t:"Rôle des microorganismes : fermentations",c:1,d:1},
+    {n:10,s:"SÉQ 4",t:"Transformation de quelques produits agricoles",c:1,d:1},
+    {n:11,s:"SÉQ 4",t:"Technique d'extraction d'une huile végétale",c:1,d:1},
+    {n:12,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SÉQ 5",t:"Les caractéristiques de la matière",c:1,d:1},
+    {n:14,s:"SÉQ 5",t:"Mesure et calcul de quelques caractéristiques",c:1,d:1},
+    {n:15,s:"SÉQ 5",t:"Les propriétés physiques de la matière",c:1,d:1},
+    {n:16,s:"SÉQ 5",t:"Les propriétés chimiques de la matière",c:1,d:1},
+    {n:17,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:18,s:"SÉQ 6",t:"Notion d'énergie",c:1,d:1},
+    {n:19,s:"SÉQ 6",t:"Formes et sources d'énergie",c:1,d:1},
+    {n:20,s:"SÉQ 7",t:"Énergie et environnement",c:1,d:1},
+    {n:21,s:"SÉQ 7",t:"Les modes de transferts de chaleur",c:1,d:1},
+    {n:22,s:"SÉQ 8",t:"Notion de circuit électrique",c:1,d:1},
+    {n:23,s:"SÉQ 9",t:"La lumière",c:1,d:1},
+    {n:24,s:"SÉQ 10",t:"Énergie mécanique",c:1,d:1},
+    {n:25,s:"SÉQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:26,s:"SÉQ 11",t:"La puberté, la fécondation et la grossesse",c:1,d:1},
+    {n:27,s:"SÉQ 11",t:"Les grossesses précoces",c:1,d:1},
+    {n:28,s:"SÉQ 11",t:"Les pratiques culturelles néfastes",c:1,d:1},
+    {n:29,s:"SÉQ 11",t:"Les IST et le VIH/SIDA",c:1,d:1},
+    {n:30,s:"SÉQ 11",t:"Hygiène des organes reproducteurs",c:1,d:1},
+    {n:31,s:"SÉQ 11",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:32,s:"SÉQ 12",t:"Les différentes catégories d'aliments",c:1,d:1},
+    {n:33,s:"SÉQ 12",t:"Les maladies nutritionnelles de carence",c:1,d:1},
+    {n:34,s:"SÉQ 12",t:"Les maladies nutritionnelles de l'excès",c:1,d:1},
+    {n:35,s:"SÉQ 12",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SÉQ 13",t:"L'eau dans l'environnement",c:1,d:1},
+    {n:37,s:"SÉQ 13",t:"La pollution de l'eau",c:1,d:1},
+    {n:38,s:"SÉQ 13",t:"Lutte contre la pollution des eaux",c:1,d:1},
+    {n:39,s:"SÉQ 13",t:"Les différents usages de l'eau",c:1,d:1},
+    {n:40,s:"SÉQ 13",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:41,s:"SÉQ 14",t:"La pollution des sols",c:1,d:1},
+    {n:42,s:"SÉQ 14",t:"Les moyens de lutte contre la pollution des sols",c:1,d:1},
+    {n:43,s:"SÉQ 14",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:44,s:"SÉQ 15",t:"Les plantes médicinales",c:1,d:1},
+    {n:45,s:"SÉQ 15",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:46,s:"SÉQ 16",t:"Technologie : définition et démarche",c:1,d:1},
+    {n:47,s:"SÉQ 17",t:"Objet technique",c:1,d:1},
+    {n:48,s:"SÉQ 18",t:"Cahier des charges",c:1,d:1},
+    {n:49,s:"SÉQ 19",t:"Notion de projet",c:1,d:1},
+    {n:50,s:"SÉQ 19",t:"Exemple : fabrication d'un filtre",c:1,d:1},
+    {n:51,s:"SÉQ 19",t:"Exemple : création d'un jardin potager",c:1,d:1},
+    {n:52,s:"SÉQ 19",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "CINQ": [
-    {n:1,s:"SÃ‰Q 1",t:"Influence de l'espace vital et compÃ©tition",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Reproduction sexuÃ©e des animaux",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:4,s:"SÃ‰Q 1",t:"SÃ©lection des espÃ¨ces et reproduction croisÃ©e",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Lutte contre les parasites des animaux",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"La transformation du lait en fromage et beurre",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"La transformation de la viande en saucisse",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Le fumage, le sÃ©chage, le saumurage",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:10,s:"SÃ‰Q 2",t:"Notions de masse volumique et de densitÃ©",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:12,s:"SÃ‰Q 3",t:"La vaporisation et la condensation",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"La solidification, la liquÃ©faction, la sublimation",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"DÃ©finitions, exemples de mÃ©langes",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"SÃ©paration des constituants d'un mÃ©lange",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 4",t:"Position d'un mobile dans un repÃ¨re",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"RelativitÃ© du mouvement et trajectoire",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Notions de vitesse moyenne et instantanÃ©e",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Diagrammes des espaces et des vitesses",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:22,s:"SÃ‰Q 5",t:"Les comportements Ã©mergents nÃ©fastes",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Le VIH/Sida",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:25,s:"SÃ‰Q 5",t:"Rations alimentaires Ã©quilibrÃ©es",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"DÃ©finition et germes impliquÃ©s (intoxications)",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"Les rÃ¨gles d'hygiÃ¨ne alimentaire",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:29,s:"SÃ‰Q 6",t:"L'air et les polluants atmosphÃ©riques",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"Causes et consÃ©quences de l'effet de serre",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Localisation et protection de la couche d'ozone",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:33,s:"SÃ‰Q 7",t:"Origines et types de roches sÃ©dimentaires",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"IntÃ©rÃªts des roches sÃ©dimentaires",c:1,d:1},
-    {n:35,s:"SÃ‰Q 7",t:"Relation entre propriÃ©tÃ©s et utilisation",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:37,s:"SÃ‰Q 8",t:"Recensement des espÃ¨ces animales",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Classification sommaire et causes de disparition",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:40,s:"SÃ‰Q 8",t:"Ã‰tude d'un objet technique",c:1,d:1},
-    {n:41,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:42,s:"SÃ‰Q 9",t:"Ã‰levage des poulets",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"Ã‰levage du tilapia",c:1,d:1},
-    {n:44,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Influence de l'espace vital et compétition",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Reproduction sexuée des animaux",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:4,s:"SÉQ 1",t:"Sélection des espèces et reproduction croisée",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Lutte contre les parasites des animaux",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"La transformation du lait en fromage et beurre",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"La transformation de la viande en saucisse",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Le fumage, le séchage, le saumurage",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:10,s:"SÉQ 2",t:"Notions de masse volumique et de densité",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:12,s:"SÉQ 3",t:"La vaporisation et la condensation",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"La solidification, la liquéfaction, la sublimation",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Définitions, exemples de mélanges",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Séparation des constituants d'un mélange",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 4",t:"Position d'un mobile dans un repère",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Relativité du mouvement et trajectoire",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Notions de vitesse moyenne et instantanée",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Diagrammes des espaces et des vitesses",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:22,s:"SÉQ 5",t:"Les comportements émergents néfastes",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Le VIH/Sida",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:25,s:"SÉQ 5",t:"Rations alimentaires équilibrées",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Définition et germes impliqués (intoxications)",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"Les règles d'hygiène alimentaire",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:29,s:"SÉQ 6",t:"L'air et les polluants atmosphériques",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"Causes et conséquences de l'effet de serre",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Localisation et protection de la couche d'ozone",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:33,s:"SÉQ 7",t:"Origines et types de roches sédimentaires",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Intérêts des roches sédimentaires",c:1,d:1},
+    {n:35,s:"SÉQ 7",t:"Relation entre propriétés et utilisation",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:37,s:"SÉQ 8",t:"Recensement des espèces animales",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Classification sommaire et causes de disparition",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:40,s:"SÉQ 8",t:"Étude d'un objet technique",c:1,d:1},
+    {n:41,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:42,s:"SÉQ 9",t:"Élevage des poulets",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Élevage du tilapia",c:1,d:1},
+    {n:44,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "QUATRE": [
-    {n:1,s:"SÃ‰Q 1",t:"Les besoins nutritifs des vÃ©gÃ©taux",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Les besoins nutritifs des animaux",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"La production de la matiÃ¨re vÃ©gÃ©tale",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"La production de la matiÃ¨re animale",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:6,s:"SÃ‰Q 2",t:"Recensement des espÃ¨ces et notion de biodiversitÃ©",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Diminution de la biodiversitÃ©",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"Les organes de l'appareil moteur",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Accidents des muscles et secourisme",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Accidents des os et articulations",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"RÃ´le de l'alimentation sur l'appareil moteur",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:14,s:"SÃ‰Q 3",t:"La peau : structure, rÃ´le et fonctions",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"Maladies liÃ©es au dÃ©capage de la peau",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 4",t:"Organisation sommaire du systÃ¨me nerveux",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"La fatigue nerveuse",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Les toxicomanies",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SÃ‰Q 5",t:"Organisation de l'appareil digestif",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"RÃ´le de l'appareil digestif",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Importance et hygiÃ¨ne de la digestion",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Les maladies par excÃ¨s et par carence",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"Les maladies du pÃ©ril fÃ©cal",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:27,s:"SÃ‰Q 6",t:"Ã‰tude de quelques IST",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Le VIH/SIDA",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:30,s:"SÃ‰Q 6",t:"Les diffÃ©rentes phases d'une Ã©ruption volcanique",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Les diffÃ©rents types de dynamisme volcanique",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"Du magma aux roches volcaniques",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"Les types de risques volcaniques",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SÃ‰Q 7",t:"Quelques exemples d'Ã©nergies fossiles",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Le pÃ©trole",c:1,d:1},
-    {n:37,s:"SÃ‰Q 8",t:"Les Ã©nergies fossiles et le dÃ©veloppement durable",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:39,s:"SÃ‰Q 8",t:"Les ressources miniÃ¨res du Cameroun",c:1,d:1},
-    {n:40,s:"SÃ‰Q 8",t:"Gestion des ressources miniÃ¨res",c:1,d:1},
-    {n:41,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:42,s:"SÃ‰Q 9",t:"BiodiversitÃ© dans un Ã©cosystÃ¨me aquatique",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"ActivitÃ©s humaines dÃ©truisant les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:44,s:"SÃ‰Q 9",t:"Restauration et conservation de la biodiversitÃ©",c:1,d:1},
-    {n:45,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Les besoins nutritifs des végétaux",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Les besoins nutritifs des animaux",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"La production de la matière végétale",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"La production de la matière animale",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:6,s:"SÉQ 2",t:"Recensement des espèces et notion de biodiversité",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Diminution de la biodiversité",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"Les organes de l'appareil moteur",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Accidents des muscles et secourisme",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Accidents des os et articulations",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Rôle de l'alimentation sur l'appareil moteur",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:14,s:"SÉQ 3",t:"La peau : structure, rôle et fonctions",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Maladies liées au décapage de la peau",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 4",t:"Organisation sommaire du système nerveux",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"La fatigue nerveuse",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Les toxicomanies",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SÉQ 5",t:"Organisation de l'appareil digestif",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Rôle de l'appareil digestif",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Importance et hygiène de la digestion",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Les maladies par excès et par carence",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Les maladies du péril fécal",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:27,s:"SÉQ 6",t:"Étude de quelques IST",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Le VIH/SIDA",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:30,s:"SÉQ 6",t:"Les différentes phases d'une éruption volcanique",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Les différents types de dynamisme volcanique",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"Du magma aux roches volcaniques",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"Les types de risques volcaniques",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SÉQ 7",t:"Quelques exemples d'énergies fossiles",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Le pétrole",c:1,d:1},
+    {n:37,s:"SÉQ 8",t:"Les énergies fossiles et le développement durable",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:39,s:"SÉQ 8",t:"Les ressources minières du Cameroun",c:1,d:1},
+    {n:40,s:"SÉQ 8",t:"Gestion des ressources minières",c:1,d:1},
+    {n:41,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:42,s:"SÉQ 9",t:"Biodiversité dans un écosystème aquatique",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Activités humaines détruisant les écosystèmes",c:1,d:1},
+    {n:44,s:"SÉQ 9",t:"Restauration et conservation de la biodiversité",c:1,d:1},
+    {n:45,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TROIS": [
-    {n:1,s:"SÃ‰Q 1",t:"Ressemblances entre les individus",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"DiffÃ©rences entre les individus",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Localisation de l'information gÃ©nÃ©tique",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Nature de l'information gÃ©nÃ©tique : chromosome et ADN",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Nature de l'information gÃ©nÃ©tique : chromosomes humains",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"Les gÃ¨nes humains",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"GÃ¨nes et diversitÃ© humaine (groupes sanguins)",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"DiffÃ©rents groupes de microorganismes",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Mode de vie des microbes : reproduction",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Mode de vie des microbes : nutrition et respiration",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Contamination par les microorganismes",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Pratiques pour Ã©viter la contamination",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"La rÃ©ponse immunitaire non spÃ©cifique (peau, muqueuses)",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"La rÃ©ponse immunitaire non spÃ©cifique (phagocytose)",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"La rÃ©ponse immunitaire spÃ©cifique",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:18,s:"SÃ‰Q 4",t:"La multiplication du VIH",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"VIH/SIDA : phases, prÃ©vention et traitement",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SÃ‰Q 5",t:"AntibiothÃ©rapie et sÃ©rothÃ©rapie",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"VaccinothÃ©rapie",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:24,s:"SÃ‰Q 5",t:"SiÃ¨ge de la circulation : les vaisseaux",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"SiÃ¨ge de la circulation : le cÅ“ur",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"HygiÃ¨ne de la circulation : hÃ©morragies",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"HygiÃ¨ne de la circulation : maladies cardiovasculaires",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Soins de premiers secours (AVC, hÃ©morragie)",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Anatomie de l'Å“il, anomalies et maladies",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"HygiÃ¨ne de la vision",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:32,s:"SÃ‰Q 7",t:"Un exemple d'endÃ©mie : le paludisme",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"Quelques exemples d'Ã©pidÃ©mies",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SÃ‰Q 7",t:"Manifestations et origine des sÃ©ismes",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Localisation des sÃ©ismes",c:1,d:1},
-    {n:37,s:"SÃ‰Q 8",t:"Causes des risques liÃ©s aux mouvements de terrain",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Causes : action mÃ©canique de l'eau",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Techniques de prÃ©vention des accidents",c:1,d:1},
-    {n:40,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:41,s:"SÃ‰Q 9",t:"BiodiversitÃ© dans les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:42,s:"SÃ‰Q 9",t:"ActivitÃ©s humaines dÃ©truisant les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"Restauration et conservation de la biodiversitÃ©",c:1,d:1},
-    {n:44,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Ressemblances entre les individus",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Différences entre les individus",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Localisation de l'information génétique",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Nature de l'information génétique : chromosome et ADN",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Nature de l'information génétique : chromosomes humains",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"Les gènes humains",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Gènes et diversité humaine (groupes sanguins)",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"Différents groupes de microorganismes",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Mode de vie des microbes : reproduction",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Mode de vie des microbes : nutrition et respiration",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Contamination par les microorganismes",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Pratiques pour éviter la contamination",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"La réponse immunitaire non spécifique (peau, muqueuses)",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"La réponse immunitaire non spécifique (phagocytose)",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"La réponse immunitaire spécifique",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:18,s:"SÉQ 4",t:"La multiplication du VIH",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"VIH/SIDA : phases, prévention et traitement",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SÉQ 5",t:"Antibiothérapie et sérothérapie",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Vaccinothérapie",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:24,s:"SÉQ 5",t:"Siège de la circulation : les vaisseaux",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Siège de la circulation : le cœur",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Hygiène de la circulation : hémorragies",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"Hygiène de la circulation : maladies cardiovasculaires",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Soins de premiers secours (AVC, hémorragie)",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Anatomie de l'œil, anomalies et maladies",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"Hygiène de la vision",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:32,s:"SÉQ 7",t:"Un exemple d'endémie : le paludisme",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"Quelques exemples d'épidémies",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SÉQ 7",t:"Manifestations et origine des séismes",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Localisation des séismes",c:1,d:1},
+    {n:37,s:"SÉQ 8",t:"Causes des risques liés aux mouvements de terrain",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Causes : action mécanique de l'eau",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Techniques de prévention des accidents",c:1,d:1},
+    {n:40,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:41,s:"SÉQ 9",t:"Biodiversité dans les écosystèmes",c:1,d:1},
+    {n:42,s:"SÉQ 9",t:"Activités humaines détruisant les écosystèmes",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Restauration et conservation de la biodiversité",c:1,d:1},
+    {n:44,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "SEC_C": [
-    {n:1,s:"SÃ‰Q 1",t:"La cellule chlorophyllienne, usine photosynthÃ©tique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"L'influence de certains facteurs sur la production vÃ©gÃ©tale",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Les plantes performantes",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Les sociÃ©tÃ©s des fourmis, termites, abeilles",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:6,s:"SÃ‰Q 2",t:"DÃ©finition de la notion de plan d'organisation",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"DÃ©duction de la notion d'homologie, analogie",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Liens de parentÃ© entre Homme et autres espÃ¨ces",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"La transmission de l'information gÃ©nÃ©tique : mitose",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Ã‰changes gazeux respiratoires",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (1)",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (2)",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"Structure et rÃ´le de l'appareil urinaire",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Insuffisances rÃ©nales",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"DÃ©finition, mÃ©canisme, causes des allergies",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:19,s:"SÃ‰Q 4",t:"Complications des allergies",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"La filariose lymphatique et l'onchocercose",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"La dracunculose et la tÃ©niase",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Les schistosomiases et l'ulcÃ¨re de Buruli",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"La fiÃ¨vre jaune",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:25,s:"SÃ‰Q 5",t:"Situation de la planÃ¨te Terre",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"Le rÃ©chauffement climatique",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"La mangrove et l'Ã©cosystÃ¨me aquatique",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Restauration et conservation de la biodiversitÃ©",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:30,s:"SÃ‰Q 6",t:"Les dÃ©chets biodÃ©gradables et non biodÃ©gradables",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Le gÃ©nie gÃ©nÃ©tique",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"La cellule chlorophyllienne, usine photosynthétique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"L'influence de certains facteurs sur la production végétale",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Les plantes performantes",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Les sociétés des fourmis, termites, abeilles",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:6,s:"SÉQ 2",t:"Définition de la notion de plan d'organisation",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Déduction de la notion d'homologie, analogie",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Liens de parenté entre Homme et autres espèces",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"La transmission de l'information génétique : mitose",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Échanges gazeux respiratoires",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SÉQ 3",t:"Variations des paramètres physiologiques (1)",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Variations des paramètres physiologiques (2)",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Structure et rôle de l'appareil urinaire",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Insuffisances rénales",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Définition, mécanisme, causes des allergies",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:19,s:"SÉQ 4",t:"Complications des allergies",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"La filariose lymphatique et l'onchocercose",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"La dracunculose et la téniase",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Les schistosomiases et l'ulcère de Buruli",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"La fièvre jaune",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:25,s:"SÉQ 5",t:"Situation de la planète Terre",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Le réchauffement climatique",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"La mangrove et l'écosystème aquatique",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Restauration et conservation de la biodiversité",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:30,s:"SÉQ 6",t:"Les déchets biodégradables et non biodégradables",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Le génie génétique",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "SEC_A": [
-    {n:1,s:"SÃ‰Q 1",t:"Cellule chlorophyllienne, usine photosynthÃ©tique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Cellule chlorophyllienne et approvisionnement",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"L'influence de certains facteurs sur la production",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 2",t:"Les plantes performantes",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"La transmission de l'information gÃ©nÃ©tique",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:8,s:"SÃ‰Q 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
-    {n:9,s:"SÃ‰Q 3",t:"Ã‰changes gazeux respiratoires",c:1,d:1},
-    {n:10,s:"SÃ‰Q 3",t:"HygiÃ¨ne de l'appareil respiratoire",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (1)",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (2)",c:1,d:1},
-    {n:13,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:14,s:"SÃ‰Q 4",t:"Structure et rÃ´le de l'appareil urinaire",c:1,d:1},
-    {n:15,s:"SÃ‰Q 4",t:"Insuffisances rÃ©nales",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Cycles sexuels",c:1,d:1},
-    {n:17,s:"SÃ‰Q 5",t:"Formation des gamÃ¨tes et fÃ©condation",c:1,d:1},
-    {n:18,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:19,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration (suite)",c:1,d:0},
-    {n:20,s:"SÃ‰Q 5",t:"Les comportements Ã  risque et le VIH/Sida",c:1,d:1},
-    {n:21,s:"SÃ‰Q 6",t:"CaractÃ©ristiques de la planÃ¨te Terre",c:1,d:1},
-    {n:22,s:"SÃ‰Q 6",t:"Le rÃ©chauffement climatique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 6",t:"La mangrove",c:1,d:1},
-    {n:24,s:"SÃ‰Q 6",t:"ActivitÃ©s humaines dÃ©truisant les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:25,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:26,s:"SÃ‰Q 7",t:"Les Ã©tapes du gÃ©nie gÃ©nÃ©tique",c:1,d:1},
-    {n:27,s:"SÃ‰Q 7",t:"Un exemple d'application du gÃ©nie gÃ©nÃ©tique",c:1,d:1},
-    {n:28,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Cellule chlorophyllienne, usine photosynthétique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Cellule chlorophyllienne et approvisionnement",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"L'influence de certains facteurs sur la production",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 2",t:"Les plantes performantes",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"La transmission de l'information génétique",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:8,s:"SÉQ 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
+    {n:9,s:"SÉQ 3",t:"Échanges gazeux respiratoires",c:1,d:1},
+    {n:10,s:"SÉQ 3",t:"Hygiène de l'appareil respiratoire",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Variations des paramètres physiologiques (1)",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Variations des paramètres physiologiques (2)",c:1,d:1},
+    {n:13,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:14,s:"SÉQ 4",t:"Structure et rôle de l'appareil urinaire",c:1,d:1},
+    {n:15,s:"SÉQ 4",t:"Insuffisances rénales",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Cycles sexuels",c:1,d:1},
+    {n:17,s:"SÉQ 5",t:"Formation des gamètes et fécondation",c:1,d:1},
+    {n:18,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:19,s:"SÉQ 5",t:"Apprentissage de l'intégration (suite)",c:1,d:0},
+    {n:20,s:"SÉQ 5",t:"Les comportements à risque et le VIH/Sida",c:1,d:1},
+    {n:21,s:"SÉQ 6",t:"Caractéristiques de la planète Terre",c:1,d:1},
+    {n:22,s:"SÉQ 6",t:"Le réchauffement climatique",c:1,d:1},
+    {n:23,s:"SÉQ 6",t:"La mangrove",c:1,d:1},
+    {n:24,s:"SÉQ 6",t:"Activités humaines détruisant les écosystèmes",c:1,d:1},
+    {n:25,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:26,s:"SÉQ 7",t:"Les étapes du génie génétique",c:1,d:1},
+    {n:27,s:"SÉQ 7",t:"Un exemple d'application du génie génétique",c:1,d:1},
+    {n:28,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TERM_C": [
-    {n:1,s:"SÃ‰Q 1",t:"Prise de contact ; prÃ©sentation du programme ; Ã©valuation diagnostique",c:1,d:0},
-    {n:2,s:"SÃ‰Q 1",t:"Cellule en microscopie optique",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Organisation de la cellule en microscopie Ã©lectronique",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Principaux organites cellulaires et leurs rÃ´les",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:6,s:"SÃ‰Q 2",t:"Structure des acides nuclÃ©iques et duplication de l'ADN",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (Ã©tapes, localisation, acteurs et produits)",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (la relation entre la protÃ©ine et le caractÃ¨re)",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:10,s:"SÃ‰Q 3",t:"De la diploÃ¯die Ã  l'haploÃ¯die : les Ã©tapes de la mÃ©iose",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"NÃ©cessitÃ© de la mÃ©iose dans la pÃ©rennisation de l'espÃ¨ce",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SÃ‰Q 3",t:"Ã‰valuation / Correction, remise des copies et remÃ©diations",c:1,d:0},
-    {n:14,s:"SÃ‰Q 4",t:"Absorption intestinale : dÃ©finition et troubles y affÃ©rents",c:1,d:1},
-    {n:15,s:"SÃ‰Q 4",t:"Devenir et le rÃ´le des Ã©lÃ©ments absorbÃ©s",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Sort des rÃ©sidus de la digestion : Ã©limination des dÃ©chets",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:18,s:"SÃ‰Q 5",t:"Constituants du sang et leurs rÃ´les",c:1,d:1},
-    {n:19,s:"SÃ‰Q 5",t:"Milieu intÃ©rieur",c:1,d:1},
-    {n:20,s:"SÃ‰Q 5",t:"NÃ©cessitÃ© du maintien de la constance du milieu intÃ©rieur",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"Importance de l'Ã©limination urinaire",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:23,s:"SÃ‰Q 6",t:"RÃ´le du systÃ¨me nerveux dans les relations interpersonnelles",c:1,d:1},
-    {n:24,s:"SÃ‰Q 6",t:"Comportements psychosociaux dans la gestion d'un malade contagieux et d'une Ã©pidÃ©mie",c:1,d:1},
-    {n:25,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:26,s:"SÃ‰Q 7",t:"Grossesse",c:1,d:1},
-    {n:27,s:"SÃ‰Q 7",t:"StÃ©rilitÃ©",c:1,d:1},
-    {n:28,s:"SÃ‰Q 7",t:"La procrÃ©ation mÃ©dicalement assistÃ©e",c:1,d:1},
-    {n:29,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:30,s:"SÃ‰Q 8",t:"Dysfonctionnements du systÃ¨me immunitaire : les maladies auto-immunes",c:1,d:1},
-    {n:31,s:"SÃ‰Q 8",t:"Le VIH-Sida et consÃ©quences socioculturelles",c:1,d:1},
-    {n:32,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:33,s:"SÃ‰Q 9",t:"DÃ©finition et classification des catastrophes",c:1,d:1},
-    {n:34,s:"SÃ‰Q 9",t:"La gestion des catastrophes (prÃ©vision, prÃ©diction, prÃ©vention)",c:1,d:1},
-    {n:35,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SÃ‰Q 10",t:"Transformation et conservation de fruits : cas de la mangue",c:1,d:1},
-    {n:37,s:"SÃ‰Q 10",t:"Transformation et conservation de fruits : cas de la tomate",c:1,d:1},
-    {n:38,s:"SÃ‰Q 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:39,s:"SÃ‰Q 11",t:"Valorisation des dÃ©chets papiers et plastiques",c:1,d:1},
+    {n:1,s:"SÉQ 1",t:"Prise de contact ; présentation du programme ; évaluation diagnostique",c:1,d:0},
+    {n:2,s:"SÉQ 1",t:"Cellule en microscopie optique",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Organisation de la cellule en microscopie électronique",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Principaux organites cellulaires et leurs rôles",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:6,s:"SÉQ 2",t:"Structure des acides nucléiques et duplication de l'ADN",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (étapes, localisation, acteurs et produits)",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (la relation entre la protéine et le caractère)",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:10,s:"SÉQ 3",t:"De la diploïdie à l'haploïdie : les étapes de la méiose",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Nécessité de la méiose dans la pérennisation de l'espèce",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SÉQ 3",t:"Évaluation / Correction, remise des copies et remédiations",c:1,d:0},
+    {n:14,s:"SÉQ 4",t:"Absorption intestinale : définition et troubles y afférents",c:1,d:1},
+    {n:15,s:"SÉQ 4",t:"Devenir et le rôle des éléments absorbés",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Sort des résidus de la digestion : élimination des déchets",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:18,s:"SÉQ 5",t:"Constituants du sang et leurs rôles",c:1,d:1},
+    {n:19,s:"SÉQ 5",t:"Milieu intérieur",c:1,d:1},
+    {n:20,s:"SÉQ 5",t:"Nécessité du maintien de la constance du milieu intérieur",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"Importance de l'élimination urinaire",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:23,s:"SÉQ 6",t:"Rôle du système nerveux dans les relations interpersonnelles",c:1,d:1},
+    {n:24,s:"SÉQ 6",t:"Comportements psychosociaux dans la gestion d'un malade contagieux et d'une épidémie",c:1,d:1},
+    {n:25,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:26,s:"SÉQ 7",t:"Grossesse",c:1,d:1},
+    {n:27,s:"SÉQ 7",t:"Stérilité",c:1,d:1},
+    {n:28,s:"SÉQ 7",t:"La procréation médicalement assistée",c:1,d:1},
+    {n:29,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:30,s:"SÉQ 8",t:"Dysfonctionnements du système immunitaire : les maladies auto-immunes",c:1,d:1},
+    {n:31,s:"SÉQ 8",t:"Le VIH-Sida et conséquences socioculturelles",c:1,d:1},
+    {n:32,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:33,s:"SÉQ 9",t:"Définition et classification des catastrophes",c:1,d:1},
+    {n:34,s:"SÉQ 9",t:"La gestion des catastrophes (prévision, prédiction, prévention)",c:1,d:1},
+    {n:35,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SÉQ 10",t:"Transformation et conservation de fruits : cas de la mangue",c:1,d:1},
+    {n:37,s:"SÉQ 10",t:"Transformation et conservation de fruits : cas de la tomate",c:1,d:1},
+    {n:38,s:"SÉQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:39,s:"SÉQ 11",t:"Valorisation des déchets papiers et plastiques",c:1,d:1},
   ],
 };
 
 function ProgrammePage() {
-  // Vue Animatrice â€” Suivi programme global
-  // Utilise le contexte AppContext (donnÃ©es partagÃ©es avec tout AppLayout)
+  // Vue Animatrice — Suivi programme global
+  // Utilise le contexte AppContext (données partagées avec tout AppLayout)
   const {data} = useApp();
 
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
       <Spinner size={28} color={C.green}/>
-      <div style={{marginTop:12,fontSize:13}}>Chargement des donnÃ©esâ€¦</div>
+      <div style={{marginTop:12,fontSize:13}}>Chargement des données…</div>
     </div>
   );
 
   return <EnseignantsPage/>;
 }
 
-// const EP_SLOTS: dÃ©fini globalement ligne ~4092
-// constante dÃ©finie globalement
+// const EP_SLOTS: défini globalement ligne ~4092
+// constante définie globalement
 
-// [DEDUPLIQUÃ‰] const ENS_COLORS = { mbassam:"#1a6b3c",boubam:"#c0392b",douniaroud:"#2980b9",hayatouh:"#16a085",aissatous:"#8e44ad",essambas:"#d35400",koffa:"#27ae60",mawiyak:"#e67e22",sadjot:"#2c3e50",sylvie:"#c8a951" };
-// const getColor = id => ENS_COLORS[id] || "#1a6b3c"; â€” dÃ©fini globalement
-// getIni: dÃ©fini globalement
+// [DEDUPLIQUÉ] const ENS_COLORS = { mbassam:"#1a6b3c",boubam:"#c0392b",douniaroud:"#2980b9",hayatouh:"#16a085",aissatous:"#8e44ad",essambas:"#d35400",koffa:"#27ae60",mawiyak:"#e67e22",sadjot:"#2c3e50",sylvie:"#c8a951" };
+// const getColor = id => ENS_COLORS[id] || "#1a6b3c"; — défini globalement
+// getIni: défini globalement
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PALETTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// const C: rÃ©fÃ©rence au bloc global ci-dessus
+// ═══════════════════════════════════════════════════
+// const C: référence au bloc global ci-dessus
 
 const STATUT_CONFIG = {
-  attente:  { label:"En attente",  emoji:"â³", color:C.orange,  bg:C.orangePale, border:C.orangeBorder },
-  validee:  { label:"ValidÃ©e",     emoji:"âœ…", color:C.green,   bg:C.greenPale,  border:C.greenBorder  },
-  rejetee:  { label:"RejetÃ©e",     emoji:"âŒ", color:C.red,     bg:C.redPale,    border:C.redBorder    },
-  vide:     { label:"Non soumise", emoji:"â—‹",  color:C.txtLight,bg:"#f8fafc",    border:C.border       },
+  attente:  { label:"En attente",  emoji:"⏳", color:C.orange,  bg:C.orangePale, border:C.orangeBorder },
+  validee:  { label:"Validée",     emoji:"✅", color:C.green,   bg:C.greenPale,  border:C.greenBorder  },
+  rejetee:  { label:"Rejetée",     emoji:"❌", color:C.red,     bg:C.redPale,    border:C.redBorder    },
+  vide:     { label:"Non soumise", emoji:"○",  color:C.txtLight,bg:"#f8fafc",    border:C.border       },
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // COMPOSANTS UI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // EpSpinner: utilise Spinner global
 
-// (composant Ep dÃ©dupliquÃ©)
+// (composant Ep dédupliqué)
 
-// (composant Ep dÃ©dupliquÃ©)
+// (composant Ep dédupliqué)
 
 const StatutBadge = ({ statut }) => {
   const cfg = STATUT_CONFIG[statut] || STATUT_CONFIG.vide;
   return <Pill ch={`${cfg.emoji} ${cfg.label}`} color={cfg.color} bg={cfg.bg}/>;
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // CHARGEMENT INITIAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 async function loadData() {
   await syncElevesImport();
   const [epreuves, users, classes, prog, notes, absences] = await Promise.all([
@@ -4114,9 +4113,9 @@ async function loadData() {
   return { epreuves: eps, users: usersMap, classes: classes||[], prog: progIndex, notes: notesIndex, absences: absIndex };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // GRILLE DE COUVERTURE (vue animateur)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 function GrilleCouverture({ classes, epreuves, onCardClick }) {
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:18 }}>
@@ -4130,13 +4129,13 @@ function GrilleCouverture({ classes, epreuves, onCardClick }) {
             <div style={{ padding:"10px 14px",background:"#f8fafc",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
                 <span style={{ fontSize:13,fontWeight:800,color:C.txt }}>{cl.code}</span>
-                <span style={{ fontSize:11,color:C.txtMuted,marginLeft:8 }}>{cl.effectif} Ã©lÃ¨ves</span>
+                <span style={{ fontSize:11,color:C.txtMuted,marginLeft:8 }}>{cl.effectif} élèves</span>
               </div>
               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                 <div style={{ width:80,height:5,background:"#e2e8f0",borderRadius:3,overflow:"hidden" }}>
                   <div style={{ height:"100%",width:`${Math.min(100, Math.round(nb/total*100))}%`,background:nb===total?C.green:nb>0?C.orange:C.border,borderRadius:3,transition:"width .5s" }}/>
                 </div>
-                <span style={{ fontSize:11,fontWeight:700,color:nb===total?C.green:C.txtMuted }}>{nb}/{total} validÃ©es</span>
+                <span style={{ fontSize:11,fontWeight:700,color:nb===total?C.green:C.txtMuted }}>{nb}/{total} validées</span>
               </div>
             </div>
             {/* Slots */}
@@ -4164,9 +4163,9 @@ function GrilleCouverture({ classes, epreuves, onCardClick }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CARTE Ã‰PREUVE (animateur â€” avec actions)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// CARTE ÉPREUVE (animateur — avec actions)
+// ═══════════════════════════════════════════════════
 function EpreuveCard({ ep, users, onAction, isAdmin }) {
   const [comment, setComment] = useState("");
   const [sendingCom, setSendingCom] = useState(false);
@@ -4192,22 +4191,22 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
     <div style={{ background:C.white,borderRadius:12,border:`1.5px solid ${cfg.border}`,overflow:"hidden",animation:"fadeUp .3s ease" }}>
       {/* Header */}
       <div style={{ padding:"14px 16px",background:cfg.bg,borderBottom:`1px solid ${cfg.border}`,display:"flex",alignItems:"flex-start",gap:12 }}>
-        {/* IcÃ´ne type */}
+        {/* Icône type */}
         <div style={{ width:42,height:42,borderRadius:10,background:ep.type==="pdf"?C.redPale:C.bluePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>
-          {ep.type==="pdf"?"ðŸ“•":"ðŸ“˜"}
+          {ep.type==="pdf"?"📕":"📘"}
         </div>
         {/* Infos */}
         <div style={{ flex:1,minWidth:0 }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.txt }}>
-            {ep.trim}Â·{ep.num} â€” {ep.classe} Â· SVTEEHB
+            {ep.trim}·{ep.num} — {ep.classe} · SVTEEHB
           </div>
           <div style={{ display:"flex",flexWrap:"wrap",gap:10,marginTop:5 }}>
             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
               <Avatar ens={ens} size={20} fontSize={8}/>
               <span style={{ fontSize:12,color:C.txtMuted }}>{ens.nom}</span>
             </div>
-            <span style={{ fontSize:12,color:C.txtMuted }}>ðŸ“… {fmtDateFr(ep.soumis)}</span>
-            {ep.fichier && <span style={{ fontSize:12,color:C.txtMuted }}>ðŸ“„ {ep.fichier}</span>}
+            <span style={{ fontSize:12,color:C.txtMuted }}>📅 {fmtDateFr(ep.soumis)}</span>
+            {ep.fichier && <span style={{ fontSize:12,color:C.txtMuted }}>📄 {ep.fichier}</span>}
             {ep.taille && <span style={{ fontSize:12,color:C.txtMuted }}>{ep.taille}</span>}
           </div>
         </div>
@@ -4219,35 +4218,35 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
         <div style={{ padding:"12px 16px",display:"flex",gap:8,borderBottom:`1px solid ${C.border}`,background:"rgba(255,255,255,.7)" }}>
           <button onClick={() => handleAction("validee")} disabled={!!actioning}
             style={{ flex:1,padding:"9px",background:actioning==="validee"?C.green:`linear-gradient(135deg,${C.greenDark},${C.greenLight})`,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:actioning?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:7 }}>
-            {actioning==="validee" ? <><Spinner s={14}/>Validationâ€¦</> : "âœ“ Valider"}
+            {actioning==="validee" ? <><Spinner s={14}/>Validation…</> : "✓ Valider"}
           </button>
           <button onClick={() => handleAction("rejetee")} disabled={!!actioning}
             style={{ flex:1,padding:"9px",background:actioning==="rejetee"?C.red:C.redPale,color:actioning==="rejetee"?"#fff":C.red,border:`1.5px solid ${C.redBorder}`,borderRadius:9,fontSize:13,fontWeight:700,cursor:actioning?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:7 }}>
-            {actioning==="rejetee" ? <><Spinner size={14} color={C.red}/>Rejetâ€¦</> : "âœ— Rejeter"}
+            {actioning==="rejetee" ? <><Spinner size={14} color={C.red}/>Rejet…</> : "✗ Rejeter"}
           </button>
           {ep.stockPath ? (
             <button onClick={() => window.open(sb.fileUrl(ep.stockPath), "_blank")}
               style={{ padding:"9px 14px",background:"#f8fafc",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",color:C.txtMuted,fontFamily:"inherit",whiteSpace:"nowrap" }}>
-              ðŸ‘ï¸ PrÃ©visualiser
+              👁️ Prévisualiser
             </button>
           ) : (
-            <span title="Le fichier n'a pas pu Ãªtre envoyÃ© lors de la soumission" style={{ padding:"9px 12px",background:C.redPale,border:`1.5px solid ${C.redBorder}`,borderRadius:9,fontSize:12,fontWeight:700,color:C.red,whiteSpace:"nowrap" }}>
-              âš ï¸ Fichier manquant
+            <span title="Le fichier n'a pas pu être envoyé lors de la soumission" style={{ padding:"9px 12px",background:C.redPale,border:`1.5px solid ${C.redBorder}`,borderRadius:9,fontSize:12,fontWeight:700,color:C.red,whiteSpace:"nowrap" }}>
+              ⚠️ Fichier manquant
             </span>
           )}
         </div>
       )}
 
-      {/* Bouton prÃ©visualisation seul (validÃ©e / rejetÃ©e) */}
+      {/* Bouton prévisualisation seul (validée / rejetée) */}
       {isAdmin && ep.statut !== "attente" && (
         <div style={{ padding:"10px 16px",borderBottom:`1px solid ${C.border}` }}>
           {ep.stockPath ? (
             <button onClick={() => window.open(sb.fileUrl(ep.stockPath), "_blank")}
               style={{ padding:"7px 14px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",color:C.txtMuted,fontFamily:"inherit" }}>
-              ðŸ‘ï¸ PrÃ©visualiser / Imprimer
+              👁️ Prévisualiser / Imprimer
             </button>
           ) : (
-            <span style={{ fontSize:12,fontWeight:700,color:C.red }}>âš ï¸ Fichier manquant â€” non envoyÃ© lors de la soumission</span>
+            <span style={{ fontSize:12,fontWeight:700,color:C.red }}>⚠️ Fichier manquant — non envoyé lors de la soumission</span>
           )}
         </div>
       )}
@@ -4256,7 +4255,7 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
       {ep.commentaires.length > 0 && (
         <div style={{ padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:8 }}>
           <div style={{ fontSize:11,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:2 }}>
-            {isAdmin ? "Ã‰changes" : "Retour de l'animatrice"}
+            {isAdmin ? "Échanges" : "Retour de l'animatrice"}
           </div>
           {ep.commentaires.map((c, i) => (
             <div key={i} style={{ display:"flex",gap:9 }}>
@@ -4278,7 +4277,7 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
       {/* Zone commentaire */}
       <div style={{ padding:"12px 16px",display:"flex",gap:8,alignItems:"flex-end" }}>
         <textarea value={comment} onChange={e=>setComment(e.target.value)}
-          placeholder="Ajouter un commentaireâ€¦"
+          placeholder="Ajouter un commentaire…"
           rows={1} onInput={e=>{ e.target.style.height="auto"; e.target.style.height=e.target.scrollHeight+"px"; }}
           style={{ flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,fontSize:12,color:C.txt,fontFamily:"inherit",resize:"none",outline:"none",lineHeight:1.4,background:"#f8fafc",transition:"border .2s" }}
           onFocus={e=>{ e.target.style.borderColor=C.green; e.target.style.background=C.white; }}
@@ -4286,16 +4285,16 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
           onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleComment();} }}/>
         <button onClick={handleComment} disabled={!comment.trim()||sendingCom}
           style={{ padding:"9px 14px",background:comment.trim()?C.green:"#e2e8f0",color:comment.trim()?"#fff":C.txtLight,border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:comment.trim()?"pointer":"not-allowed",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center",gap:6 }}>
-          {sendingCom ? <Spinner size={14}/> : "âž¤"}
+          {sendingCom ? <Spinner size={14}/> : "➤"}
         </button>
       </div>
     </div>
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // FORMULAIRE DE SOUMISSION (enseignant)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 function FormSoumission({ user, onSubmit }) {
   const [file, setFile] = useState(null);
   const [classe, setClasse] = useState(user.classes?.[0] || "");
@@ -4336,11 +4335,11 @@ function FormSoumission({ user, onSubmit }) {
   return (
     <div style={{ background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden" }}>
       <div style={{ padding:"14px 16px",background:"#f8fafc",borderBottom:`1px solid ${C.border}` }}>
-        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>ðŸ“¤ Soumettre une Ã©preuve</h3>
-        <p style={{ margin:"3px 0 0",fontSize:12,color:C.txtMuted }}>L'animatrice sera notifiÃ©e automatiquement</p>
+        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>📤 Soumettre une épreuve</h3>
+        <p style={{ margin:"3px 0 0",fontSize:12,color:C.txtMuted }}>L'animatrice sera notifiée automatiquement</p>
       </div>
       <div style={{ padding:"18px 16px",display:"flex",flexDirection:"column",gap:14 }}>
-        {/* SÃ©lecteurs */}
+        {/* Sélecteurs */}
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10 }}>
           <div>
             <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Classe</label>
@@ -4357,7 +4356,7 @@ function FormSoumission({ user, onSubmit }) {
             </select>
           </div>
           <div>
-            <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Ã‰preuve</label>
+            <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Épreuve</label>
             <select value={num} onChange={e=>setNum(e.target.value)}
               style={{ width:"100%",padding:"9px 11px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,color:C.txt,background:C.white,fontFamily:"inherit",outline:"none",cursor:"pointer" }}>
               {slots.map(s=><option key={s.ep} value={s.ep}>{s.label}</option>)}
@@ -4373,14 +4372,14 @@ function FormSoumission({ user, onSubmit }) {
             onDrop={handleDrop}
             onClick={()=>fileRef.current?.click()}
             style={{ border:`2px dashed ${dragging?C.green:C.border}`,borderRadius:11,padding:"28px 20px",textAlign:"center",cursor:"pointer",background:dragging?C.greenPale:"#f8fafc",transition:"all .2s" }}>
-            <div style={{ fontSize:32,marginBottom:8 }}>ðŸ“Ž</div>
-            <div style={{ fontSize:13,fontWeight:700,color:C.txt }}>DÃ©poser le fichier ici</div>
-            <div style={{ fontSize:12,color:C.txtMuted,marginTop:3 }}>ou cliquer pour parcourir â€” PDF, Word, image â€” max 10 Mo</div>
+            <div style={{ fontSize:32,marginBottom:8 }}>📎</div>
+            <div style={{ fontSize:13,fontWeight:700,color:C.txt }}>Déposer le fichier ici</div>
+            <div style={{ fontSize:12,color:C.txtMuted,marginTop:3 }}>ou cliquer pour parcourir — PDF, Word, image — max 10 Mo</div>
             <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style={{ display:"none" }} onChange={e=>handleFile(e.target.files[0])}/>
           </div>
         ) : (
           <div style={{ background:C.greenPale,border:`1.5px solid ${C.greenBorder}`,borderRadius:11,padding:"12px 14px",display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ fontSize:22,flexShrink:0 }}>{file.name.endsWith(".pdf")?"ðŸ“•":"ðŸ“˜"}</div>
+            <div style={{ fontSize:22,flexShrink:0 }}>{file.name.endsWith(".pdf")?"📕":"📘"}</div>
             <div style={{ flex:1,minWidth:0 }}>
               <div style={{ fontSize:13,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{file.name}</div>
               <div style={{ fontSize:11,color:C.txtMuted }}>{(file.size/1024).toFixed(0)} Ko</div>
@@ -4391,8 +4390,8 @@ function FormSoumission({ user, onSubmit }) {
 
         {/* Note facultative */}
         <div>
-          <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Note Ã  l'animatrice (optionnel)</label>
-          <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="Informations complÃ©mentaires, consignes, contexteâ€¦"
+          <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Note à l'animatrice (optionnel)</label>
+          <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="Informations complémentaires, consignes, contexte…"
             style={{ width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:12,color:C.txt,fontFamily:"inherit",resize:"vertical",outline:"none",background:"#f8fafc",transition:"border .2s" }}
             onFocus={e=>{ e.target.style.borderColor=C.green; e.target.style.background=C.white; }}
             onBlur={e=>{ e.target.style.borderColor=C.border; e.target.style.background="#f8fafc"; }}/>
@@ -4401,16 +4400,16 @@ function FormSoumission({ user, onSubmit }) {
         {/* Bouton */}
         <button onClick={submit} disabled={!file||submitting}
           style={{ width:"100%",padding:"12px",background:file&&!submitting?`linear-gradient(135deg,${C.greenDark},${C.greenLight})`:"#e2e8f0",color:file&&!submitting?"#fff":C.txtLight,border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:file&&!submitting?"pointer":"not-allowed",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:9 }}>
-          {submitting ? <><Spinner/>Envoi en coursâ€¦</> : "ðŸ“¤ Soumettre Ã  l'animatrice"}
+          {submitting ? <><Spinner/>Envoi en cours…</> : "📤 Soumettre à l'animatrice"}
         </button>
       </div>
     </div>
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// VUE ANIMATEUR COMPLÃˆTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// VUE ANIMATEUR COMPLÈTE
+// ═══════════════════════════════════════════════════
 function EpViewAdmin({ data, setData, showToast }) {
   const {isMobile} = useDevice();
   const [activeTab, setActiveTab] = useState("pending");
@@ -4433,7 +4432,7 @@ function EpViewAdmin({ data, setData, showToast }) {
       ep.statut = statut;
       const ok = await sb.rpc("update_epreuve_statut", { p_id: ep.id, p_statut: statut });
       if (ok) {
-        showToast(statut==="validee" ? "âœ… Ã‰preuve validÃ©e â€” enseignant notifiÃ©" : "âš ï¸ Ã‰preuve rejetÃ©e â€” enseignant notifiÃ©", true);
+        showToast(statut==="validee" ? "✅ Épreuve validée — enseignant notifié" : "⚠️ Épreuve rejetée — enseignant notifié", true);
       }
     }
     if (commentaire) {
@@ -4441,7 +4440,7 @@ function EpViewAdmin({ data, setData, showToast }) {
       const nouveauCommentaire = { av:"AS", col:C.gold, aut:"Sylvie", txt:commentaire, date:now };
       ep.commentaires.push(nouveauCommentaire);
       await sb.rpc("add_epreuve_commentaire", { p_id: ep.id, p_commentaire: nouveauCommentaire });
-      showToast("ðŸ’¬ Commentaire envoyÃ©", true);
+      showToast("💬 Commentaire envoyé", true);
     }
     setData(prev => ({ ...prev, epreuves: eps }));
     if (selectedEp?.id === epId) setSelectedEp(eps.find(e => e.id === epId));
@@ -4449,8 +4448,8 @@ function EpViewAdmin({ data, setData, showToast }) {
 
   const tabs = [
     { id:"pending",   label:"En attente",  count:pending.length,   color:C.orange },
-    { id:"validated", label:"ValidÃ©es",     count:validated.length, color:C.green  },
-    { id:"rejected",  label:"RejetÃ©es",     count:rejected.length,  color:C.red    },
+    { id:"validated", label:"Validées",     count:validated.length, color:C.green  },
+    { id:"rejected",  label:"Rejetées",     count:rejected.length,  color:C.red    },
     { id:"grille",    label:"Grille globale",count:null,            color:C.blue   },
   ];
 
@@ -4458,14 +4457,14 @@ function EpViewAdmin({ data, setData, showToast }) {
 
   return (
     <div style={{ display:"grid",gridTemplateColumns:"1fr 380px",gap:16,alignItems:"start" }}>
-      {/* Gauche â€” liste */}
+      {/* Gauche — liste */}
       <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
         {/* Stats */}
         <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:10 }}>
           {[
             { label:"En attente", val:pending.length,   col:C.orange, bg:C.orangePale },
-            { label:"ValidÃ©es",   val:validated.length, col:C.green,  bg:C.greenPale  },
-            { label:"RejetÃ©es",   val:rejected.length,  col:C.red,    bg:C.redPale    },
+            { label:"Validées",   val:validated.length, col:C.green,  bg:C.greenPale  },
+            { label:"Rejetées",   val:rejected.length,  col:C.red,    bg:C.redPale    },
             { label:"Total",      val:(data?.epreuves||[]).length, col:C.blue, bg:C.bluePale },
           ].map((s,i)=>(
             <div key={i} style={{ background:s.bg,borderRadius:10,border:`1px solid ${s.col}20`,padding:"12px 14px" }}>
@@ -4506,10 +4505,10 @@ function EpViewAdmin({ data, setData, showToast }) {
             {currentList.length === 0 ? (
               <div style={{ textAlign:"center",padding:"40px",color:C.txtMuted,background:C.white,borderRadius:12,border:`1px solid ${C.border}` }}>
                 <div style={{ fontSize:32,marginBottom:8 }}>
-                  {activeTab==="pending"?"ðŸ“­":activeTab==="validated"?"âœ…":"ðŸ“‹"}
+                  {activeTab==="pending"?"📭":activeTab==="validated"?"✅":"📋"}
                 </div>
                 <div style={{ fontSize:13,fontWeight:600 }}>
-                  {activeTab==="pending"?"Aucune Ã©preuve en attente":activeTab==="validated"?"Aucune Ã©preuve validÃ©e":"Aucune Ã©preuve rejetÃ©e"}
+                  {activeTab==="pending"?"Aucune épreuve en attente":activeTab==="validated"?"Aucune épreuve validée":"Aucune épreuve rejetée"}
                 </div>
               </div>
             ) : (
@@ -4521,21 +4520,21 @@ function EpViewAdmin({ data, setData, showToast }) {
         )}
       </div>
 
-      {/* Droite â€” dÃ©tail sÃ©lectionnÃ© */}
+      {/* Droite — détail sélectionné */}
       <div style={{ position:"sticky",top:70 }}>
         {selectedEp ? (
           <div>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-              <h3 style={{ margin:0,fontSize:13,fontWeight:700,color:C.txt }}>DÃ©tail de l'Ã©preuve</h3>
-              <button onClick={()=>setSelectedEp(null)} style={{ padding:"4px 9px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:7,color:C.txtMuted,fontSize:11,cursor:"pointer",fontFamily:"inherit" }}>âœ• Fermer</button>
+              <h3 style={{ margin:0,fontSize:13,fontWeight:700,color:C.txt }}>Détail de l'épreuve</h3>
+              <button onClick={()=>setSelectedEp(null)} style={{ padding:"4px 9px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:7,color:C.txtMuted,fontSize:11,cursor:"pointer",fontFamily:"inherit" }}>✕ Fermer</button>
             </div>
             <EpreuveCard ep={(data?.epreuves||[]).find(e=>e.id===selectedEp.id)||selectedEp} users={data?.users||{}} onAction={handleAction} isAdmin={true}/>
           </div>
         ) : (
           <div style={{ background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:"28px 20px",textAlign:"center",color:C.txtMuted }}>
-            <div style={{ fontSize:32,marginBottom:10 }}>ðŸ‘†</div>
-            <div style={{ fontSize:13,fontWeight:600,marginBottom:5 }}>SÃ©lectionner une Ã©preuve</div>
-            <div style={{ fontSize:12 }}>Cliquez sur une carte de la grille ou d'une Ã©preuve pour voir le dÃ©tail et agir</div>
+            <div style={{ fontSize:32,marginBottom:10 }}>👆</div>
+            <div style={{ fontSize:13,fontWeight:600,marginBottom:5 }}>Sélectionner une épreuve</div>
+            <div style={{ fontSize:12 }}>Cliquez sur une carte de la grille ou d'une épreuve pour voir le détail et agir</div>
           </div>
         )}
       </div>
@@ -4543,9 +4542,9 @@ function EpViewAdmin({ data, setData, showToast }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// VUE ENSEIGNANT COMPLÃˆTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// VUE ENSEIGNANT COMPLÈTE
+// ═══════════════════════════════════════════════════
 function EpViewTeacher({ user, data, setData, showToast }) {
   const {isMobile} = useDevice();
   const mesEpreuves = (data?.epreuves||[]).filter(e => e.ens_id === user.id || e.ens === user.id);
@@ -4561,7 +4560,7 @@ function EpViewTeacher({ user, data, setData, showToast }) {
     const nouveauCommentaire = { av:user.ini, col:user.col, aut:getNomCourt(user.nom), txt:commentaire, date:now };
     ep.commentaires.push(nouveauCommentaire);
     await sb.rpc("add_epreuve_commentaire", { p_id: ep.id, p_commentaire: nouveauCommentaire });
-    showToast("ðŸ’¬ Message envoyÃ© Ã  l'animatrice", true);
+    showToast("💬 Message envoyé à l'animatrice", true);
     setData(prev => ({ ...prev, epreuves: eps }));
   }, [data?.epreuves||[], user]);
 
@@ -4569,25 +4568,25 @@ function EpViewTeacher({ user, data, setData, showToast }) {
     if (ok && ep) {
       setData(prev => ({ ...prev, epreuves: [ep, ...prev.epreuves] }));
       if (uploadFailed) {
-        showToast("âš ï¸ Fiche enregistrÃ©e mais le FICHIER n'a pas pu Ãªtre envoyÃ© â€” rÃ©essayez ou contactez l'animatrice", false);
+        showToast("⚠️ Fiche enregistrée mais le FICHIER n'a pas pu être envoyé — réessayez ou contactez l'animatrice", false);
       } else {
-        showToast("âœ… Ã‰preuve soumise â€” animatrice notifiÃ©e", true);
+        showToast("✅ Épreuve soumise — animatrice notifiée", true);
       }
     } else {
-      showToast("âš ï¸ Erreur lors de la soumission", false);
+      showToast("⚠️ Erreur lors de la soumission", false);
     }
   };
 
   return (
     <div style={{ display:"grid",gridTemplateColumns:"1fr 340px",gap:16,alignItems:"start" }}>
-      {/* Gauche â€” mes Ã©preuves */}
+      {/* Gauche — mes épreuves */}
       <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
         {/* Stats */}
         <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(3,1fr)",gap:10 }}>
           {[
             { label:"En attente",   val:pending.length,   col:C.orange, bg:C.orangePale },
-            { label:"ValidÃ©es",     val:validated.length, col:C.green,  bg:C.greenPale  },
-            { label:"Ã€ corriger",   val:rejected.length,  col:C.red,    bg:C.redPale    },
+            { label:"Validées",     val:validated.length, col:C.green,  bg:C.greenPale  },
+            { label:"À corriger",   val:rejected.length,  col:C.red,    bg:C.redPale    },
           ].map((s,i)=>(
             <div key={i} style={{ background:s.bg,borderRadius:10,border:`1px solid ${s.col}20`,padding:"12px 14px" }}>
               <div style={{ fontSize:10,color:s.col,fontWeight:700,marginBottom:4 }}>{s.label}</div>
@@ -4596,21 +4595,21 @@ function EpViewTeacher({ user, data, setData, showToast }) {
           ))}
         </div>
 
-        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>ðŸ“‹ Mes Ã©preuves soumises</h3>
+        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>📋 Mes épreuves soumises</h3>
 
         {mesEpreuves.length === 0 ? (
           <div style={{ textAlign:"center",padding:"40px",color:C.txtMuted,background:C.white,borderRadius:12,border:`1px solid ${C.border}` }}>
-            <div style={{ fontSize:32,marginBottom:8 }}>ðŸ“­</div>
-            <div style={{ fontSize:13,fontWeight:600 }}>Aucune Ã©preuve soumise</div>
-            <div style={{ fontSize:12,marginTop:4 }}>Utilisez le formulaire ci-contre pour soumettre votre premiÃ¨re Ã©preuve</div>
+            <div style={{ fontSize:32,marginBottom:8 }}>📭</div>
+            <div style={{ fontSize:13,fontWeight:600 }}>Aucune épreuve soumise</div>
+            <div style={{ fontSize:12,marginTop:4 }}>Utilisez le formulaire ci-contre pour soumettre votre première épreuve</div>
           </div>
         ) : (
           <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-            {/* RejetÃ©es en premier â€” action requise */}
+            {/* Rejetées en premier — action requise */}
             {rejected.length > 0 && (
               <div style={{ background:C.redPale,border:`1px solid ${C.redBorder}`,borderRadius:10,padding:"10px 14px",marginBottom:4 }}>
-                <div style={{ fontSize:12,fontWeight:700,color:C.red }}>âš ï¸ {rejected.length} Ã©preuve{rejected.length>1?"s":""} rejetÃ©e{rejected.length>1?"s":""} â€” action requise</div>
-                <div style={{ fontSize:11,color:C.txtMuted,marginTop:2 }}>Consultez les commentaires et soumettez une version corrigÃ©e</div>
+                <div style={{ fontSize:12,fontWeight:700,color:C.red }}>⚠️ {rejected.length} épreuve{rejected.length>1?"s":""} rejetée{rejected.length>1?"s":""} — action requise</div>
+                <div style={{ fontSize:11,color:C.txtMuted,marginTop:2 }}>Consultez les commentaires et soumettez une version corrigée</div>
               </div>
             )}
             {mesEpreuves.map(ep => (
@@ -4620,16 +4619,16 @@ function EpViewTeacher({ user, data, setData, showToast }) {
         )}
       </div>
 
-      {/* Droite â€” formulaire */}
+      {/* Droite — formulaire */}
       <div style={{ position:"sticky",top:70 }}>
         <FormSoumission user={user} onSubmit={onSubmit}/>
         {/* Grille slots */}
         <div style={{ marginTop:14,background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:"14px 16px" }}>
-          <h4 style={{ margin:"0 0 12px",fontSize:13,fontWeight:700,color:C.txt }}>ðŸ“Š Mes slots d'Ã©preuves</h4>
+          <h4 style={{ margin:"0 0 12px",fontSize:13,fontWeight:700,color:C.txt }}>📊 Mes slots d'épreuves</h4>
           <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(2,1fr)",gap:7 }}>
             {EP_SLOTS.map((slot,i) => {
               const submitted = mesEpreuves.filter(e => e.trim===slot.trim && e.num===slot.ep);
-              // On prend la plus rÃ©cente
+              // On prend la plus récente
               const ep = submitted.sort((a,b)=>b.soumis?.localeCompare(a.soumis)||0)[0];
               const st = ep?.statut || "vide";
               const cfg = STATUT_CONFIG[st];
@@ -4651,9 +4650,9 @@ function EpViewTeacher({ user, data, setData, showToast }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PAGE PRINCIPALE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 
 function EpreuvesPage() {
   const {user, data, setData, showToast} = useApp();
@@ -4662,46 +4661,46 @@ function EpreuvesPage() {
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
       <Spinner size={28} color={C.green}/>
-      <div style={{marginTop:12,fontSize:13}}>Chargementâ€¦</div>
+      <div style={{marginTop:12,fontSize:13}}>Chargement…</div>
     </div>
   );
 
   if (isAdmin) return <EpViewAdmin data={data} setData={setData} showToast={showToast}/>;
 
-  // Vue enseignant â€” utiliser l'utilisateur connectÃ©
+  // Vue enseignant — utiliser l'utilisateur connecté
   const ens = user;
   return <EpViewTeacher user={ens} data={data} setData={setData} showToast={showToast}/>;
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PALETTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// const C: rÃ©fÃ©rence au bloc global ci-dessus
+// ═══════════════════════════════════════════════════
+// const C: référence au bloc global ci-dessus
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CHARGEMENT DONNÃ‰ES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// loadData: dÃ©finie globalement (charge classes, users, prog_suivi, epreuves, edt_exceptions)
+// ═══════════════════════════════════════════════════
+// CHARGEMENT DONNÉES
+// ═══════════════════════════════════════════════════
+// loadData: définie globalement (charge classes, users, prog_suivi, epreuves, edt_exceptions)
 
-// progDocMeta: dÃ©finie globalement dans le header
+// progDocMeta: définie globalement dans le header
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GÃ‰NÃ‰RATION HTML DOCUMENT OFFICIEL MINESEC
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// GÉNÉRATION HTML DOCUMENT OFFICIEL MINESEC
+// ═══════════════════════════════════════════════════
 function enteteOfficiel(titre, sousTitre) {
   return `
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;border-bottom:2px solid #1a6b3c;padding-bottom:10px">
     <div style="text-align:center;font-size:9px;line-height:1.5;width:45%">
       <div style="font-weight:bold">REPUBLIQUE DU CAMEROUN</div>
-      <div style="font-style:italic">Paix â€“ Travail â€“ Patrie</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-style:italic">Paix – Travail – Patrie</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>MINISTERE DES ENSEIGNEMENTS SECONDAIRES</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTION GENERALE DES ENSEIGNEMENTS</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTION DE PEDAGOGIE CHARGEE DE L'ENSEIGNEMENT DES SCIENCES</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div style="font-weight:bold">SECTION : SVTEEHB</div>
     </div>
     <div style="text-align:center;width:10%;display:flex;flex-direction:column;align-items:center;gap:6px">
@@ -4709,35 +4708,35 @@ function enteteOfficiel(titre, sousTitre) {
     </div>
     <div style="text-align:center;font-size:9px;line-height:1.5;width:45%">
       <div style="font-weight:bold">REPUBLIC OF CAMEROON</div>
-      <div style="font-style:italic">Peace â€“ Work â€“ Fatherland</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-style:italic">Peace – Work – Fatherland</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>MINISTRY OF SECONDARY EDUCATION</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTORATE GENERAL OF EDUCATION</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTORATE OF PEDAGOGY IN CHARGE OF THE TEACHING OF SCIENCES</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div style="font-weight:bold">SECTION : LESEEHB</div>
     </div>
   </div>
   <h2 style="text-align:center;font-size:13px;font-weight:900;text-transform:uppercase;border:2px solid #222;padding:7px;margin:8px 0;letter-spacing:.04em">${titre}</h2>
   ${sousTitre ? `<p style="text-align:center;font-size:10px;color:#444;margin:0 0 8px">${sousTitre}</p>` : ""}
-  <div style="text-align:center;font-size:9px;margin-bottom:2px">Ã‰tablissement : LycÃ©e de Kakatare &nbsp;|&nbsp; Discipline : SVTEEHB &nbsp;|&nbsp; AnnÃ©e scolaire : 2025-2026</div>`;
+  <div style="text-align:center;font-size:9px;margin-bottom:2px">Établissement : Lycée de Kakatare &nbsp;|&nbsp; Discipline : SVTEEHB &nbsp;|&nbsp; Année scolaire : 2025-2026</div>`;
 }
 
-// Fiche de suivi pÃ©dagogique (vue animatrice par enseignant)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// genFicheSuivi â€” Fiche de Suivi PÃ©dagogique MINESEC officielle
-// Source modÃ¨le : Modele_de_FP.pdf â€” MINESEC-DRES/EXTREME-NORD
-// Structure : identique au modÃ¨le officiel â€” toutes colonnes prÃ©sentes
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Fiche de suivi pédagogique (vue animatrice par enseignant)
+// ═══════════════════════════════════════════════════════════════════
+// genFicheSuivi — Fiche de Suivi Pédagogique MINESEC officielle
+// Source modèle : Modele_de_FP.pdf — MINESEC-DRES/EXTREME-NORD
+// Structure : identique au modèle officiel — toutes colonnes présentes
+// ═══════════════════════════════════════════════════════════════════
 function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex = {}, absencesIndex = {}) {
-  const periode = TRIM_LABELS[trim] || "AnnÃ©e complÃ¨te";
+  const periode = TRIM_LABELS[trim] || "Année complète";
   const nbSem   = trim === "ANN" ? 36 : 12;
   const dateJour = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
-  const evalLabel = trim === "ANN" ? "NÂ° 1 Â· 2 Â· 3 Â· 4 Â· 5 Â· 6" : trim === "T1" ? "NÂ° 1 et 2" : trim === "T2" ? "NÂ° 3 et 4" : "NÂ° 5 et 6";
+  const evalLabel = trim === "ANN" ? "N° 1 · 2 · 3 · 4 · 5 · 6" : trim === "T1" ? "N° 1 et 2" : trim === "T2" ? "N° 3 et 4" : "N° 5 et 6";
 
-  // â”€â”€ Calcul des lignes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Calcul des lignes ────────────────────────────────────────────
   const statsObs = [];
   const rows = classes.map((cl,idx) => {
     const eleves = ELEVES_DB[cl] || [];
@@ -4746,12 +4745,12 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const total = eleves.length;
     const code = resolveProgCode(cl);
     const meta = code ? PROG_META[code] : null;
-    if (!meta) return `<tr><td style="font-weight:700;padding:3px 4px;text-align:center;font-size:7.5pt;background:#f0f0f0;border:1px solid #999">${cl}</td><td colspan="22" style="border:1px solid #999;padding:3px;text-align:center;color:#999;font-style:italic;font-size:7pt">Programme non mappÃ©</td></tr>`;
+    if (!meta) return `<tr><td style="font-weight:700;padding:3px 4px;text-align:center;font-size:7.5pt;background:#f0f0f0;border:1px solid #999">${cl}</td><td colspan="22" style="border:1px solid #999;padding:3px;text-align:center;color:#999;font-style:italic;font-size:7pt">Programme non mappé</td></tr>`;
 
     const key    = `${enseignant.id}||${cl}`;
     const faites = progIndex[key] || [];
     const leconsCodeAll = LECONS_DATA[code]||[];
-    const tdLeconsAll = leconsCodeAll.filter(l=>/intÃ©gration/i.test(l.t));
+    const tdLeconsAll = leconsCodeAll.filter(l=>/intégration/i.test(l.t));
 
     let lp = meta.lpRef, tpP = meta.tp?.length||0, tdP = tdLeconsAll.length;
     if (trim !== "ANN") {
@@ -4771,7 +4770,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const tdFait = trim==="ANN"
       ? tdLeconsAll.filter(l=>faites.includes(l.n)).length
       : tdLeconsAll.filter(l=>{ const r=getTrimRange(code,trim); return faites.includes(l.n)&&r&&l.n>=r[0]&&l.n<=r[1]; }).length;
-    // Nombre prÃ©vu/fait total = TP + TD (activitÃ©s d'intÃ©gration, obligatoires)
+    // Nombre prévu/fait total = TP + TD (activités d'intégration, obligatoires)
     const tpTdP  = tpP + tdP;
     const tpTdFT = tpFT + tdFait;
     const tauxTP = tpTdP>0 ? Math.min(100, Math.round(tpTdFT/tpTdP*100)) : 0;
@@ -4779,7 +4778,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const hFaites = Math.round(lfTrim * (meta.hd/meta.lpRef));
     const tauxHD = hDues>0 ? Math.min(100, Math.round(hFaites/hDues*100)) : 0;
 
-    // Utilisation des ressources digitalisÃ©es â€” depuis prog_suivi clÃ© "||dig"
+    // Utilisation des ressources digitalisées — depuis prog_suivi clé "||dig"
     const digFaites = progIndex[`${key}||dig`] || [];
     const leconsCode = LECONS_DATA[code]||[];
     const digRange = trim!=="ANN" ? getTrimRange(code,trim) : null;
@@ -4790,7 +4789,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const ldFait = leconsDigitalisables.filter(l=>digFaites.includes(l.n)).length;
     const tauxLD = ldTot>0 ? Math.min(100, Math.round(ldFait/ldTot*100)) : 0;
 
-    // Taux de rÃ©ussite depuis notes
+    // Taux de réussite depuis notes
     const getN = (eid, t, e) => { const v = (notesIndex[`${cl}||${t}-${e}`]||{})[eid]; return (v===undefined||v===""||v===null) ? null : +v; };
     const moyTrimEl = (eid, t) => { const e1=getN(eid,t,"E1"), e2=getN(eid,t,"E2"); if(e1===null&&e2===null) return null; if(e1!==null&&e2!==null) return (e1+e2)/2; return e1!==null?e1:e2; };
     const trimsToAvg = trim==="ANN" ? ["T1","T2","T3"] : [trim];
@@ -4803,10 +4802,10 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const pctG = mG.length>0?Math.round(mG.filter(n=>n>=10).length/mG.length*100):null;
     const pctF = mF.length>0?Math.round(mF.filter(n=>n>=10).length/mF.length*100):null;
 
-    // Taux d'AssiduitÃ© (TA) â€” formule exacte de la lÃ©gende (2) :
-    // A = Volume horaire HEBDOMADAIRE Ã— Effectif, Ã©tendu sur nbSem semaines de la pÃ©riode
-    // B = Total des heures d'absence enregistrÃ©es sur la pÃ©riode
-    // PrÃ©sences enregistrÃ©es par DATE (indÃ©pendant du cahier de texte)
+    // Taux d'Assiduité (TA) — formule exacte de la légende (2) :
+    // A = Volume horaire HEBDOMADAIRE × Effectif, étendu sur nbSem semaines de la période
+    // B = Total des heures d'absence enregistrées sur la période
+    // Présences enregistrées par DATE (indépendant du cahier de texte)
     const moisDansTrim = (dateStr, tr) => {
       if (tr === "ANN") return true;
       const mois = parseInt((dateStr||"").split("-")[1], 10);
@@ -4820,15 +4819,15 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
       .filter(k=>k.startsWith(absPrefix))
       .map(k=>k.slice(absPrefix.length))
       .filter(d=>moisDansTrim(d, trim));
-    const heuresParSeance = lp>0 ? (meta.vh*nbSem)/lp : 0; // 1 sÃ©ance â‰ˆ (vhÃ—semaines pÃ©riode)/leÃ§ons prÃ©vues
+    const heuresParSeance = lp>0 ? (meta.vh*nbSem)/lp : 0; // 1 séance ≈ (vh×semaines période)/leçons prévues
     let heuresAbsTotal = 0;
     datesAvecDonnees.forEach(d=>{
       const abs = absencesIndex[`${absPrefix}${d}`]||[];
       heuresAbsTotal += abs.length * heuresParSeance;
     });
     const seancesAvecDonnees = datesAvecDonnees.length;
-    // A = capacitÃ© d'heures pour les SÃ‰ANCES RÃ‰ELLEMENT RENSEIGNÃ‰ES uniquement
-    // (et non toute l'annÃ©e â€” sinon 1 seule journÃ©e notÃ©e dilue le taux vers 100%)
+    // A = capacité d'heures pour les SÉANCES RÉELLEMENT RENSEIGNÉES uniquement
+    // (et non toute l'année — sinon 1 seule journée notée dilue le taux vers 100%)
     const heuresPossibles = total * heuresParSeance * seancesAvecDonnees;
     const tauxAssiduite = (seancesAvecDonnees>0 && heuresPossibles>0)
       ? Math.max(0, Math.min(100, Math.round((heuresPossibles - heuresAbsTotal) * 100 / heuresPossibles)))
@@ -4837,7 +4836,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 
     // Couleurs taux
     const col = v => v>=75?"#16a34a":v>=50?"#92400e":"#991b1b";
-    const pct = (v,sfx="%") => v!==null?`<span style="color:${col(v)};font-weight:700">${v}${sfx}</span>`:"â€”";
+    const pct = (v,sfx="%") => v!==null?`<span style="color:${col(v)};font-weight:700">${v}${sfx}</span>`:"—";
     const bgRow = idx%2===0?"#ffffff":"#f9f9f9";
     const td = `style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;background:${bgRow}"`;
     const tdG = `style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:8pt;font-weight:700;background:#f0f0f0"`;
@@ -4846,44 +4845,44 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     return `<tr>
       <td ${tdG}>${cl}</td>
       <td ${td}>${g}</td><td ${td}>${f}</td><td ${td} style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;font-weight:700;background:${bgRow}">${total}</td>
-      <td ${td}>${seancesAvecDonnees>0?Math.round(heuresPossibles):"â€”"}</td><td ${td}>${heuresFaitesAssidu!==null?heuresFaitesAssidu:"â€”"}</td><td ${td}>${tauxAssiduite!==null?pct(tauxAssiduite):'<span style="color:#999;font-style:italic;font-size:6.5pt">N/D</span>'}</td>
+      <td ${td}>${seancesAvecDonnees>0?Math.round(heuresPossibles):"—"}</td><td ${td}>${heuresFaitesAssidu!==null?heuresFaitesAssidu:"—"}</td><td ${td}>${tauxAssiduite!==null?pct(tauxAssiduite):'<span style="color:#999;font-style:italic;font-size:6.5pt">N/D</span>'}</td>
       <td ${td}>${lp}</td><td ${td}><strong>${lfTrim}</strong></td><td ${td}>${pct(tauxLP)}</td>
       <td ${td}>${ldTot}</td><td ${td}><strong>${ldFait}</strong></td><td ${td}>${pct(tauxLD)}</td>
       <td ${td}>${hDues}</td><td ${td}>${hFaites}</td><td ${td}>${pct(tauxHD)}</td>
       <td ${td}>${tpTdP}</td><td ${td}>${tpTdFT}</td><td ${td}>${pct(tauxTP)}</td>
-      <td ${td}>${pctG!==null?pct(pctG):"â€”"}</td><td ${td}>${pctF!==null?pct(pctF):"â€”"}</td><td ${td}>${tauxReuss!==null?pct(tauxReuss):"â€”"}</td>
-      <td ${td} style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;font-weight:700;background:${bgRow}">${moyClasse!==null?moyClasse:"â€”"}</td>
+      <td ${td}>${pctG!==null?pct(pctG):"—"}</td><td ${td}>${pctF!==null?pct(pctF):"—"}</td><td ${td}>${tauxReuss!==null?pct(tauxReuss):"—"}</td>
+      <td ${td} style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;font-weight:700;background:${bgRow}">${moyClasse!==null?moyClasse:"—"}</td>
     </tr>`;
   }).join("");
 
-  // â”€â”€ Constats automatiques (brouillon â€” Ã  complÃ©ter par l'enseignant) â”€â”€
+  // ── Constats automatiques (brouillon — à compléter par l'enseignant) ──
   function genObservations(stats) {
     const difficultes = [];
     const suggestions = [];
     stats.forEach(s => {
       if (s.tauxLP !== null && s.tauxLP < 50) {
-        difficultes.push(`${s.cl} : couverture du programme Ã  ${s.tauxLP}% â€” nettement sous l'objectif (75%)`);
-        suggestions.push(`${s.cl} : envisager un rattrapage accÃ©lÃ©rÃ© ou revoir le rythme de progression`);
+        difficultes.push(`${s.cl} : couverture du programme à ${s.tauxLP}% — nettement sous l'objectif (75%)`);
+        suggestions.push(`${s.cl} : envisager un rattrapage accéléré ou revoir le rythme de progression`);
       }
       if (s.tauxTP !== null && s.tauxTP < 40) {
-        difficultes.push(`${s.cl} : faible exÃ©cution des TP/TD (${s.tauxTP}%)`);
+        difficultes.push(`${s.cl} : faible exécution des TP/TD (${s.tauxTP}%)`);
       }
       if (s.tauxAssiduite !== null && s.tauxAssiduite < 85) {
-        difficultes.push(`${s.cl} : taux d'assiduitÃ© de ${s.tauxAssiduite}% â€” absences Ã  surveiller`);
+        difficultes.push(`${s.cl} : taux d'assiduité de ${s.tauxAssiduite}% — absences à surveiller`);
       }
       if (s.pctG !== null && s.pctF !== null && Math.abs(s.pctG - s.pctF) >= 25) {
-        difficultes.push(`${s.cl} : Ã©cart de rÃ©ussite important entre garÃ§ons (${s.pctG}%) et filles (${s.pctF}%)`);
-        suggestions.push(`${s.cl} : analyser les causes de l'Ã©cart de rÃ©ussite entre genres`);
+        difficultes.push(`${s.cl} : écart de réussite important entre garçons (${s.pctG}%) et filles (${s.pctF}%)`);
+        suggestions.push(`${s.cl} : analyser les causes de l'écart de réussite entre genres`);
       }
       if (s.moyClasse !== null && s.moyClasse < 8) {
-        difficultes.push(`${s.cl} : moyenne gÃ©nÃ©rale faible (${s.moyClasse}/20)`);
+        difficultes.push(`${s.cl} : moyenne générale faible (${s.moyClasse}/20)`);
       }
     });
     return { difficultes: difficultes.slice(0,5), suggestions: suggestions.slice(0,4) };
   }
   const obs = genObservations(statsObs);
-  const ligneObs = (txt) => `&nbsp;&nbsp;&nbsp;â€”&nbsp;&nbsp;${txt}<br>`;
-  const blancObs = () => `&nbsp;&nbsp;&nbsp;â€”&nbsp;&nbsp;&nbsp;<span style="color:#bbb">_______________________________________________</span><br>`;
+  const ligneObs = (txt) => `&nbsp;&nbsp;&nbsp;—&nbsp;&nbsp;${txt}<br>`;
+  const blancObs = () => `&nbsp;&nbsp;&nbsp;—&nbsp;&nbsp;&nbsp;<span style="color:#bbb">_______________________________________________</span><br>`;
   const difficultesHTML = obs.difficultes.length>0
     ? obs.difficultes.map(ligneObs).join("") + blancObs()
     : blancObs() + blancObs();
@@ -4891,7 +4890,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     ? obs.suggestions.map(ligneObs).join("") + blancObs()
     : blancObs() + blancObs();
 
-  // â”€â”€ Infos heures hebdo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Infos heures hebdo ──────────────────────────────────────────
   const hHebdoTotal = classes.reduce((sum,cl) => { const code=resolveProgCode(cl); return sum + (code?(PROG_META[code]?.vh||0):0); }, 0);
   const hHebdoStr = `${hHebdoTotal}h / semaine`;
 
@@ -4902,7 +4901,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Times New Roman", Times, serif; font-size: 9pt; color: #000; background: #fff; }
 
-  /* â”€â”€ EN-TÃŠTE BILINGUE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── EN-TÊTE BILINGUE ─────────────────────────────── */
   .entete { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 4px; margin-bottom: 0; }
   .col-fr, .col-en { width: 42%; font-size: 8pt; line-height: 1.55; text-align: center; }
   .pays { font-weight: 900; font-size: 9.5pt; text-transform: uppercase; letter-spacing: .03em; }
@@ -4910,36 +4909,36 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   .logo-zone { width: 14%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
   .logo-zone img { width: 64px; height: 64px; object-fit: contain; }
 
-  /* â”€â”€ BLOC TITRE (tableau grisÃ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── BLOC TITRE (tableau grisé) ───────────────────── */
   .titre-tbl { width: 100%; border-collapse: collapse; margin-top: 4px; }
   .titre-tbl td { background: #bbbbbb; border: 1.5px solid #999; text-align: center; padding: 5px 8px 4px; }
   .titre-principal { font-size: 13pt; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; text-decoration: underline; color: #333333; }
   .titre-annee { font-size: 10pt; font-weight: 700; letter-spacing: .06em; margin-top: 2px; color: #333333; }
   .titre-minesec { font-size: 8pt; font-style: italic; font-weight: 700; letter-spacing: .04em; margin-top: 2px; color: #333333; }
 
-  /* â”€â”€ TABLEAU IDENTITÃ‰ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── TABLEAU IDENTITÉ ─────────────────────────────── */
   .ident-tbl { width: 100%; border-collapse: collapse; margin-top: 6px; }
   .ident-tbl td { border: 1px solid #bbbbbb; background: #f4f4f4; padding: 5px 7px; font-size: 8.5pt; vertical-align: middle; }
   .il { font-style: italic; color: #666666; }
   .iv { font-weight: 700; color: #333333; border-bottom: 1px solid #777; display: inline-block; min-width: 40px; }
 
-  /* â”€â”€ TABLEAU PRINCIPAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── TABLEAU PRINCIPAL ────────────────────────────── */
   .main-tbl { width: 100%; border-collapse: collapse; margin-top: 6px; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; }
   .main-tbl th, .main-tbl td { border: 1px solid #aaa; padding: 2px 3px; text-align: center; vertical-align: middle; line-height: 1.25; }
   .th-l1 { background: #bbbbbb; font-size: 7pt; font-weight: 700; color: #333; }
   .th-l2 { background: #cecece; font-size: 6.5pt; font-weight: 700; color: #333; }
   .th-l3 { background: #e4e4e4; font-size: 6pt; font-weight: 700; color: #000; }
 
-  /* â”€â”€ LÃ‰GENDE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── LÉGENDE ──────────────────────────────────────── */
   .legende-tbl { width: 100%; border-collapse: collapse; margin-top: 4px; }
   .legende-tbl td { border: 1px solid #aaa; padding: 4px 8px; font-family: Arial, sans-serif; font-size: 6.5pt; line-height: 1.7; vertical-align: top; }
 
-  /* â”€â”€ OBSERVATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── OBSERVATIONS ─────────────────────────────────── */
   .obs-tbl { width: 100%; border-collapse: collapse; margin-top: 0; }
   .obs-tbl td { border: 1px solid #aaa; padding: 5px 9px; font-family: Arial, sans-serif; font-size: 7.5pt; }
   .obs-label { font-weight: 700; text-decoration: underline; color: #666; }
 
-  /* â”€â”€ SIGNATURES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── SIGNATURES ───────────────────────────────────── */
   .sigs-tbl { width: 100%; border-collapse: collapse; margin-top: 0; }
   .sigs-tbl td { border: 1px solid #aaa; padding: 8px 12px 12px; font-family: Arial, sans-serif; font-size: 8pt; }
   .sig-titre { font-weight: 700; text-transform: uppercase; color: #666; text-align: center; }
@@ -4947,10 +4946,10 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   .sig-lieu { font-style: italic; font-size: 7.5pt; text-align: right; margin-bottom: 2px; }
 </style></head><body>
 
-<!-- EN-TÃŠTE BILINGUE -->
+<!-- EN-TÊTE BILINGUE -->
 <div class="entete">
   <div class="col-fr">
-    <div class="pays">RÃ©publique du Cameroun</div>
+    <div class="pays">République du Cameroun</div>
     <div class="devise">Paix &ndash; Travail &ndash; Patrie</div>
   </div>
   <div class="logo-zone">
@@ -4965,34 +4964,34 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 <!-- BLOC TITRE -->
 <table class="titre-tbl">
   <tr><td>
-    <div class="titre-principal">Fiche de Suivi PÃ©dagogique de l'Enseignant(e)</div>
-    <div class="titre-annee">AnnÃ©e Scolaire : 2025 / 2026</div>
-    <div class="titre-minesec">MINESEC / DRES / EXTRÃŠME-NORD</div>
+    <div class="titre-principal">Fiche de Suivi Pédagogique de l'Enseignant(e)</div>
+    <div class="titre-annee">Année Scolaire : 2025 / 2026</div>
+    <div class="titre-minesec">MINESEC / DRES / EXTRÊME-NORD</div>
   </td></tr>
 </table>
 
-<!-- TABLEAU IDENTITÃ‰ -->
+<!-- TABLEAU IDENTITÉ -->
 <table class="ident-tbl">
   <tr>
-    <td style="width:33%"><span class="il">Ã‰tablissement : </span><span class="iv">LYCÃ‰E DE KAKATARE</span></td>
+    <td style="width:33%"><span class="il">Établissement : </span><span class="iv">LYCÉE DE KAKATARE</span></td>
     <td style="width:33%">
       <span class="il">Discipline : </span><span class="iv">SVTEEHB</span>
       <span class="il" style="margin-left:8px">Grade : </span><span class="iv">PLEG</span>
     </td>
     <td style="width:34%">
-      <span class="il">AnciennetÃ© : </span><span class="iv" style="min-width:30px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-      <span class="il" style="margin-left:6px">QualitÃ© : </span><span class="iv">Fonctionnaire</span>
+      <span class="il">Ancienneté : </span><span class="iv" style="min-width:30px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      <span class="il" style="margin-left:6px">Qualité : </span><span class="iv">Fonctionnaire</span>
     </td>
   </tr>
   <tr>
     <td><span class="il">Nom de l'enseignant(e) : </span><span class="iv">${enseignant.nom}</span></td>
-    <td><span class="il">Animateur pÃ©dagogique : </span><span class="iv">AÃSSATOU SYLVIE</span></td>
+    <td><span class="il">Animateur pédagogique : </span><span class="iv">AÏSSATOU SYLVIE</span></td>
     <td><span class="il">Nb h. hebdomadaires : </span><span class="iv">${hHebdoStr}</span></td>
   </tr>
   <tr>
-    <td><span class="il">PÃ©riode : </span><span class="iv">${periode}</span></td>
-    <td><span class="il">Ã‰valuation : </span><span class="iv">${evalLabel}</span></td>
-    <td><span class="il">TÃ©l. : </span><span class="iv" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
+    <td><span class="il">Période : </span><span class="iv">${periode}</span></td>
+    <td><span class="il">Évaluation : </span><span class="iv">${evalLabel}</span></td>
+    <td><span class="il">Tél. : </span><span class="iv" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
   </tr>
 </table>
 
@@ -5001,39 +5000,39 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   <colgroup>
     <col style="width:54px"><!-- classe -->
     <col style="width:17px"><col style="width:17px"><col style="width:18px"><!-- effectifs -->
-    <col style="width:20px"><col style="width:20px"><col style="width:20px"><!-- assiduitÃ© -->
-    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- prÃ©sentiel -->
-    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- digitalisÃ© -->
+    <col style="width:20px"><col style="width:20px"><col style="width:20px"><!-- assiduité -->
+    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- présentiel -->
+    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- digitalisé -->
     <col style="width:20px"><col style="width:20px"><col style="width:20px"><!-- heures -->
     <col style="width:19px"><col style="width:19px"><col style="width:19px"><!-- TP/TD -->
-    <col style="width:18px"><col style="width:18px"><col style="width:20px"><!-- rÃ©ussite -->
-    <col style="width:28px"><!-- moy. gÃ©n. -->
+    <col style="width:18px"><col style="width:18px"><col style="width:20px"><!-- réussite -->
+    <col style="width:28px"><!-- moy. gén. -->
   </colgroup>
   <thead>
     <tr>
       <th class="th-l1" rowspan="3">Classes<br>tenues</th>
-      <th class="th-l1" colspan="3">Effectifs des Ã©lÃ¨ves</th>
-      <th class="th-l1" colspan="3">AssiduitÃ© des Ã©lÃ¨ves <sup>(Â²)</sup></th>
-      <th class="th-l1" colspan="6">Couverture des programmes/rÃ©fÃ©rentiels de formation (par rapport Ã  l'annÃ©e)</th>
-      <th class="th-l1" colspan="3">Couverture des heures<br>d'enseignement / annÃ©e</th>
-      <th class="th-l1" colspan="3">Taux d'exÃ©cution <sup>(Â³)</sup> des TPI/TD/DOSSIERS / annÃ©e</th>
-      <th class="th-l1" colspan="3">Taux de rÃ©ussite <sup>(â´)</sup> des Ã©lÃ¨ves (M â‰¥ 10)</th>
-      <th class="th-l1" rowspan="3">Moyenne GÃ©nÃ©rale<br>de la classe <sup>(âµ)</sup><br>/20</th>
+      <th class="th-l1" colspan="3">Effectifs des élèves</th>
+      <th class="th-l1" colspan="3">Assiduité des élèves <sup>(²)</sup></th>
+      <th class="th-l1" colspan="6">Couverture des programmes/référentiels de formation (par rapport à l'année)</th>
+      <th class="th-l1" colspan="3">Couverture des heures<br>d'enseignement / année</th>
+      <th class="th-l1" colspan="3">Taux d'exécution <sup>(³)</sup> des TPI/TD/DOSSIERS / année</th>
+      <th class="th-l1" colspan="3">Taux de réussite <sup>(⁴)</sup> des élèves (M ≥ 10)</th>
+      <th class="th-l1" rowspan="3">Moyenne Générale<br>de la classe <sup>(⁵)</sup><br>/20</th>
     </tr>
     <tr>
-      <th class="th-l2">GarÃ§.</th><th class="th-l2">Filles</th><th class="th-l2">Total</th>
-      <th class="th-l2">Heures<br>PrÃ©vues</th><th class="th-l2">Heures<br>Faites</th><th class="th-l2">Taux<br>(%)</th>
-      <th class="th-l2" colspan="3">En prÃ©sentiel</th>
-      <th class="th-l2" colspan="3">Utilisation des ressources<br>digitalisÃ©es (Distance Ã‰d. ou non)</th>
+      <th class="th-l2">Garç.</th><th class="th-l2">Filles</th><th class="th-l2">Total</th>
+      <th class="th-l2">Heures<br>Prévues</th><th class="th-l2">Heures<br>Faites</th><th class="th-l2">Taux<br>(%)</th>
+      <th class="th-l2" colspan="3">En présentiel</th>
+      <th class="th-l2" colspan="3">Utilisation des ressources<br>digitalisées (Distance Éd. ou non)</th>
       <th class="th-l2">Heures<br>Dues</th><th class="th-l2">Heures<br>Faites</th><th class="th-l2">Taux<br>(%)</th>
-      <th class="th-l2">Nbre<br>PrÃ©vu</th><th class="th-l2">Nbre<br>Fait</th><th class="th-l2">Taux<br>(%)</th>
-      <th class="th-l2">%<br>GarÃ§.</th><th class="th-l2">%<br>Filles</th><th class="th-l2">%<br>Total</th>
+      <th class="th-l2">Nbre<br>Prévu</th><th class="th-l2">Nbre<br>Fait</th><th class="th-l2">Taux<br>(%)</th>
+      <th class="th-l2">%<br>Garç.</th><th class="th-l2">%<br>Filles</th><th class="th-l2">%<br>Total</th>
     </tr>
     <tr>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
-      <th class="th-l3">LeÃ§ons<br>PrÃ©vues</th><th class="th-l3">LeÃ§ons<br>Faites</th><th class="th-l3">Taux (%)</th>
-      <th class="th-l3">LeÃ§ons<br>PrÃ©vues</th><th class="th-l3">LeÃ§ons<br>Faites</th><th class="th-l3">Taux (%)</th>
+      <th class="th-l3">Leçons<br>Prévues</th><th class="th-l3">Leçons<br>Faites</th><th class="th-l3">Taux (%)</th>
+      <th class="th-l3">Leçons<br>Prévues</th><th class="th-l3">Leçons<br>Faites</th><th class="th-l3">Taux (%)</th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
@@ -5042,24 +5041,24 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   <tbody>${rows}</tbody>
 </table>
 
-<!-- LÃ‰GENDE -->
+<!-- LÉGENDE -->
 <table class="legende-tbl">
   <tr>
     <td style="width:50%">
       (1) Rayer la mention inutile.<br>
-      <strong>(2) Calcul du Taux d'AssiduitÃ© (TA) :</strong><br>
+      <strong>(2) Calcul du Taux d'Assiduité (TA) :</strong><br>
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TA = (A &minus; B) &times; 100 / A<br>
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = Volume horaire hebdomadaire &times; Effectif de la classe<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;B = Total des heures d'absence enregistrÃ©es dans la semaine<br>
-      <em>NB : Ce taux peut Ãªtre calculÃ© Ã  l'Ã©chelle du trimestre (12 semaines).</em>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;B = Total des heures d'absence enregistrées dans la semaine<br>
+      <em>NB : Ce taux peut être calculé à l'échelle du trimestre (12 semaines).</em>
     </td>
     <td style="width:50%">
-      <strong>(3) Taux d'exÃ©cution des TD/TP/Dossiers :</strong><br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre fait de TD+TP+Dossiers) &times; 100 / Nbre prÃ©vu de TD/TP/Dossiers<br><br>
-      <strong>(4) Taux de rÃ©ussite :</strong><br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre d'Ã©lÃ¨ves ayant M â‰¥ 10 par genre) &times; 100 / Effectif par genre Ã©valuÃ©<br><br>
-      <strong>(5) Moyenne gÃ©nÃ©rale de la classe :</strong><br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Somme des notes de chaque Ã©lÃ¨ve / Nombre d'Ã©lÃ¨ves Ã©valuÃ©s
+      <strong>(3) Taux d'exécution des TD/TP/Dossiers :</strong><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre fait de TD+TP+Dossiers) &times; 100 / Nbre prévu de TD/TP/Dossiers<br><br>
+      <strong>(4) Taux de réussite :</strong><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre d'élèves ayant M ≥ 10 par genre) &times; 100 / Effectif par genre évalué<br><br>
+      <strong>(5) Moyenne générale de la classe :</strong><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Somme des notes de chaque élève / Nombre d'élèves évalués
     </td>
   </tr>
 </table>
@@ -5067,11 +5066,11 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 <!-- OBSERVATIONS -->
 <table class="obs-tbl">
   <tr><td>
-    <span class="obs-label">Observations gÃ©nÃ©rales (difficultÃ©s rencontrÃ©es + suggestions pour amÃ©liorer les rÃ©sultats) :</span>
-    <span style="font-size:6.5pt;color:#0369a1;font-style:italic">â€” constats automatiques gÃ©nÃ©rÃ©s Ã  partir des donnÃ©es ci-dessus, Ã  vÃ©rifier et complÃ©ter â€”</span><br><br>
-    <strong>DifficultÃ©s rencontrÃ©es :</strong><br>
+    <span class="obs-label">Observations générales (difficultés rencontrées + suggestions pour améliorer les résultats) :</span>
+    <span style="font-size:6.5pt;color:#0369a1;font-style:italic">— constats automatiques générés à partir des données ci-dessus, à vérifier et compléter —</span><br><br>
+    <strong>Difficultés rencontrées :</strong><br>
     ${difficultesHTML}<br>
-    <strong>Suggestions pour amÃ©liorer les rÃ©sultats :</strong><br>
+    <strong>Suggestions pour améliorer les résultats :</strong><br>
     ${suggestionsHTML}
   </td></tr>
 </table>
@@ -5080,11 +5079,11 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 <table class="sigs-tbl">
   <tr>
     <td style="width:50%">
-      <div class="sig-titre">Visa de l'Animateur PÃ©dagogique</div>
-      <div class="sig-nom">AÃSSATOU SYLVIE</div>
+      <div class="sig-titre">Visa de l'Animateur Pédagogique</div>
+      <div class="sig-nom">AÏSSATOU SYLVIE</div>
     </td>
     <td style="width:50%">
-      <div class="sig-lieu">Fait Ã  Maroua, le _________________________</div>
+      <div class="sig-lieu">Fait à Maroua, le _________________________</div>
       <div class="sig-titre">Signature de l'Enseignant(e)</div>
       <div class="sig-nom">${enseignant.nom}</div>
     </td>
@@ -5099,25 +5098,25 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 
 
 // Fiche de compilation par niveau
-// Regroupement par niveau â€” structure exacte de la maquette de rÃ©fÃ©rence
-// UtilisÃ© par genCompilation (impression) ET exportCompilationExcel (export Excel)
+// Regroupement par niveau — structure exacte de la maquette de référence
+// Utilisé par genCompilation (impression) ET exportCompilationExcel (export Excel)
 const NIVEAUX_COMPIL = [
-  {label:"6Ã¨me",     salles:3, classes:["6Ã¨me 1","6Ã¨me 2","6Ã¨me 3"]},
-  {label:"5Ã¨me",     salles:3, classes:["5Ã¨me 1","5Ã¨me 2","5Ã¨me 3"]},
-  {label:"4Ã¨me",     salles:3, classes:["4Ã¨me ALL","4Ã¨me ARB","4Ã¨me CHN","4Ã¨me ESP","4Ã¨me ITA"]},
-  {label:"3Ã¨me",     salles:3, classes:["3Ã¨me ALL","3Ã¨me ARB","3Ã¨me CHN","3Ã¨me ESP","3Ã¨me ITA"]},
+  {label:"6ème",     salles:3, classes:["6ème 1","6ème 2","6ème 3"]},
+  {label:"5ème",     salles:3, classes:["5ème 1","5ème 2","5ème 3"]},
+  {label:"4ème",     salles:3, classes:["4ème ALL","4ème ARB","4ème CHN","4ème ESP","4ème ITA"]},
+  {label:"3ème",     salles:3, classes:["3ème ALL","3ème ARB","3ème CHN","3ème ESP","3ème ITA"]},
   {label:"2nde A4",  salles:2, classes:["2nde ALL","2nde ARB","2nde CHN","2nde ITA","2nde ESP"]},
   {label:"2nde C",   salles:1, classes:["2nde C"]},
-  {label:"1Ã¨re A4",  salles:3, classes:["1Ã¨re A4 ALL","1Ã¨re A4 ARB","1Ã¨re A4 ESP","1Ã¨re CHN","1Ã¨re ITA"]},
-  {label:"1Ã¨re S",   salles:1, classes:["1Ã¨re C","1Ã¨re Ti"]},
-  {label:"1Ã¨re D",   salles:1, classes:["1Ã¨re D"]},
+  {label:"1ère A4",  salles:3, classes:["1ère A4 ALL","1ère A4 ARB","1ère A4 ESP","1ère CHN","1ère ITA"]},
+  {label:"1ère S",   salles:1, classes:["1ère C","1ère Ti"]},
+  {label:"1ère D",   salles:1, classes:["1ère D"]},
   {label:"Tle A4",   salles:2, classes:["Tle A4 ALL","Tle A4 ARB","Tle A4 CHN","Tle A4 ESP","Tle A4 ITA"]},
   {label:"Tle S",    salles:1, classes:["Tle C","Tle Ti"]},
   {label:"Tle D",    salles:1, classes:["Tle D"]},
 ];
 
-// Calcule les statistiques complÃ¨tes d'une classe pour la Compilation
-// (programme, digitalisation, heures, TP, rÃ©ussite) â€” partagÃ© entre impression et export Excel
+// Calcule les statistiques complètes d'une classe pour la Compilation
+// (programme, digitalisation, heures, TP, réussite) — partagé entre impression et export Excel
 function calcClasseCompilation(cl, data, trim, nbSemP) {
   const prog = data?.prog||{};
   const notesIndex = data?.notes||{};
@@ -5133,7 +5132,7 @@ function calcClasseCompilation(cl, data, trim, nbSemP) {
         hd:0, hf:0, tauxHD:null, tpP:0, tpF:0, tauxTP:null, pctG:null, pctF:null, pctT:null, moy:null };
     }
 
-    // LeÃ§ons faites â€” agrÃ©gÃ©es tous enseignants confondus pour cette classe
+    // Leçons faites — agrégées tous enseignants confondus pour cette classe
     const allFaites = new Set();
     const allDig = new Set();
     Object.entries(prog).forEach(([key,arr])=>{
@@ -5164,7 +5163,7 @@ function calcClasseCompilation(cl, data, trim, nbSemP) {
     const tpF = tpPeriode.filter(n=>allFaites.has(n)).length;
     const tauxTP = tpP>0 ? Math.min(100, Math.round(tpF/tpP*100)) : null;
 
-    // RÃ©ussite â€” toutes Ã©valuations de cette classe sur la pÃ©riode
+    // Réussite — toutes évaluations de cette classe sur la période
     const trimsToAvg = trim==="ANN" ? ["T1","T2","T3"] : [trim];
     const getN = (eid,t,e) => { const v=(notesIndex[`${cl}||${t}-${e}`]||{})[eid]; return (v===undefined||v===""||v===null)?null:+v; };
     const moyTrimEl = (eid,t) => { const e1=getN(eid,t,"E1"), e2=getN(eid,t,"E2"); if(e1===null&&e2===null) return null; if(e1!==null&&e2!==null) return (e1+e2)/2; return e1!==null?e1:e2; };
@@ -5178,7 +5177,7 @@ function calcClasseCompilation(cl, data, trim, nbSemP) {
     return { cl, g, f, total, lp, lf, tauxLP, ldTot, ldFait, tauxLD, hd, hf, tauxHD, tpP, tpF, tauxTP, pctG, pctF, pctT, moy };
 }
 
-// Export Excel de la Compilation â€” rÃ©utilise exactement le mÃªme calcul que l'impression
+// Export Excel de la Compilation — réutilise exactement le même calcul que l'impression
 function exportCompilationExcel(data, trim = "ANN") {
   const nbSemP = trim === "ANN" ? 36 : 12;
   const exportRows = [];
@@ -5187,11 +5186,11 @@ function exportCompilationExcel(data, trim = "ANN") {
       const r = calcClasseCompilation(cl, data, trim, nbSemP);
       exportRows.push({
         "Niveau": niv.label, "Classe": r.cl, "Salles niveau": niv.salles,
-        "GarÃ§ons": r.g, "Filles": r.f, "Total Ã©lÃ¨ves": r.total,
-        "Couv. prÃ©sentiel (%)": r.tauxLP, "Couv. digitalisÃ© (%)": r.tauxLD,
-        "Couv. heures (%)": r.tauxHD, "TP prÃ©sentiel (%)": r.tauxTP,
-        "RÃ©ussite GarÃ§ons (%)": r.pctG, "RÃ©ussite Filles (%)": r.pctF, "RÃ©ussite Totale (%)": r.pctT,
-        "Moyenne gÃ©nÃ©rale": r.moy,
+        "Garçons": r.g, "Filles": r.f, "Total élèves": r.total,
+        "Couv. présentiel (%)": r.tauxLP, "Couv. digitalisé (%)": r.tauxLD,
+        "Couv. heures (%)": r.tauxHD, "TP présentiel (%)": r.tauxTP,
+        "Réussite Garçons (%)": r.pctG, "Réussite Filles (%)": r.pctF, "Réussite Totale (%)": r.pctT,
+        "Moyenne générale": r.moy,
       });
     });
   });
@@ -5199,12 +5198,12 @@ function exportCompilationExcel(data, trim = "ANN") {
 }
 
 function genCompilation(data, trim = "ANN") {
-  const periode = TRIM_LABELS[trim] || "AnnÃ©e complÃ¨te";
+  const periode = TRIM_LABELS[trim] || "Année complète";
   const nbSemP  = trim === "ANN" ? 36 : 12;
 
   const tauxColor = v => v===null ? "#94a3b8" : v>=75?"#16a34a":v>=50?"#e67e22":"#ef4444";
   const fmtPct = v => v===null ? "N/D" : `${v}%`;
-  const fmtMoy = v => v===null ? "â€”" : v;
+  const fmtMoy = v => v===null ? "—" : v;
 
   let grandG=0, grandF=0, grandT=0, grandSalles=0;
 
@@ -5217,7 +5216,7 @@ function genCompilation(data, trim = "ANN") {
     const tLP=avgTaux("tauxLP"), tLD=avgTaux("tauxLD"), tHD=avgTaux("tauxHD"), tTP=avgTaux("tauxTP"),
           tG=avgTaux("pctG"), tF=avgTaux("pctF"), tT=avgTaux("pctT");
     const moyVals = rows.map(r=>r.moy).filter(v=>v!==null).map(Number);
-    const moyNiv = moyVals.length>0 ? (moyVals.reduce((s,v)=>s+v,0)/moyVals.length).toFixed(2) : "â€”";
+    const moyNiv = moyVals.length>0 ? (moyVals.reduce((s,v)=>s+v,0)/moyVals.length).toFixed(2) : "—";
 
     const td = "padding:4px 6px;border:1px solid #ccc;text-align:center;font-size:8px";
     const rowsHTML = rows.map(r => `
@@ -5229,28 +5228,28 @@ function genCompilation(data, trim = "ANN") {
         <td style="${td};color:${tauxColor(r.tauxHD)};font-weight:700">${fmtPct(r.tauxHD)}</td>
         <td style="${td};color:${tauxColor(r.tauxTP)};font-weight:700">${fmtPct(r.tauxTP)}</td>
         <td style="${td};color:#94a3b8;font-style:italic">N/D</td>
-        <td style="${td}">${r.pctG===null?"â€”":r.pctG+"%"}</td>
-        <td style="${td}">${r.pctF===null?"â€”":r.pctF+"%"}</td>
-        <td style="${td};font-weight:700">${r.pctT===null?"â€”":r.pctT+"%"}</td>
+        <td style="${td}">${r.pctG===null?"—":r.pctG+"%"}</td>
+        <td style="${td}">${r.pctF===null?"—":r.pctF+"%"}</td>
+        <td style="${td};font-weight:700">${r.pctT===null?"—":r.pctT+"%"}</td>
         <td style="${td};font-weight:700">${fmtMoy(r.moy)}</td>
       </tr>`).join("");
 
     return `
     <h3 style="font-size:10px;font-weight:bold;margin:12px 0 3px;padding:5px 10px;background:#1a6b3c;color:#fff">
-      ${niv.label} â€” ${niv.salles} salle${niv.salles>1?"s":""} fonctionnelle${niv.salles>1?"s":""}
+      ${niv.label} — ${niv.salles} salle${niv.salles>1?"s":""} fonctionnelle${niv.salles>1?"s":""}
     </h3>
     <table style="width:100%;border-collapse:collapse;font-size:8px">
       <thead>
         <tr style="background:#dcfce7">
           <th rowspan="2" style="${td};background:#166534;color:#fff">Classe</th>
           <th colspan="3" style="${td};background:#166534;color:#fff">Effectifs</th>
-          <th style="${td};background:#166534;color:#fff">Couv.<br>prÃ©sentiel</th>
-          <th style="${td};background:#166534;color:#fff">Couv.<br>digitalisÃ©</th>
+          <th style="${td};background:#166534;color:#fff">Couv.<br>présentiel</th>
+          <th style="${td};background:#166534;color:#fff">Couv.<br>digitalisé</th>
           <th style="${td};background:#166534;color:#fff">Couv.<br>heures</th>
-          <th style="${td};background:#166534;color:#fff">TP<br>prÃ©sentiel</th>
-          <th style="${td};background:#166534;color:#fff">TP<br>digitalisÃ©</th>
-          <th colspan="3" style="${td};background:#166534;color:#fff">RÃ©ussite (%)</th>
-          <th style="${td};background:#166534;color:#fff">Moy.<br>GÃ©n.</th>
+          <th style="${td};background:#166534;color:#fff">TP<br>présentiel</th>
+          <th style="${td};background:#166534;color:#fff">TP<br>digitalisé</th>
+          <th colspan="3" style="${td};background:#166534;color:#fff">Réussite (%)</th>
+          <th style="${td};background:#166534;color:#fff">Moy.<br>Gén.</th>
         </tr>
         <tr style="background:#dcfce7">
           <th style="${td}">G</th><th style="${td}">F</th><th style="${td}">T</th>
@@ -5268,9 +5267,9 @@ function genCompilation(data, trim = "ANN") {
           <td style="${td};color:${tauxColor(tHD)}">${fmtPct(tHD)}</td>
           <td style="${td};color:${tauxColor(tTP)}">${fmtPct(tTP)}</td>
           <td style="${td};color:#94a3b8;font-style:italic">N/D</td>
-          <td style="${td}">${tG===null?"â€”":tG+"%"}</td>
-          <td style="${td}">${tF===null?"â€”":tF+"%"}</td>
-          <td style="${td}">${tT===null?"â€”":tT+"%"}</td>
+          <td style="${td}">${tG===null?"—":tG+"%"}</td>
+          <td style="${td}">${tF===null?"—":tF+"%"}</td>
+          <td style="${td}">${tT===null?"—":tT+"%"}</td>
           <td style="${td}">${moyNiv}</td>
         </tr>
       </tbody>
@@ -5287,32 +5286,32 @@ function genCompilation(data, trim = "ANN") {
 </style>
 </head>
 <body>
-  ${enteteOfficiel("FICHE DE COMPILATION PAR NIVEAU", `DÃ©partement SVTEEHB &nbsp;|&nbsp; ${periode}`)}
+  ${enteteOfficiel("FICHE DE COMPILATION PAR NIVEAU", `Département SVTEEHB &nbsp;|&nbsp; ${periode}`)}
   ${niveauxHTML}
   <table style="margin-top:10px;font-size:9px">
     <tr style="background:#166534;color:#fff;font-weight:800">
-      <td style="padding:6px 10px;border:1px solid #ccc">TOTAL GÃ‰NÃ‰RAL</td>
+      <td style="padding:6px 10px;border:1px solid #ccc">TOTAL GÉNÉRAL</td>
       <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandSalles} salles</td>
       <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandG} G</td>
       <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandF} F</td>
-      <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandT} Ã©lÃ¨ves</td>
+      <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandT} élèves</td>
     </tr>
   </table>
   <div style="margin-top:8px;font-size:7.5px;color:#666;font-style:italic">
-    "TP digitalisÃ©" : N/D â€” aucune donnÃ©e distincte entre TP en prÃ©sentiel et TP digitalisÃ© n'est actuellement collectÃ©e dans l'application.
+    "TP digitalisé" : N/D — aucune donnée distincte entre TP en présentiel et TP digitalisé n'est actuellement collectée dans l'application.
   </div>
   <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:30px;font-size:9px">
-    <div><div style="font-weight:bold;margin-bottom:10px">L'Animateur(trice) PÃ©dagogique</div><div style="border-top:1px solid #999;margin-top:30px;padding-top:4px">Signature &amp; Cachet</div></div>
+    <div><div style="font-weight:bold;margin-bottom:10px">L'Animateur(trice) Pédagogique</div><div style="border-top:1px solid #999;margin-top:30px;padding-top:4px">Signature &amp; Cachet</div></div>
     <div><div style="font-weight:bold;margin-bottom:10px">Le Proviseur</div><div style="border-top:1px solid #999;margin-top:30px;padding-top:4px">Signature &amp; Cachet</div></div>
   </div>
   <script>window.onload=()=>window.print();</script>
 </body>
 </html>`;
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// IMPRESSION VIA IFRAME CACHÃ‰ (mÃ©thode anti popup-blocker)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// printGuard: dÃ©clarÃ© globalement
+// ═══════════════════════════════════════════════════
+// IMPRESSION VIA IFRAME CACHÉ (méthode anti popup-blocker)
+// ═══════════════════════════════════════════════════
+// printGuard: déclaré globalement
 function imprimerHTML(html) {
   if (printGuard) return;
   printGuard = true;
@@ -5328,9 +5327,9 @@ function imprimerHTML(html) {
   }, 400);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // COMPOSANTS UI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 const DocSp = ({ size=20, color=C.green }) => (
   <div style={{ width:size,height:size,border:`2px solid ${color}30`,borderTopColor:color,borderRadius:"50%",animation:"spin .7s linear infinite" }}/>
 );
@@ -5348,17 +5347,17 @@ const DocTaux = ({ taux }) => {
   return <DocPi ch={`${taux}%`} color={color}/>;
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// TABLEAU DE PRÃ‰VISUALISATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// TABLEAU DE PRÉVISUALISATION
+// ═══════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // CARTE DOCUMENT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PAGE PRINCIPALE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 
 function DocumentsPage() {
   const {isMobile} = useDevice();
@@ -5369,7 +5368,7 @@ function DocumentsPage() {
   const [docTab, setDocTab]     = useState("compilation"); // compilation | fiches | bilan
   const [trim, setTrim]         = useState("ANN");
   const [selEns, setSelEns]     = useState("all");
-  const [previewHtml, setPreviewHtml] = useState(null);  // HTML de l'aperÃ§u
+  const [previewHtml, setPreviewHtml] = useState(null);  // HTML de l'aperçu
   const [previewLabel, setPreviewLabel] = useState("");
   const iframeRef = useRef(null);
   const previewMainRef = useRef(null);
@@ -5381,11 +5380,11 @@ function DocumentsPage() {
     });
   }, []);
 
-  // Navigation ciblÃ©e depuis le Tableau de bord ("voir la fiche de cet enseignant")
+  // Navigation ciblée depuis le Tableau de bord ("voir la fiche de cet enseignant")
   useEffect(() => {
     if (!pendingFicheEns || !data) return;
     setDocTab("fiches");
-    aperÃ§uFicheEns(pendingFicheEns);
+    aperçuFicheEns(pendingFicheEns);
     setPendingFicheEns(null);
   }, [pendingFicheEns, data]);
 
@@ -5394,9 +5393,9 @@ function DocumentsPage() {
     try {
       const d = await loadData();
       setData(d);
-      showToast("âœ“ DonnÃ©es actualisÃ©es â€” fiches Ã  jour");
+      showToast("✓ Données actualisées — fiches à jour");
     } catch {
-      showToast("âš  Actualisation impossible â€” vÃ©rifiez la connexion", false);
+      showToast("⚠ Actualisation impossible — vérifiez la connexion", false);
     } finally {
       setRefreshing(false);
     }
@@ -5404,19 +5403,19 @@ function DocumentsPage() {
 
   const enseignants = data ? Object.values(data?.users||{}).filter(u => u.role !== "animatrice") : [];
 
-  // â”€â”€ AperÃ§u dans iframe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Aperçu dans iframe ────────────────────────────────────────────
   function afficherApercu(html, label) {
     setPreviewHtml(html);
     setPreviewLabel(label);
-    // Injecter dans l'iframe aprÃ¨s le render
+    // Injecter dans l'iframe après le render
     setTimeout(() => {
       if (iframeRef.current) {
         const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
-        // Retirer le script d'impression auto pour l'aperÃ§u
+        // Retirer le script d'impression auto pour l'aperçu
         const htmlSansScript = html.replace(/<script>window\.onload.*?<\/script>/gs, "");
         doc.open(); doc.write(htmlSansScript); doc.close();
       }
-      // Sur mobile, faire dÃ©filer jusqu'Ã  l'aperÃ§u (situÃ© en dessous de la liste)
+      // Sur mobile, faire défiler jusqu'à l'aperçu (situé en dessous de la liste)
       if (isMobile && previewMainRef.current) {
         previewMainRef.current.scrollIntoView({ behavior:"smooth", block:"start" });
       }
@@ -5425,29 +5424,29 @@ function DocumentsPage() {
 
   const [selClasseParEns, setSelClasseParEns] = useState({}); // {ensId: "all" | code_classe}
 
-  function aperÃ§uFicheEns(ensId) {
+  function aperçuFicheEns(ensId) {
     if (!data) return;
     const ens = (data?.users||{})[ensId];
     if (!ens) return;
     const classeSel = selClasseParEns[ensId] || "all";
     const classesAGenerer = classeSel==="all" ? (ens.classes||[]) : [classeSel];
     const html = genFicheSuivi(ens, classesAGenerer, (data?.prog||{}), trim, (data?.notes||{}), (data?.absences||{}));
-    afficherApercu(html, `Fiche â€” ${ens.nom}${classeSel==="all"?"":` â€” ${classeSel}`} â€” ${TRIM_LABELS[trim]||"AnnÃ©e"}`);
+    afficherApercu(html, `Fiche — ${ens.nom}${classeSel==="all"?"":` — ${classeSel}`} — ${TRIM_LABELS[trim]||"Année"}`);
   }
 
-  function aperÃ§uCompilation() {
+  function aperçuCompilation() {
     if (!data) return;
     const html = genCompilation(data, trim);
-    afficherApercu(html, `Compilation globale â€” ${TRIM_LABELS[trim]||"AnnÃ©e"}`);
+    afficherApercu(html, `Compilation globale — ${TRIM_LABELS[trim]||"Année"}`);
   }
 
-  function aperÃ§uBilan() {
+  function aperçuBilan() {
     if (!data) return;
     const html = genBilanTrimestre(trim, data);
-    afficherApercu(html, `Bilan trimestriel â€” ${TRIM_LABELS[trim]||"AnnÃ©e"}`);
+    afficherApercu(html, `Bilan trimestriel — ${TRIM_LABELS[trim]||"Année"}`);
   }
 
-  // â”€â”€ Impression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Impression ────────────────────────────────────────────────────
   function imprimerApercu() {
     if (!previewHtml) return;
     imprimerHTML(previewHtml);
@@ -5474,41 +5473,41 @@ function DocumentsPage() {
   return (
     <div style={{ display:"flex", flexDirection:"column", flex:1, minHeight:0, overflow:"hidden" }}>
 
-      {/* â”€â”€ Barre de contrÃ´le Documents (remplace l'ancien header propre) â”€â”€ */}
+      {/* ── Barre de contrôle Documents (remplace l'ancien header propre) ── */}
       <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding: isMobile?"10px 14px":"8px 20px", display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"stretch":"center", gap:10, flexShrink:0 }}>
         <button onClick={refreshDocsData} disabled={refreshing}
           style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6,
             padding: isMobile?"10px 12px":"6px 12px", background:"#eff6ff", border:"1px solid #bfdbfe",
             borderRadius:8, fontSize: isMobile?13:12, fontWeight:700, color:"#1e40af",
             cursor:refreshing?"not-allowed":"pointer", fontFamily:"inherit", flexShrink:0 }}>
-          {refreshing ? <><Spinner size={13} color="#1e40af"/> Actualisationâ€¦</> : <>ðŸ”„ Actualiser les donnÃ©es</>}
+          {refreshing ? <><Spinner size={13} color="#1e40af"/> Actualisation…</> : <>🔄 Actualiser les données</>}
         </button>
         {!isMobile && <div style={{ flex:1 }}/>}
-        {/* PÃ©riode */}
+        {/* Période */}
         <div style={{ display:"flex", flexDirection: isMobile?"column":"row", gap:8, alignItems: isMobile?"stretch":"center" }}>
-          {!isMobile && <span style={{ fontSize:11, color:C.txtMuted }}>PÃ©riode :</span>}
+          {!isMobile && <span style={{ fontSize:11, color:C.txtMuted }}>Période :</span>}
           <select value={trim} onChange={e=>setTrim(e.target.value)}
             style={{ padding: isMobile?"10px 12px":"5px 10px", border:`1px solid ${C.border}`, borderRadius:8, fontSize: isMobile?13:12, color:C.txt, background:C.white }}>
-            <option value="ANN">ðŸ“… AnnÃ©e complÃ¨te</option>
+            <option value="ANN">📅 Année complète</option>
             <option value="T1">Trimestre 1</option>
             <option value="T2">Trimestre 2</option>
             <option value="T3">Trimestre 3</option>
           </select>
 
-          {/* AperÃ§u si prÃ©sent : bouton imprimer */}
+          {/* Aperçu si présent : bouton imprimer */}
           {previewHtml && (
             <button onClick={imprimerApercu}
               style={{ padding: isMobile?"11px 14px":"6px 14px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:8, fontSize: isMobile?13:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, whiteSpace:"nowrap" }}>
-              ðŸ–¨ï¸ {isMobile?"Imprimer":"Imprimer ce document"}
+              🖨️ {isMobile?"Imprimer":"Imprimer ce document"}
             </button>
           )}
         </div>
       </div>
 
-      {/* â”€â”€ Layout 2 colonnes (desktop) / empilÃ© (mobile) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Layout 2 colonnes (desktop) / empilé (mobile) ──────────────── */}
       <div style={{ display:"flex", flexDirection: isMobile?"column":"row", flex:1, minHeight:0, overflow:"hidden" }}>
 
-        {/* â”€â”€ Panneau gauche â€” sÃ©lection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Panneau gauche — sélection ─────────────────────────────── */}
         <aside style={{
           width: isMobile?"100%":280, minWidth: isMobile?"auto":280,
           maxHeight: isMobile?"45vh":undefined,
@@ -5517,15 +5516,15 @@ function DocumentsPage() {
           overflowY:"auto", minHeight:0, padding: isMobile?12:16,
           display:"flex", flexDirection:"column", gap:12, background:C.white, flexShrink:0 }}>
 
-          <h2 style={{ fontSize:13, fontWeight:700, color:C.txt }}>ðŸ“‹ Choisir un document</h2>
+          <h2 style={{ fontSize:13, fontWeight:700, color:C.txt }}>📋 Choisir un document</h2>
 
-          {/* Onglets de catÃ©gorie de document */}
+          {/* Onglets de catégorie de document */}
           <div style={{ display:"flex", flexDirection: isMobile?"row":"column", gap:6,
             overflowX: isMobile?"auto":"visible" }}>
             {[
-              {id:"compilation", label:"ðŸ“Š Compilation annuelle", sub:"Vue par niveau, toutes classes"},
-              {id:"fiches",      label:"ðŸ‘¤ Fiches individuelles", sub:"Une fiche par enseignant"},
-              {id:"bilan",       label:"ðŸ“‹ Bilan trimestriel",    sub:"Classement par taux de couverture"},
+              {id:"compilation", label:"📊 Compilation annuelle", sub:"Vue par niveau, toutes classes"},
+              {id:"fiches",      label:"👤 Fiches individuelles", sub:"Une fiche par enseignant"},
+              {id:"bilan",       label:"📋 Bilan trimestriel",    sub:"Classement par taux de couverture"},
             ].map(t=>(
               <button key={t.id} onClick={()=>{ setDocTab(t.id); setPreviewHtml(null); setPreviewLabel(""); }}
                 style={{
@@ -5542,43 +5541,43 @@ function DocumentsPage() {
           {loading ? (
             <div style={{ textAlign:"center", padding:30, color:C.txtMuted }}>
               <Spinner size={20} color={C.green}/>
-              <div style={{ marginTop:8, fontSize:12 }}>Chargementâ€¦</div>
+              <div style={{ marginTop:8, fontSize:12 }}>Chargement…</div>
             </div>
           ) : (
             <>
-              {/* â”€â”€ Onglet : Compilation annuelle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* ── Onglet : Compilation annuelle ─────────────────── */}
               {docTab==="compilation" && (
                 <div style={{ background:C.greenPale, border:`1.5px solid ${C.greenBorder}`, borderRadius: isMobile?14:10, padding: isMobile?"14px 16px":"12px 14px" }}>
-                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:C.green, marginBottom:4 }}>ðŸ“Š Compilation globale</div>
+                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:C.green, marginBottom:4 }}>📊 Compilation globale</div>
                   <div style={{ fontSize: isMobile?11.5:11, color:C.txtMuted, marginBottom:10, lineHeight:1.5 }}>
-                    Toutes les classes Â· Tous les enseignants Â· Par niveau
+                    Toutes les classes · Tous les enseignants · Par niveau
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={aperÃ§uCompilation}
+                    <button onClick={aperçuCompilation}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:C.green }}>
-                      ðŸ‘ AperÃ§u
+                      👁 Aperçu
                     </button>
                     <button onClick={()=>imprimerHTML(genCompilation(data,trim))}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:C.green, border:"none", borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#fff" }}>
-                      ðŸ–¨ï¸ Imprimer
+                      🖨️ Imprimer
                     </button>
                   </div>
                   <button onClick={()=>{
                       const ok = exportCompilationExcel(data, trim);
-                      showToast(ok ? "âœ“ Fichier Excel tÃ©lÃ©chargÃ©" : "âš  Ã‰chec de l'export", ok);
+                      showToast(ok ? "✓ Fichier Excel téléchargé" : "⚠ Échec de l'export", ok);
                     }}
                     style={{ width:"100%", marginTop:8, padding: isMobile?"10px":"7px", background:"#f0fdf4", border:"1.5px solid #15803d", borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#15803d" }}>
-                    ðŸ“¥ Exporter Excel
+                    📥 Exporter Excel
                   </button>
                 </div>
               )}
 
-              {/* â”€â”€ Onglet : Fiches individuelles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* ── Onglet : Fiches individuelles ────────────────── */}
               {docTab==="fiches" && (
                 <div style={{ background:C.bluePale, border:`1.5px solid ${C.blue}30`, borderRadius:10, padding:"12px 14px" }}>
-                  <div style={{ fontSize:13, fontWeight:800, color:C.blue, marginBottom:4 }}>ðŸ‘¨â€ðŸ« Fiches individuelles</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:C.blue, marginBottom:4 }}>👨‍🏫 Fiches individuelles</div>
                   <div style={{ fontSize:11, color:C.txtMuted, marginBottom:10 }}>
-                    SÃ©lectionner un enseignant pour aperÃ§u ou impression directe
+                    Sélectionner un enseignant pour aperçu ou impression directe
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", gap: isMobile?8:6 }}>
                     {enseignants.map(ens => (
@@ -5606,43 +5605,43 @@ function DocumentsPage() {
                           </select>
                         )}
                         <div style={{display:"flex", gap:8}}>
-                          <button onClick={() => aperÃ§uFicheEns(ens.id)}
+                          <button onClick={() => aperçuFicheEns(ens.id)}
                             style={{ flex:1, padding: isMobile?"9px 10px":"6px 8px", background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius: isMobile?9:6, fontSize: isMobile?12:11, fontWeight:700, cursor:"pointer", color:C.green, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                            ðŸ‘ AperÃ§u
+                            👁 Aperçu
                           </button>
                           <button onClick={() => imprimerFicheEns(ens.id)}
                             style={{ flex:1, padding: isMobile?"9px 10px":"6px 8px", background:C.green, border:"none", borderRadius: isMobile?9:6, fontSize: isMobile?12:11, fontWeight:700, cursor:"pointer", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                            ðŸ–¨ï¸ Imprimer
+                            🖨️ Imprimer
                           </button>
                         </div>
                       </div>
                     ))}
                     {enseignants.length===0 && (
-                      <div style={{textAlign:"center", padding:20, color:C.txtLight, fontSize:12}}>Aucun enseignant trouvÃ©</div>
+                      <div style={{textAlign:"center", padding:20, color:C.txtLight, fontSize:12}}>Aucun enseignant trouvé</div>
                     )}
                   </div>
                   <button onClick={imprimerToutesFiches}
                     style={{ marginTop:10, width:"100%", padding:"8px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                    ðŸ–¨ï¸ Imprimer toutes les fiches
+                    🖨️ Imprimer toutes les fiches
                   </button>
                 </div>
               )}
 
-              {/* â”€â”€ Onglet : Bilan trimestriel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* ── Onglet : Bilan trimestriel ────────────────────── */}
               {docTab==="bilan" && (
                 <div style={{ background:"#fef3c7", border:`1.5px solid #fcd34d`, borderRadius: isMobile?14:10, padding: isMobile?"14px 16px":"12px 14px" }}>
-                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:"#92400e", marginBottom:4 }}>ðŸ“‹ Bilan trimestriel</div>
+                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:"#92400e", marginBottom:4 }}>📋 Bilan trimestriel</div>
                   <div style={{ fontSize: isMobile?11.5:11, color:C.txtMuted, marginBottom:10, lineHeight:1.5 }}>
-                    Classement des enseignants par taux de couverture â€” alertes et objectifs atteints
+                    Classement des enseignants par taux de couverture — alertes et objectifs atteints
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={aperÃ§uBilan}
+                    <button onClick={aperçuBilan}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:C.white, border:`1px solid #fcd34d`, borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#92400e" }}>
-                      ðŸ‘ AperÃ§u
+                      👁 Aperçu
                     </button>
                     <button onClick={()=>imprimerHTML(genBilanTrimestre(trim,data))}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:"#d97706", border:"none", borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#fff" }}>
-                      ðŸ–¨ï¸ Imprimer
+                      🖨️ Imprimer
                     </button>
                   </div>
                 </div>
@@ -5650,38 +5649,38 @@ function DocumentsPage() {
 
               {/* Note */}
               <div style={{ background:C.goldPale, border:`1px solid ${C.gold}40`, borderRadius:8, padding:"10px 12px", fontSize:10, color:C.txtMuted, lineHeight:1.6 }}>
-                â„¹ï¸ {isMobile
-                  ? <>L'aperÃ§u s'affiche <strong>juste en dessous</strong>. Cliquez <strong>ðŸ‘ AperÃ§u</strong> pour visualiser avant d'imprimer.</>
-                  : <>L'aperÃ§u s'affiche Ã  droite. Cliquez <strong>ðŸ‘ AperÃ§u</strong> pour visualiser avant d'imprimer.</>}
+                ℹ️ {isMobile
+                  ? <>L'aperçu s'affiche <strong>juste en dessous</strong>. Cliquez <strong>👁 Aperçu</strong> pour visualiser avant d'imprimer.</>
+                  : <>L'aperçu s'affiche à droite. Cliquez <strong>👁 Aperçu</strong> pour visualiser avant d'imprimer.</>}
               </div>
             </>
           )}
         </aside>
 
-        {/* â”€â”€ Panneau droit â€” aperÃ§u iframe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Panneau droit — aperçu iframe ──────────────────────────── */}
         <main ref={previewMainRef} style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
-          {/* Header aperÃ§u */}
+          {/* Header aperçu */}
           <div style={{ padding: isMobile?"10px 14px":"10px 20px", borderBottom:`1px solid ${C.border}`, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, flexShrink:0, background:C.white }}>
             <div style={{ flex:1, minWidth:"60%" }}>
               <h3 style={{ margin:0, fontSize: isMobile?12.5:13, fontWeight:700, color:C.txt }}>
-                {previewHtml ? `ðŸ“„ ${previewLabel}` : "ðŸ“„ AperÃ§u du document"}
+                {previewHtml ? `📄 ${previewLabel}` : "📄 Aperçu du document"}
               </h3>
               <p style={{ margin:"2px 0 0", fontSize: isMobile?10.5:11, color:C.txtMuted }}>
                 {previewHtml
-                  ? (isMobile ? "Touchez ðŸ–¨ï¸ pour imprimer" : "Cliquez ðŸ–¨ï¸ dans la topbar pour imprimer ce document")
-                  : (isMobile ? "SÃ©lectionnez un document ci-dessus" : "SÃ©lectionnez un document dans le panneau gauche")}
+                  ? (isMobile ? "Touchez 🖨️ pour imprimer" : "Cliquez 🖨️ dans la topbar pour imprimer ce document")
+                  : (isMobile ? "Sélectionnez un document ci-dessus" : "Sélectionnez un document dans le panneau gauche")}
               </p>
             </div>
             {previewHtml && (
               <div style={{ display:"flex", gap:8 }}>
                 <button onClick={imprimerApercu}
                   style={{ padding: isMobile?"8px 13px":"6px 14px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:8, fontSize: isMobile?12:12, fontWeight:700, cursor:"pointer" }}>
-                  ðŸ–¨ï¸ Imprimer
+                  🖨️ Imprimer
                 </button>
                 <button onClick={()=>{ setPreviewHtml(null); setPreviewLabel(""); }}
                   style={{ padding: isMobile?"8px 11px":"6px 12px", background:C.white, border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, color:C.txtMuted, cursor:"pointer" }}>
-                  âœ• Fermer
+                  ✕ Fermer
                 </button>
               </div>
             )}
@@ -5692,7 +5691,7 @@ function DocumentsPage() {
             {previewHtml ? (
               <iframe
                 ref={iframeRef}
-                title="AperÃ§u document MINESEC"
+                title="Aperçu document MINESEC"
                 style={{
                   width:"100%", height:"100%",
                   border:"none", borderRadius:8,
@@ -5702,12 +5701,12 @@ function DocumentsPage() {
               />
             ) : (
               <div style={{ textAlign:"center", color:C.txtLight }}>
-                <div style={{ fontSize:56, marginBottom:16 }}>ðŸ“„</div>
+                <div style={{ fontSize:56, marginBottom:16 }}>📄</div>
                 <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:8 }}>
-                  Aucun aperÃ§u sÃ©lectionnÃ©
+                  Aucun aperçu sélectionné
                 </div>
                 <div style={{ fontSize:12, color:C.txtMuted, maxWidth:320 }}>
-                  Cliquez sur <strong>ðŸ‘ AperÃ§u</strong> Ã  cÃ´tÃ© d'un document pour le visualiser ici avant de l'imprimer.
+                  Cliquez sur <strong>👁 Aperçu</strong> à côté d'un document pour le visualiser ici avant de l'imprimer.
                 </div>
               </div>
             )}
@@ -5718,16 +5717,16 @@ function DocumentsPage() {
   );
 }
 
-// getNowInfo: dÃ©finie globalement
+// getNowInfo: définie globalement
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PALETTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// const C: rÃ©fÃ©rence au bloc global ci-dessus
+// ═══════════════════════════════════════════════════
+// const C: référence au bloc global ci-dessus
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // COMPOSANTS UI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 const EdtSp = ({ size=18, color=C.green }) => (
   <span style={{ width:size,height:size,border:`2px solid ${color}30`,borderTopColor:color,borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite",flexShrink:0 }}/>
 );
@@ -5742,9 +5741,9 @@ const EdtToast = ({ msg, ok }) => (
   </div>
 );
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// 5. MON EMPLOI DU TEMPS â€” classes de l'enseignant uniquement
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// 5. MON EMPLOI DU TEMPS — classes de l'enseignant uniquement
+// ══════════════════════════════════════════════════════════════════════
 function MonEdtPage() {
   const {user} = useApp();
   const {jk: nowJk, hi: nowHi} = getNowInfo();
@@ -5760,12 +5759,12 @@ function MonEdtPage() {
 
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
         <div>
-          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>ðŸ—“ Mon emploi du temps SVTEEHB</h2>
-          <p style={{fontSize:11, color:C.txtMuted, margin:"4px 0 0"}}>{user?.nom} Â· {(user?.classes||[]).length} classe{(user?.classes||[]).length>1?"s":""} Â· 2025â€“2026</p>
+          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>🗓 Mon emploi du temps SVTEEHB</h2>
+          <p style={{fontSize:11, color:C.txtMuted, margin:"4px 0 0"}}>{user?.nom} · {(user?.classes||[]).length} classe{(user?.classes||[]).length>1?"s":""} · 2025–2026</p>
         </div>
         {nowJk && nowHi>=0 && edt[nowJk]?.[nowHi] && (
           <div style={{background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:9, padding:"8px 14px", textAlign:"center"}}>
-            <div style={{fontSize:9, color:C.green, fontWeight:700, marginBottom:2}}>ðŸŸ¢ EN COURS</div>
+            <div style={{fontSize:9, color:C.green, fontWeight:700, marginBottom:2}}>🟢 EN COURS</div>
             <div style={{fontSize:14, fontWeight:800, color:C.green}}>{edt[nowJk]?.[nowHi]}</div>
           </div>
         )}
@@ -5811,10 +5810,10 @@ function MonEdtPage() {
         </table>
       </div>
 
-      {/* RÃ©sumÃ© des classes SVTEEHB */}
+      {/* Résumé des classes SVTEEHB */}
       {classesDansEDT.size > 0 && (
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px"}}>
-          <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:10}}>ðŸ“š Classes SVTEEHB enseignÃ©es</div>
+          <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:10}}>📚 Classes SVTEEHB enseignées</div>
           <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
             {[...classesDansEDT].map(cl=>(
               <div key={cl} style={{padding:"6px 12px", borderRadius:20, background:getColor(ensId)+"15", border:`1px solid ${getColor(ensId)}40`, color:getColor(ensId), fontSize:12, fontWeight:700}}>
@@ -5830,9 +5829,9 @@ function MonEdtPage() {
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GRILLE EDT D'UN ENSEIGNANT (admin, avec Ã©dition au clic)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// GRILLE EDT D'UN ENSEIGNANT (admin, avec édition au clic)
+// ═══════════════════════════════════════════════════
 function buildEdtRuntime(exceptions = {}, edtBase = {}) {
   const copy = {};
   const useBase = Object.keys(edtBase).length > 0;
@@ -5926,7 +5925,7 @@ function EdtPage() {
   const [selEns, setSelEns] = useState(()=> Object.keys(EDT_REEL)[0]||null);
   const [selCl, setSelCl] = useState(null);
   const [editMode, setEditMode] = useState(false);
-  const [edtGrid, setEdtGrid] = useState(null); // copie de travail {L:[8],Ma:[8],Me:[8],J:[8],V:[8]} pendant l'Ã©dition
+  const [edtGrid, setEdtGrid] = useState(null); // copie de travail {L:[8],Ma:[8],Me:[8],J:[8],V:[8]} pendant l'édition
   const [edtJourMobile, setEdtJourMobile] = useState("L");
   const [saving, setSaving] = useState(false);
 
@@ -5971,7 +5970,7 @@ function EdtPage() {
     });
   };
 
-  // Retire une classe de TOUS ses crÃ©neaux en un clic (pas besoin de chercher case par case)
+  // Retire une classe de TOUS ses créneaux en un clic (pas besoin de chercher case par case)
   const retirerClasseDeEdt = (classe) => {
     setEdtGrid(prev => {
       const next = {};
@@ -5990,8 +5989,8 @@ function EdtPage() {
     const classesAjoutees = classesDansEdt.filter(cl => !classesActuelles.includes(cl));
     const classesRetirees = classesActuelles.filter(cl => !classesDansEdt.includes(cl));
 
-    // DÃ©tection de conflit : une classe ajoutÃ©e est-elle dÃ©jÃ  assignÃ©e Ã  un AUTRE enseignant ?
-    // (Ã©vite qu'une mÃªme classe se retrouve chez deux enseignants Ã  la fois)
+    // Détection de conflit : une classe ajoutée est-elle déjà assignée à un AUTRE enseignant ?
+    // (évite qu'une même classe se retrouve chez deux enseignants à la fois)
     const conflits = [];
     classesAjoutees.forEach(cl => {
       enseignants.forEach(autre => {
@@ -5999,25 +5998,25 @@ function EdtPage() {
       });
     });
     if (conflits.length > 0) {
-      const liste = conflits.map(c => `â€¢ ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
+      const liste = conflits.map(c => `• ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
       const continuer = window.confirm(
-        `${conflits.length>1?"Ces classes sont":"Cette classe est"} dÃ©jÃ  assignÃ©e(s) Ã  un autre enseignant :\n\n${liste}\n\n`+
-        `Continuer va la/les retirer de l'autre enseignant (classes assignÃ©es + son EDT) pour la/les transfÃ©rer Ã  ${getNomCourt(ensActuel?.nom)}.\n\nContinuer ?`
+        `${conflits.length>1?"Ces classes sont":"Cette classe est"} déjà assignée(s) à un autre enseignant :\n\n${liste}\n\n`+
+        `Continuer va la/les retirer de l'autre enseignant (classes assignées + son EDT) pour la/les transférer à ${getNomCourt(ensActuel?.nom)}.\n\nContinuer ?`
       );
       if (!continuer) return;
     }
 
     setSaving(true);
-    // Remplacement complet et propre : admin_set_edt_slots rÃ©Ã©crit (upsert) les 40 crÃ©neaux
-    // en une fois â€” plus besoin de purge prÃ©alable, l'upsert couvre dÃ©jÃ  toutes les positions.
+    // Remplacement complet et propre : admin_set_edt_slots réécrit (upsert) les 40 créneaux
+    // en une fois — plus besoin de purge préalable, l'upsert couvre déjà toutes les positions.
     const rows = [];
     JKEYS.forEach(jk => { (edtGrid[jk]||[]).forEach((lbl, hi) => { rows.push({ slot:`${jk}-${hi}`, lbl: lbl||"" }); }); });
     const ok = await sb.rpc("admin_set_edt_slots", { p_ens_id: selEns, p_slots: rows });
 
     let cascadeOk = true;
 
-    // Nettoyage chez les enseignants en conflit : retirer la classe transfÃ©rÃ©e de leurs
-    // classes assignÃ©es ET de tous leurs crÃ©neaux EDT correspondants.
+    // Nettoyage chez les enseignants en conflit : retirer la classe transférée de leurs
+    // classes assignées ET de tous leurs créneaux EDT correspondants.
     if (ok && conflits.length > 0) {
       const parAutreEns = {};
       conflits.forEach(c => { (parAutreEns[c.autreEns.id] ||= []).push(c.classe); });
@@ -6031,8 +6030,8 @@ function EdtPage() {
           await sb.rpc("admin_set_edt_slots", { p_ens_id: autreId, p_slots: slotsAEffacer.map(slot=>({ slot, lbl:"" })) });
         }
         // Cascade identique aux autres points de retrait de classe (cf. resoudreConflit,
-        // ModalEnsForm) : pas de progression/suivi digital fantÃ´me chez le perdant du conflit.
-        // NettoyÃ©e seulement si le retrait de classe a rÃ©ellement rÃ©ussi (rOk).
+        // ModalEnsForm) : pas de progression/suivi digital fantôme chez le perdant du conflit.
+        // Nettoyée seulement si le retrait de classe a réellement réussi (rOk).
         const rOk = await sb.rpc("admin_set_teacher_classes", { p_id: autreId, p_classes: nouvellesClassesAutre });
         if (rOk) {
           for (const cl of classesAEnlever) {
@@ -6045,17 +6044,17 @@ function EdtPage() {
       }
     }
 
-    // Cascade bidirectionnelle habituelle : les "classes assignÃ©es" de selEns deviennent
+    // Cascade bidirectionnelle habituelle : les "classes assignées" de selEns deviennent
     // exactement le reflet du contenu de son EDT (ajouts ET retraits).
     // sb.patchRow (PATCH) et non sb.upsert : on ne modifie QUE la colonne "classes", sans
     // exiger les autres colonnes NOT NULL (nom, role) qu'un upsert/INSERT imposerait.
     if (ok && (classesAjoutees.length > 0 || classesRetirees.length > 0)) {
       const rOk = await sb.rpc("admin_set_teacher_classes", { p_id: selEns, p_classes: classesDansEdt });
       if (!rOk) cascadeOk = false;
-      // Cascade prog_suivi pour selEns lui-mÃªme : une classe retirÃ©e de son EDT (donc de ses
-      // classes assignÃ©es) ne doit pas garder de progression/suivi digital fantÃ´me.
-      // GardÃ©e derriÃ¨re "ok" : si la sauvegarde EDT elle-mÃªme a Ã©chouÃ©, le retrait de classe
-      // n'a pas rÃ©ellement eu lieu, donc rien Ã  nettoyer cÃ´tÃ© progression.
+      // Cascade prog_suivi pour selEns lui-même : une classe retirée de son EDT (donc de ses
+      // classes assignées) ne doit pas garder de progression/suivi digital fantôme.
+      // Gardée derrière "ok" : si la sauvegarde EDT elle-même a échoué, le retrait de classe
+      // n'a pas réellement eu lieu, donc rien à nettoyer côté progression.
       if (rOk) {
         for (const cl of classesRetirees) {
           await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(selEns)}&classe=eq.${encodeURIComponent(cl)}`);
@@ -6066,28 +6065,28 @@ function EdtPage() {
 
     setSaving(false);
     const messages = [];
-    if (classesAjoutees.length>0) messages.push(`${classesAjoutees.join(", ")} ajoutÃ©e(s)`);
-    if (classesRetirees.length>0) messages.push(`${classesRetirees.join(", ")} retirÃ©e(s)`);
-    if (conflits.length>0) messages.push(`transfÃ©rÃ©e(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
+    if (classesAjoutees.length>0) messages.push(`${classesAjoutees.join(", ")} ajoutée(s)`);
+    if (classesRetirees.length>0) messages.push(`${classesRetirees.join(", ")} retirée(s)`);
+    if (conflits.length>0) messages.push(`transférée(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
     if (ok && cascadeOk) {
       showToast(messages.length>0
-        ? `âœ“ Emploi du temps enregistrÃ© Â· ${messages.join(" Â· ")}`
-        : "âœ“ Emploi du temps enregistrÃ©", true);
+        ? `✓ Emploi du temps enregistré · ${messages.join(" · ")}`
+        : "✓ Emploi du temps enregistré", true);
       setEditMode(false); setEdtGrid(null);
       await refreshData?.();
     } else if (ok && !cascadeOk) {
-      showToast(`âš  EDT enregistrÃ©, mais la mise Ã  jour des classes assignÃ©es a Ã©chouÃ© â€” vÃ©rifie manuellement dans "GÃ©rer enseignants"`, false);
+      showToast(`⚠ EDT enregistré, mais la mise à jour des classes assignées a échoué — vérifie manuellement dans "Gérer enseignants"`, false);
       setEditMode(false); setEdtGrid(null);
       await refreshData?.();
     } else {
-      showToast("âš  Ã‰chec de l'enregistrement â€” vÃ©rifiez la connexion", false);
+      showToast("⚠ Échec de l'enregistrement — vérifiez la connexion", false);
     }
   };
 
   if (!data) return (
     <div style={{ padding:"60px", textAlign:"center", color:C.txtMuted }}>
       <Spinner size={28} color={C.green}/>
-      <div style={{ marginTop:12, fontSize:13 }}>Chargementâ€¦</div>
+      <div style={{ marginTop:12, fontSize:13 }}>Chargement…</div>
     </div>
   );
 
@@ -6095,14 +6094,14 @@ function EdtPage() {
 
   return (
     <div style={{ padding: isMobile?14:20, display:"flex", flexDirection:"column", gap:16 }}>
-      {saving && <Pill ch="ðŸ”„ Sauvegardeâ€¦" color={C.blue}/>}
+      {saving && <Pill ch="🔄 Sauvegarde…" color={C.blue}/>}
 
       {/* Onglets */}
       <div style={{ display:"flex", gap: isMobile?5:8, background:"#f1f5f9", padding:5, borderRadius:10, overflowX:"auto" }}>
         {[
-          {id:"maintenant",    label:"ðŸŸ¢ Maintenant"},
-          {id:"parEnseignant", label:"ðŸ‘¤ Par enseignant"},
-          {id:"parClasse",     label:"ðŸ« Par classe"},
+          {id:"maintenant",    label:"🟢 Maintenant"},
+          {id:"parEnseignant", label:"👤 Par enseignant"},
+          {id:"parClasse",     label:"🏫 Par classe"},
         ].map(o=>(
           <button key={o.id} onClick={()=>setOnglet(o.id)}
             style={{ flex:1, padding: isMobile?"9px 6px":"10px", borderRadius:7, border:"none", whiteSpace:"nowrap",
@@ -6114,16 +6113,16 @@ function EdtPage() {
         ))}
       </div>
 
-      {/* â”€â”€ Onglet Maintenant : qui enseigne en ce moment â”€â”€ */}
+      {/* ── Onglet Maintenant : qui enseigne en ce moment ── */}
       {onglet==="maintenant" && (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {!nowJk ? (
             <div style={{ background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:30, textAlign:"center", color:C.txtMuted }}>
-              ðŸ“… Pas de cours le week-end
+              📅 Pas de cours le week-end
             </div>
           ) : enseignants.filter(ens=>edtRt[ens.id]?.[nowJk]?.[nowHi]).length===0 ? (
             <div style={{ background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:30, textAlign:"center", color:C.txtMuted }}>
-              ðŸ• Aucun cours SVTEEHB en ce moment
+              🕐 Aucun cours SVTEEHB en ce moment
             </div>
           ) : enseignants.filter(ens=>edtRt[ens.id]?.[nowJk]?.[nowHi]).map(ens=>(
             <div key={ens.id} style={{ display:"flex", alignItems:"center", gap:12, background:C.white, borderRadius:12, border:`1.5px solid ${C.greenBorder}`, padding:"12px 16px" }}>
@@ -6140,7 +6139,7 @@ function EdtPage() {
         </div>
       )}
 
-      {/* â”€â”€ Onglet Par enseignant â”€â”€ */}
+      {/* ── Onglet Par enseignant ── */}
       {onglet==="parEnseignant" && (
         <>
           <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
@@ -6159,14 +6158,14 @@ function EdtPage() {
               <button onClick={entrerModeEdition}
                 style={{ alignSelf:"flex-start", padding:"9px 16px", background:C.greenPale, border:`1.5px solid ${C.greenBorder}`, borderRadius:9,
                   fontSize:12.5, fontWeight:700, color:C.green, cursor:"pointer", fontFamily:"inherit" }}>
-                âœŽ Modifier l'emploi du temps de {getNomCourt(ensActuel.nom)}
+                ✎ Modifier l'emploi du temps de {getNomCourt(ensActuel.nom)}
               </button>
             </>
           )}
           {ensActuel && editMode && (
             <div style={{ background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 18px", display:"flex", flexDirection:"column", gap:12 }}>
               <p style={{ fontSize:11.5, color:C.txtMuted, margin:0, lineHeight:1.5 }}>
-                Cette modification Ã©crase entiÃ¨rement l'EDT de {getNomCourt(ensActuel.nom)} dans Supabase â€” plus besoin de toucher au code pour une nouvelle annÃ©e scolaire.
+                Cette modification écrase entièrement l'EDT de {getNomCourt(ensActuel.nom)} dans Supabase — plus besoin de toucher au code pour une nouvelle année scolaire.
               </p>
               {isMobile ? (
                 <>
@@ -6183,7 +6182,7 @@ function EdtPage() {
                       <label style={{ fontSize:10.5, fontWeight:700, color:C.txtMuted }}>{h}</label>
                       <select value={edtGrid[edtJourMobile][hi]||""} onChange={e=>setEdtCell(edtJourMobile,hi,e.target.value)}
                         style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:"inherit", background:C.white }}>
-                        <option value="">â€” Libre â€”</option>
+                        <option value="">— Libre —</option>
                         {toutesClasses.map(cl=><option key={cl} value={cl}>{cl}</option>)}
                       </select>
                     </div>
@@ -6206,7 +6205,7 @@ function EdtPage() {
                             <td key={jk} style={{ padding:"4px 6px" }}>
                               <select value={edtGrid[jk][hi]||""} onChange={e=>setEdtCell(jk,hi,e.target.value)}
                                 style={{ width:"100%", padding:"6px 8px", border:`1px solid ${C.border}`, borderRadius:7, fontSize:11, fontFamily:"inherit", background:C.white }}>
-                                <option value="">â€”</option>
+                                <option value="">—</option>
                                 {toutesClasses.map(cl=><option key={cl} value={cl}>{cl}</option>)}
                               </select>
                             </td>
@@ -6225,8 +6224,8 @@ function EdtPage() {
                     {classesDansEdtGrid.map(cl=>(
                       <span key={cl} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"5px 10px", borderRadius:20, background:C.redPale, border:`1px solid ${C.redBorder}`, fontSize:11.5, fontWeight:700, color:C.red }}>
                         {cl}
-                        <button onClick={()=>retirerClasseDeEdt(cl)} title={`Retirer ${cl} de tous ses crÃ©neaux`} type="button"
-                          style={{ background:"none", border:"none", cursor:"pointer", color:C.red, fontSize:14, padding:0, lineHeight:1, fontWeight:900 }}>Ã—</button>
+                        <button onClick={()=>retirerClasseDeEdt(cl)} title={`Retirer ${cl} de tous ses créneaux`} type="button"
+                          style={{ background:"none", border:"none", cursor:"pointer", color:C.red, fontSize:14, padding:0, lineHeight:1, fontWeight:900 }}>×</button>
                       </span>
                     ))}
                   </div>
@@ -6241,7 +6240,7 @@ function EdtPage() {
                 <button onClick={handleSaveEdt} disabled={saving}
                   style={{ flex:2, padding:"10px 18px", background:saving?"#94a3b8":`linear-gradient(135deg,${C.greenDark},${C.green})`,
                     border:"none", borderRadius:9, fontSize:13, fontWeight:700, color:"#fff", cursor:saving?"not-allowed":"pointer", fontFamily:"inherit" }}>
-                  {saving ? "Enregistrementâ€¦" : "âœ“ Enregistrer l'emploi du temps"}
+                  {saving ? "Enregistrement…" : "✓ Enregistrer l'emploi du temps"}
                 </button>
               </div>
             </div>
@@ -6249,7 +6248,7 @@ function EdtPage() {
         </>
       )}
 
-      {/* â”€â”€ Onglet Par classe â”€â”€ */}
+      {/* ── Onglet Par classe ── */}
       {onglet==="parClasse" && (
         <>
           <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
@@ -6266,7 +6265,7 @@ function EdtPage() {
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
                 <thead>
                   <tr style={{ background:"#fafbfc" }}>
-                    <th style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:"#64748b", fontWeight:700, textTransform:"uppercase" }}>CrÃ©neau</th>
+                    <th style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:"#64748b", fontWeight:700, textTransform:"uppercase" }}>Créneau</th>
                     <th style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:"#64748b", fontWeight:700, textTransform:"uppercase" }}>Enseignant</th>
                   </tr>
                 </thead>
@@ -6275,7 +6274,7 @@ function EdtPage() {
                     JKEYS.flatMap((jk,ji)=>HEURES.map((h,hi)=>({ens,jk,ji,hi,h})).filter(x=>edtRt[ens.id]?.[jk]?.[x.hi]===selCl))
                   ).map((x,i)=>(
                     <tr key={i} style={{ borderTop:`1px solid ${C.border}` }}>
-                      <td style={{ padding:"9px 14px" }}>{JOURS[x.ji]} Â· {x.h}</td>
+                      <td style={{ padding:"9px 14px" }}>{JOURS[x.ji]} · {x.h}</td>
                       <td style={{ padding:"9px 14px", display:"flex", alignItems:"center", gap:8 }}>
                         <Avatar ens={x.ens} size={20} fontSize={8}/>
                         {getNomCourt(x.ens.nom)}
@@ -6293,36 +6292,36 @@ function EdtPage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// NAVIGATION & LAYOUT â€” Composants partagÃ©s
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// NAVIGATION & LAYOUT — Composants partagés
+// ═══════════════════════════════════════════════════════════════════
 
 const NAV_ADMIN = [
-  {id:"dashboard",   emoji:"ðŸ ", label:"Tableau de bord"},
-  {id:"enseignants", emoji:"ðŸ‘¥", label:"Enseignants"},
-  {id:"eleves",      emoji:"ðŸŽ“", label:"Ã‰lÃ¨ves"},
-  {id:"programme",   emoji:"ðŸ“Š", label:"Suivi programme",  sub:"Vue synthÃ©tique"},
-  {id:"epreuves",    emoji:"ðŸ“‹", label:"Ã‰preuves"},
-  {id:"edt",         emoji:"ðŸ“…", label:"Emploi du temps"},
-  {id:"documents",   emoji:"ðŸ“„", label:"Documents"},
-  {id:"gestion-annuelle", emoji:"ðŸ”„", label:"Gestion annuelle", sub:"Import Ã©lÃ¨ves"},
+  {id:"dashboard",   emoji:"🏠", label:"Tableau de bord"},
+  {id:"enseignants", emoji:"👥", label:"Enseignants"},
+  {id:"eleves",      emoji:"🎓", label:"Élèves"},
+  {id:"programme",   emoji:"📊", label:"Suivi programme",  sub:"Vue synthétique"},
+  {id:"epreuves",    emoji:"📋", label:"Épreuves"},
+  {id:"edt",         emoji:"📅", label:"Emploi du temps"},
+  {id:"documents",   emoji:"📄", label:"Documents"},
+  {id:"gestion-annuelle", emoji:"🔄", label:"Gestion annuelle", sub:"Import élèves"},
 ];
 
 const NAV_TEACHER = [
-  {id:"dashboard",    emoji:"ðŸ ", label:"Tableau de bord"},
-  {id:"mes-classes",  emoji:"ðŸ‘¨â€ðŸ«", label:"Mes classes"},
-  {id:"cahier",       emoji:"ðŸ“–", label:"Cahier de texte"},
-  {id:"programme",    emoji:"ðŸ“Š", label:"Mon programme"},
-  {id:"epreuves",     emoji:"ðŸ“‹", label:"Ã‰preuves"},
-  {id:"edt-teacher",  emoji:"ðŸ“…", label:"Mon emploi du temps"},
+  {id:"dashboard",    emoji:"🏠", label:"Tableau de bord"},
+  {id:"mes-classes",  emoji:"👨‍🏫", label:"Mes classes"},
+  {id:"cahier",       emoji:"📖", label:"Cahier de texte"},
+  {id:"programme",    emoji:"📊", label:"Mon programme"},
+  {id:"epreuves",     emoji:"📋", label:"Épreuves"},
+  {id:"edt-teacher",  emoji:"📅", label:"Mon emploi du temps"},
 ];
 
 const PAGE_TITLES = {
   dashboard:"Tableau de bord", "mes-classes":"Mes classes",
   programme:"Mon programme", cahier:"Cahier de texte",
-  epreuves:"Ã‰preuves", "edt-teacher":"Mon emploi du temps",
+  epreuves:"Épreuves", "edt-teacher":"Mon emploi du temps",
   edt:"Emploi du temps", documents:"Documents MINESEC",
-  eleves:"Ã‰lÃ¨ves", enseignants:"Enseignants",
+  eleves:"Élèves", enseignants:"Enseignants",
 };
 
 const KpiCard = ({label,value,sub,iconEmoji,bg,subColor}) => (
@@ -6338,7 +6337,7 @@ const KpiCard = ({label,value,sub,iconEmoji,bg,subColor}) => (
 
 function displayCl(cl){ return CLASS_DISPLAY[cl]||cl; }
 
-// â”€â”€â”€ Dashboard Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Dashboard Admin ────────────────────────────────────────────────
 function DashboardAdmin() {
   const {data,user,setPage,setPendingFicheEns,refreshData} = useApp();
   const {isMobile} = useDevice();
@@ -6362,25 +6361,25 @@ function DashboardAdmin() {
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, Administration ðŸ‘‹</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
-        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.txtMuted}}>2025â€“2026</div><div style={{fontSize:13,fontWeight:700,color:C.green}}>DonnÃ©es en direct â†—</div></div>
+        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, Administration 👋</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
+        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.txtMuted}}>2025–2026</div><div style={{fontSize:13,fontWeight:700,color:C.green}}>Données en direct ↗</div></div>
       </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Enseignants" value={stats.nbEns} sub="SVTEEHB Kakatare" iconEmoji="ðŸ‘¥" bg={C.greenPale} loading={loading} delay={0}/>
-        <KpiCard label="Classes" value={stats.nbClasses} sub="Toutes sÃ©ries" iconEmoji="ðŸ“š" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
-        <KpiCard label="Ã‰lÃ¨ves" value={stats.nbEleves} sub="Total effectifs" iconEmoji="ðŸŽ“" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
-        <KpiCard label="Couverture" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"âœ“ Objectif atteint":"âš  Sous objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="ðŸ“Š" bg={C.greenPale} loading={loading} delay={0.15}/>
+        <KpiCard label="Enseignants" value={stats.nbEns} sub="SVTEEHB Kakatare" iconEmoji="👥" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Classes" value={stats.nbClasses} sub="Toutes séries" iconEmoji="📚" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
+        <KpiCard label="Élèves" value={stats.nbEleves} sub="Total effectifs" iconEmoji="🎓" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
+        <KpiCard label="Couverture" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"✓ Objectif atteint":"⚠ Sous objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="📊" bg={C.greenPale} loading={loading} delay={0.15}/>
       </div>
       {!loading && stats.tauxParEns.length>0 && (() => {
         const nbAlerte = stats.tauxParEns.filter(e=>e.taux<50).length;
         if (nbAlerte===0) return null;
         return (
           <div style={{display:"flex",alignItems:"center",gap:14,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12,padding:"14px 18px"}}>
-            <span style={{fontSize:26,flexShrink:0}}>âš ï¸</span>
+            <span style={{fontSize:26,flexShrink:0}}>⚠️</span>
             <div>
               <div style={{fontWeight:700,color:"#b91c1c",fontSize:13}}>Couverture du programme en retard</div>
               <div style={{fontSize:12,color:"#7f1d1d",marginTop:2}}>
-                {nbAlerte} enseignant{nbAlerte>1?"s":""} sur {stats.nbEns} {nbAlerte>1?"sont":"est"} en dessous de 50% de couverture â€” une relance pourrait Ãªtre utile.
+                {nbAlerte} enseignant{nbAlerte>1?"s":""} sur {stats.nbEns} {nbAlerte>1?"sont":"est"} en dessous de 50% de couverture — une relance pourrait être utile.
               </div>
             </div>
           </div>
@@ -6389,13 +6388,13 @@ function DashboardAdmin() {
       <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
         <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10}}>
           <div>
-            <h3 style={{margin:"0 0 2px",fontSize:13,fontWeight:700,color:C.txt}}>ðŸ“Š Couverture programme â€” tous les enseignants</h3>
-            <p style={{margin:0,fontSize:10.5,color:C.txtMuted}}>TriÃ©s du plus urgent au plus avancÃ©</p>
+            <h3 style={{margin:"0 0 2px",fontSize:13,fontWeight:700,color:C.txt}}>📊 Couverture programme — tous les enseignants</h3>
+            <p style={{margin:0,fontSize:10.5,color:C.txtMuted}}>Triés du plus urgent au plus avancé</p>
           </div>
           <button onClick={async()=>{ setRefreshing(true); await refreshData(); setRefreshing(false); }}
             disabled={refreshing}
             style={{display:"flex", alignItems:"center", gap:6, padding: isMobile?"7px":"6px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, color:C.txtMuted, fontSize:11, fontWeight:700, cursor:refreshing?"not-allowed":"pointer", fontFamily:"inherit", flexShrink:0}}>
-            {refreshing ? <Spinner size={11} color={C.txtMuted}/> : "ðŸ”„"} {!isMobile && "Actualiser"}
+            {refreshing ? <Spinner size={11} color={C.txtMuted}/> : "🔄"} {!isMobile && "Actualiser"}
           </button>
         </div>
         <div style={{marginTop:14}}/>
@@ -6413,7 +6412,7 @@ function DashboardAdmin() {
                 onMouseEnter={ev=>{ev.currentTarget.style.background="#f1f5f9";ev.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.06)";}}
                 onMouseLeave={ev=>{ev.currentTarget.style.background="#f8fafc";ev.currentTarget.style.boxShadow="none";}}>
                 <Avatar ens={e} size={32} fontSize={10}/>
-                <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{getNomCourt(e.nom)}</div><div style={{fontSize:10,color:C.txtMuted}}>{e.classes} classe{e.classes>1?"s":""} Â· {e.tf}/{e.tr} leÃ§ons</div></div>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{getNomCourt(e.nom)}</div><div style={{fontSize:10,color:C.txtMuted}}>{e.classes} classe{e.classes>1?"s":""} · {e.tf}/{e.tr} leçons</div></div>
                 <div style={{width:130,flexShrink:0}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:10,color:C.txtMuted}}>Couverture</span><span style={{fontSize:11,fontWeight:800,color:tauCol(e.taux)}}>{e.taux}%</span></div>
                   <ProgBar value={e.taux}/>
@@ -6423,7 +6422,7 @@ function DashboardAdmin() {
                   <span style={{width:5,height:5,borderRadius:"50%",background:statut.dot,flexShrink:0}}/>
                   {statut.label}
                 </span>
-                <span style={{fontSize:13,color:"#cbd5e1",flexShrink:0}}>â€º</span>
+                <span style={{fontSize:13,color:"#cbd5e1",flexShrink:0}}>›</span>
               </div>
               );
             })}
@@ -6434,7 +6433,7 @@ function DashboardAdmin() {
   );
 }
 
-// â”€â”€â”€ Dashboard Enseignant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Dashboard Enseignant ─────────────────────────────────────────
 function DashboardTeacher() {
   const {user,data} = useApp();
   const [loading,setLoading] = useState(true);
@@ -6458,27 +6457,27 @@ function DashboardTeacher() {
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",justifyContent:"space-between"}}>
-        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, {getNomCourt(user?.nom)} ðŸ‘‹</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</p></div>
-        <div style={{display:"inline-flex",alignItems:"center",gap:5,background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:600,color:C.green,height:"fit-content"}}><span style={{width:5,height:5,borderRadius:"50%",background:C.green}}/>SynchronisÃ©</div>
+        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, {getNomCourt(user?.nom)} 👋</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</p></div>
+        <div style={{display:"inline-flex",alignItems:"center",gap:5,background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:600,color:C.green,height:"fit-content"}}><span style={{width:5,height:5,borderRadius:"50%",background:C.green}}/>Synchronisé</div>
       </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Mes classes" value={myStats.classes.length} sub={`${myStats.classes.reduce((s,c)=>s+c.ef,0)} Ã©lÃ¨ves`} iconEmoji="ðŸ“š" bg={C.greenPale} loading={loading} delay={0}/>
-        <KpiCard label="LeÃ§ons dispensÃ©es" value={myStats.totalFait} sub={`sur ${myStats.totalRef} prÃ©vues`} iconEmoji="âœ…" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
-        <KpiCard label="Couverture globale" value={`${myStats.tauxGlobal}%`} sub={myStats.tauxGlobal>=75?"Objectif atteint âœ“":"Sous l'objectif"} subColor={tauCol(myStats.tauxGlobal)} iconEmoji="ðŸ“Š" bg={C.greenPale} loading={loading} delay={0.1}/>
+        <KpiCard label="Mes classes" value={myStats.classes.length} sub={`${myStats.classes.reduce((s,c)=>s+c.ef,0)} élèves`} iconEmoji="📚" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Leçons dispensées" value={myStats.totalFait} sub={`sur ${myStats.totalRef} prévues`} iconEmoji="✅" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
+        <KpiCard label="Couverture globale" value={`${myStats.tauxGlobal}%`} sub={myStats.tauxGlobal>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={tauCol(myStats.tauxGlobal)} iconEmoji="📊" bg={C.greenPale} loading={loading} delay={0.1}/>
       </div>
       <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
-        <h3 style={{margin:"0 0 14px",fontSize:13,fontWeight:700,color:C.txt}}>ðŸ“š Mes classes â€” suivi en direct</h3>
+        <h3 style={{margin:"0 0 14px",fontSize:13,fontWeight:700,color:C.txt}}>📚 Mes classes — suivi en direct</h3>
         {loading?[1,2,3].map(i=><Sk key={i} h={72} br={9} style={{marginBottom:8}}/>):myStats.classes.length===0?(
-          <div style={{textAlign:"center",padding:"32px 0",color:C.txtLight}}><div style={{fontSize:32,marginBottom:8}}>ðŸ“­</div>Aucune classe assignÃ©e</div>
+          <div style={{textAlign:"center",padding:"32px 0",color:C.txtLight}}><div style={{fontSize:32,marginBottom:8}}>📭</div>Aucune classe assignée</div>
         ):(
           <div style={{display:"flex",flexDirection:"column",gap:9}}>
             {myStats.classes.map((c,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`,cursor:"pointer"}}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=C.green;e.currentTarget.style.boxShadow=`0 2px 8px ${C.green}18`;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.boxShadow="none";}}>
-                <div style={{width:40,height:40,borderRadius:10,background:getColor(user?.id),display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800,flexShrink:0}}>{c.cl.replace(/[Ã Ã¡Ã¢Ã¤Ã¨Ã©ÃªÃ«Ã¬Ã­Ã®Ã¯Ã²Ã³Ã´Ã¶Ã¹ÃºÃ»Ã¼]/gi,"").substring(0,3).toUpperCase()}</div>
+                <div style={{width:40,height:40,borderRadius:10,background:getColor(user?.id),display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800,flexShrink:0}}>{c.cl.replace(/[àáâäèéêëìíîïòóôöùúûü]/gi,"").substring(0,3).toUpperCase()}</div>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div><div style={{fontSize:13,fontWeight:700,color:C.txt}}>{c.clDisplay||c.cl}</div><div style={{fontSize:10,color:C.txtMuted}}>{c.ef} Ã©lÃ¨ves Â· {c.vh}h/sem</div></div>
+                    <div><div style={{fontSize:13,fontWeight:700,color:C.txt}}>{c.clDisplay||c.cl}</div><div style={{fontSize:10,color:C.txtMuted}}>{c.ef} élèves · {c.vh}h/sem</div></div>
                     <div style={{textAlign:"right"}}><div style={{fontSize:18,fontWeight:800,color:tauCol(c.taux)}}>{c.taux}%</div><div style={{fontSize:9,color:C.txtMuted}}>{c.done}/{c.ref}</div></div>
                   </div>
                   <ProgBar value={c.taux}/>
@@ -6492,7 +6491,7 @@ function DashboardTeacher() {
   );
 }
 
-// â”€â”€â”€ Page placeholder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Page placeholder ─────────────────────────────────────────────
 const PlaceholderPage = ({title,emoji}) => (
   <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",minHeight:"60vh"}}>
     <div style={{fontSize:48,marginBottom:16}}>{emoji}</div>
@@ -6501,18 +6500,18 @@ const PlaceholderPage = ({title,emoji}) => (
   </div>
 );
 
-// â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sidebar ─────────────────────────────────────────────────────────
 const Sidebar = ({collapsed, setCollapsed}) => {
   const {user, page, setPage, data} = useApp();
   const {isMobile, mobileLandscape, isTablet} = useDevice();
-  // Forcer collapsed sur mobile/tablette en paysage pour libÃ©rer l'espace
-  // Le repli initial sur petits Ã©crans est dÃ©jÃ  gÃ©rÃ© par l'Ã©tat initial de `collapsed`
-  // (voir useState(()=>window.innerWidth<1024) dans AppLayout) â€” ici on ne force PLUS
-  // un repli permanent sur tablette, sinon le bouton de la sidebar devient inopÃ©rant.
+  // Forcer collapsed sur mobile/tablette en paysage pour libérer l'espace
+  // Le repli initial sur petits écrans est déjà géré par l'état initial de `collapsed`
+  // (voir useState(()=>window.innerWidth<1024) dans AppLayout) — ici on ne force PLUS
+  // un repli permanent sur tablette, sinon le bouton de la sidebar devient inopérant.
   const effectiveCollapsed = mobileLandscape ? true : collapsed;
   const isAdmin = user?.role === "animatrice";
   const nav = isAdmin ? NAV_ADMIN : NAV_TEACHER;
-  // Compter les Ã©preuves en attente pour le badge
+  // Compter les épreuves en attente pour le badge
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
     : (data?.epreuves||[]).filter(e=>e.ens_id===user?.id&&e.statut==="attente").length;
@@ -6534,16 +6533,16 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed && (
           <div>
             <div style={{fontSize:12, fontWeight:800, color:"#fff", lineHeight:1}}>SVTEEHB</div>
-            <div style={{fontSize:9, color:"rgba(255,255,255,.4)", marginTop:2}}>LycÃ©e de Kakatare Â· Maroua</div>
+            <div style={{fontSize:9, color:"rgba(255,255,255,.4)", marginTop:2}}>Lycée de Kakatare · Maroua</div>
           </div>
         )}
       </div>
 
-      {/* AnnÃ©e scolaire */}
+      {/* Année scolaire */}
       {!effectiveCollapsed && (
         <div style={{padding:"10px 16px", borderBottom:"1px solid rgba(255,255,255,.08)", flexShrink:0}}>
-          <div style={{fontSize:9, fontWeight:700, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:4}}>AnnÃ©e scolaire</div>
-          <div style={{fontSize:12, fontWeight:700, color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.08)", borderRadius:7, padding:"5px 10px"}}>2025 â€“ 2026 â–¾</div>
+          <div style={{fontSize:9, fontWeight:700, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:4}}>Année scolaire</div>
+          <div style={{fontSize:12, fontWeight:700, color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.08)", borderRadius:7, padding:"5px 10px"}}>2025 – 2026 ▾</div>
         </div>
       )}
 
@@ -6578,8 +6577,8 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         })}
       </nav>
 
-      {/* Profil utilisateur â€” cliquable vers ParamÃ¨tres (photo, mot de passe) */}
-      <div onClick={()=>setPage("settings")} title="ParamÃ¨tres â€” photo de profil, mot de passe"
+      {/* Profil utilisateur — cliquable vers Paramètres (photo, mot de passe) */}
+      <div onClick={()=>setPage("settings")} title="Paramètres — photo de profil, mot de passe"
         style={{borderTop:"1px solid rgba(255,255,255,.08)", padding: collapsed ? "10px 0" : "12px 14px", display:"flex", alignItems:"center", gap:9, flexShrink:0, justifyContent: effectiveCollapsed ? "center" : "flex-start", cursor:"pointer", transition:"background .15s"}}
         onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.05)"}
         onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -6587,7 +6586,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed && (
           <div style={{overflow:"hidden"}}>
             <div style={{fontSize:12, fontWeight:700, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{user?.nom}</div>
-            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="animatrice"?"Animatrice":"Enseignant"} Â· âš™ï¸ ParamÃ¨tres</div>
+            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="animatrice"?"Animatrice":"Enseignant"} · ⚙️ Paramètres</div>
           </div>
         )}
       </div>
@@ -6604,13 +6603,13 @@ const DarkModeToggle = () => {
       style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,
         background:C.white,cursor:"pointer",fontSize:14,display:"flex",
         alignItems:"center",justifyContent:"center"}}>
-      {dark?"â˜€ï¸":"ðŸŒ™"}
+      {dark?"☀️":"🌙"}
     </button>
   );
 };
 
-// â”€â”€ Topbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€ Recherche globale (Ã©lÃ¨ves, enseignants, classes) â€” admin uniquement â”€â”€
+// ── Topbar ──────────────────────────────────────────────────────────
+// ── Recherche globale (élèves, enseignants, classes) — admin uniquement ──
 const GlobalSearch = () => {
   const {data, setPage, setPendingFicheEns, setPendingClasseSelect, mobileSearchOpen, setMobileSearchOpen} = useApp();
   const {isMobile} = useDevice();
@@ -6625,7 +6624,7 @@ const GlobalSearch = () => {
   };
   const closeMobileSearch = () => {
     setQ("");
-    window.history.back(); // dÃ©clenche popstate â†’ ferme via le handler central
+    window.history.back(); // déclenche popstate → ferme via le handler central
   };
 
   useEffect(() => {
@@ -6660,17 +6659,17 @@ const GlobalSearch = () => {
   const closeAll = () => {
     setOpen(false);
     setQ("");
-    if (mobileSearchOpen) window.history.back(); // dÃ©pile l'entrÃ©e poussÃ©e Ã  l'ouverture
+    if (mobileSearchOpen) window.history.back(); // dépile l'entrée poussée à l'ouverture
   };
   const goToClasse = (cl) => { setPendingClasseSelect(cl); setPage("eleves"); closeAll(); };
   const goToEns    = (ensId) => { setPendingFicheEns(ensId); setPage("documents"); closeAll(); };
 
-  // Liste de rÃ©sultats â€” identique en contenu pour desktop (dropdown) et mobile (plein Ã©cran),
+  // Liste de résultats — identique en contenu pour desktop (dropdown) et mobile (plein écran),
   // seule la taille des zones tactiles change.
   const renderResults = (touchSize) => {
     if (query.length < 2) return null;
     if (totalResults===0) return (
-      <div style={{padding:"24px", textAlign:"center", color:"#94a3b8", fontSize:touchSize?13:12}}>Aucun rÃ©sultat pour "{q}"</div>
+      <div style={{padding:"24px", textAlign:"center", color:"#94a3b8", fontSize:touchSize?13:12}}>Aucun résultat pour "{q}"</div>
     );
     const rowPad = touchSize ? "13px 16px" : "8px 14px";
     const rowFont = touchSize ? 14 : 12.5;
@@ -6683,8 +6682,8 @@ const GlobalSearch = () => {
             {results.classes.map(cl=>(
               <div key={cl} onClick={()=>goToClasse(cl)} style={{padding:rowPad, cursor:"pointer", display:"flex", alignItems:"center", gap:10, fontSize:rowFont, borderBottom:touchSize?`1px solid #f1f5f9`:"none"}}
                 onMouseEnter={e=>!touchSize&&(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>!touchSize&&(e.currentTarget.style.background="transparent")}>
-                <span>ðŸ«</span><span style={{fontWeight:600, color:C.txt}}>{cl}</span>
-                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>Â· {(ELEVES_DB[cl]||[]).length} Ã©lÃ¨ves</span>
+                <span>🏫</span><span style={{fontWeight:600, color:C.txt}}>{cl}</span>
+                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>· {(ELEVES_DB[cl]||[]).length} élèves</span>
               </div>
             ))}
           </div>
@@ -6697,19 +6696,19 @@ const GlobalSearch = () => {
                 onMouseEnter={e=>!touchSize&&(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>!touchSize&&(e.currentTarget.style.background="transparent")}>
                 <Avatar ens={ens} size={touchSize?26:22} fontSize={touchSize?9.5:8}/>
                 <span style={{fontWeight:600, color:C.txt}}>{getNomCourt(ens.nom)}</span>
-                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>Â· {(ens.classes||[]).length} classes</span>
+                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>· {(ens.classes||[]).length} classes</span>
               </div>
             ))}
           </div>
         )}
         {results.eleves.length>0 && (
           <div>
-            <div style={{padding:`10px 16px 4px`, fontSize:labelFont, fontWeight:800, color:"#94a3b8", textTransform:"uppercase"}}>Ã‰lÃ¨ves</div>
+            <div style={{padding:`10px 16px 4px`, fontSize:labelFont, fontWeight:800, color:"#94a3b8", textTransform:"uppercase"}}>Élèves</div>
             {results.eleves.map(e=>(
               <div key={e.id} onClick={()=>goToClasse(e.classe)} style={{padding:rowPad, cursor:"pointer", display:"flex", alignItems:"center", gap:10, fontSize:rowFont, borderBottom:touchSize?`1px solid #f1f5f9`:"none"}}
                 onMouseEnter={ev=>!touchSize&&(ev.currentTarget.style.background="#f8fafc")} onMouseLeave={ev=>!touchSize&&(ev.currentTarget.style.background="transparent")}>
-                <span>{e.g==="F"?"ðŸ‘§":"ðŸ‘¦"}</span><span style={{fontWeight:600, color:C.txt}}>{e.nom}</span>
-                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>Â· {e.classe}</span>
+                <span>{e.g==="F"?"👧":"👦"}</span><span style={{fontWeight:600, color:C.txt}}>{e.nom}</span>
+                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>· {e.classe}</span>
               </div>
             ))}
           </div>
@@ -6718,22 +6717,22 @@ const GlobalSearch = () => {
     );
   };
 
-  // â”€â”€ Mobile : icÃ´ne seule dans le Topbar + overlay plein Ã©cran â”€â”€â”€â”€â”€â”€
+  // ── Mobile : icône seule dans le Topbar + overlay plein écran ──────
   if (isMobile) {
     return (
       <>
         <button onClick={openMobileSearch}
           style={{width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.white, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0}}>
-          ðŸ”
+          🔍
         </button>
         {mobileSearchOpen && (
           <div style={{position:"fixed", inset:0, background:"#fff", zIndex:300, display:"flex", flexDirection:"column"}}>
             <div style={{display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderBottom:`1px solid ${C.border}`, flexShrink:0}}>
-              <button onClick={closeMobileSearch} style={{width:34, height:34, borderRadius:8, border:"none", background:"#f1f5f9", fontSize:16, color:C.txtMuted, flexShrink:0}}>â†</button>
+              <button onClick={closeMobileSearch} style={{width:34, height:34, borderRadius:8, border:"none", background:"#f1f5f9", fontSize:16, color:C.txtMuted, flexShrink:0}}>←</button>
               <input ref={mobileInputRef} value={q} onChange={e=>setQ(e.target.value)}
-                placeholder="Ã‰lÃ¨ve, enseignant, classeâ€¦"
+                placeholder="Élève, enseignant, classe…"
                 style={{flex:1, border:"none", outline:"none", fontSize:15, fontFamily:"inherit", color:C.txt, background:"transparent"}}/>
-              {q && <button onClick={()=>setQ("")} style={{border:"none", background:"transparent", color:"#94a3b8", fontSize:16}}>âœ•</button>}
+              {q && <button onClick={()=>setQ("")} style={{border:"none", background:"transparent", color:"#94a3b8", fontSize:16}}>✕</button>}
             </div>
             <div style={{flex:1, overflowY:"auto"}}>
               {query.length<2 ? (
@@ -6746,15 +6745,15 @@ const GlobalSearch = () => {
     );
   }
 
-  // â”€â”€ Desktop : champ inline + dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Desktop : champ inline + dropdown ───────────────────────────────
   return (
     <div ref={boxRef} style={{position:"relative", width: open?320:220, transition:"width .2s"}}>
       <div style={{display:"flex", alignItems:"center", gap:7, background:"#f1f5f9", borderRadius:9, padding:"7px 12px", border:`1px solid ${open?C.green:"transparent"}`}}>
-        <span style={{fontSize:13, color:"#94a3b8"}}>ðŸ”</span>
+        <span style={{fontSize:13, color:"#94a3b8"}}>🔍</span>
         <input value={q} onChange={e=>setQ(e.target.value)} onFocus={()=>setOpen(true)}
-          placeholder="Ã‰lÃ¨ve, enseignant, classeâ€¦"
+          placeholder="Élève, enseignant, classe…"
           style={{flex:1, border:"none", background:"transparent", outline:"none", fontSize:12.5, fontFamily:"inherit", color:C.txt}}/>
-        {q && <span onClick={()=>setQ("")} style={{cursor:"pointer", color:"#94a3b8", fontSize:13}}>âœ•</span>}
+        {q && <span onClick={()=>setQ("")} style={{cursor:"pointer", color:"#94a3b8", fontSize:13}}>✕</span>}
       </div>
 
       {open && query.length>=2 && (
@@ -6775,7 +6774,7 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
 
   const REALTIME_CFG = {
     connected:    { dot:"#22c55e", label:"Synchro en direct" },
-    connecting:   { dot:"#f59e0b", label:"Connexionâ€¦" },
+    connecting:   { dot:"#f59e0b", label:"Connexion…" },
     error:        { dot:"#ef4444", label:"Synchro indisponible" },
     disconnected: { dot:"#94a3b8", label:"Synchro hors ligne" },
   };
@@ -6798,7 +6797,7 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
     <header style={{height:52, background:"rgba(255,255,255,.95)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12, padding:"0 18px", position:"sticky", top:0, zIndex:30, flexShrink:0}}>
       <button onClick={()=>setCollapsed(!collapsed)}
         style={{width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.white, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, color:C.txtMuted}}>
-        {collapsed ? "â†’" : "â†"}
+        {collapsed ? "→" : "←"}
       </button>
       <h1 style={{fontSize:14, fontWeight:700, color:C.txt, margin:0}}>{title}</h1>
       {user?.role==="animatrice" && <GlobalSearch/>}
@@ -6818,24 +6817,24 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
           style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${C.green}`,
             background:C.greenPale,fontSize:11,fontWeight:700,cursor:"pointer",
             color:C.green,fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
-          ðŸ“² Installer
+          📲 Installer
         </button>
       )}
       <DarkModeToggle/>
-      <button onClick={()=>{ if(window.confirm("Se dÃ©connecter ?")) onLogout(); }}
+      <button onClick={()=>{ if(window.confirm("Se déconnecter ?")) onLogout(); }}
         style={{padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:600, cursor:"pointer", color:C.txtMuted, fontFamily:"inherit"}}>
-        DÃ©connexion
+        Déconnexion
       </button>
     </header>
   );
 };
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GÃ‰NÃ‰RATION BILAN TRIMESTRIEL â€” PDF automatique animatrice
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// GÉNÉRATION BILAN TRIMESTRIEL — PDF automatique animatrice
+// ════════════════════════════════════════════════════════════════
 function genBilanTrimestre(trim, data) {
-  const trimLabels = {T1:"1er Trimestre",T2:"2Ã¨me Trimestre",T3:"3Ã¨me Trimestre",ANN:"Annuel"};
+  const trimLabels = {T1:"1er Trimestre",T2:"2ème Trimestre",T3:"3ème Trimestre",ANN:"Annuel"};
   const periode = trimLabels[trim] || trim;
   const dateJour = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
 
@@ -6885,7 +6884,7 @@ function genBilanTrimestre(trim, data) {
       <td style="padding:8px 10px;border:1px solid #ddd;text-align:center">${ens.totalRef}</td>
       <td style="padding:8px 10px;border:1px solid #ddd;text-align:center;font-weight:800;color:${pct(ens.tauxGlobal)}">${ens.tauxGlobal}%</td>
       <td style="padding:8px 10px;border:1px solid #ddd;text-align:center">
-        ${ens.tauxGlobal>=75?"âœ… Objectif":ens.tauxGlobal>=50?"âš ï¸ En cours":"ðŸ”´ Alerte"}
+        ${ens.tauxGlobal>=75?"✅ Objectif":ens.tauxGlobal>=50?"⚠️ En cours":"🔴 Alerte"}
       </td>
       <td style="padding:8px 10px;border:1px solid #ddd;font-size:11px">${(ens.classes||[]).join(", ")}</td>
     </tr>`).join("");
@@ -6910,16 +6909,16 @@ function genBilanTrimestre(trim, data) {
 </style></head>
 <body>
   <div style="text-align:center;margin-bottom:16px">
-    <div style="font-size:13px;font-weight:700;color:#1a5276">LYCÃ‰E DE KAKATARE â€” MAROUA</div>
-    <div style="font-size:10px;color:#888">Conseil d'Enseignement SVTEEHB Â· 2025â€“2026</div>
+    <div style="font-size:13px;font-weight:700;color:#1a5276">LYCÉE DE KAKATARE — MAROUA</div>
+    <div style="font-size:10px;color:#888">Conseil d'Enseignement SVTEEHB · 2025–2026</div>
   </div>
-  <h1>BILAN PÃ‰DAGOGIQUE â€” ${periode.toUpperCase()}</h1>
-  <h2>Couverture des programmes Â· Ã‰ditÃ© le ${dateJour}</h2>
+  <h1>BILAN PÉDAGOGIQUE — ${periode.toUpperCase()}</h1>
+  <h2>Couverture des programmes · Édité le ${dateJour}</h2>
 
   <div class="kpis">
     <div class="kpi"><div class="kpi-val" style="color:#1a5276">${statsEns.length}</div><div class="kpi-lbl">Enseignants</div></div>
     <div class="kpi"><div class="kpi-val" style="color:${pct(tauxMoyen)}">${tauxMoyen}%</div><div class="kpi-lbl">Taux moyen</div></div>
-    <div class="kpi"><div class="kpi-val" style="color:#166534">${enObjectif}</div><div class="kpi-lbl">Objectif â‰¥75%</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#166534">${enObjectif}</div><div class="kpi-lbl">Objectif ≥75%</div></div>
     <div class="kpi"><div class="kpi-val" style="color:#991b1b">${enAlerte}</div><div class="kpi-lbl">En alerte &lt;50%</div></div>
   </div>
 
@@ -6933,23 +6932,23 @@ function genBilanTrimestre(trim, data) {
         <th style="width:50px;text-align:center">LP</th>
         <th style="width:65px;text-align:center">Taux</th>
         <th style="width:90px;text-align:center">Statut</th>
-        <th>Classes enseignÃ©es</th>
+        <th>Classes enseignées</th>
       </tr>
     </thead>
     <tbody>${rowsHtml}</tbody>
   </table>
 
-  ${enAlerte>0?`<div style="margin-top:16px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#991b1b"><strong>âš ï¸ Enseignants en alerte :</strong> ${statsEns.filter(e=>e.tauxGlobal<50).map(e=>e.nom).join(", ")}</div>`:""}
+  ${enAlerte>0?`<div style="margin-top:16px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#991b1b"><strong>⚠️ Enseignants en alerte :</strong> ${statsEns.filter(e=>e.tauxGlobal<50).map(e=>e.nom).join(", ")}</div>`:""}
 
   <div class="sig">
     <div class="sig-bloc">
-      <strong>L'Animatrice PÃ©dagogique</strong><br>
-      AÃSSATOU SYLVIE â€” PCEG<br><br>
+      <strong>L'Animatrice Pédagogique</strong><br>
+      AÏSSATOU SYLVIE — PCEG<br><br>
       Signature :
     </div>
     <div class="sig-bloc" style="text-align:right">
-      Fait Ã  Maroua, le ${dateJour}<br><br>
-      <em>Document gÃ©nÃ©rÃ© automatiquement par la plateforme SVTEEHB</em>
+      Fait à Maroua, le ${dateJour}<br><br>
+      <em>Document généré automatiquement par la plateforme SVTEEHB</em>
     </div>
   </div>
 
@@ -6972,16 +6971,16 @@ function genBilanTrimestre(trim, data) {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SUIVI PROGRAMME SYNTHÃ‰TIQUE â€” Vue animatrice : tableau global
-// Tous les enseignants Â· Toutes les classes Â· En un coup d'Å“il
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â”€â”€ Courbe d'Ã©volution T1â†’T2â†’T3 â€” SVG natif, sans dÃ©pendance externe â”€â”€â”€â”€â”€â”€
-// Mini-courbe compacte (sparkline) : utilisÃ©e dans chaque ligne de tableau
+// ══════════════════════════════════════════════════════════════════════
+// SUIVI PROGRAMME SYNTHÉTIQUE — Vue animatrice : tableau global
+// Tous les enseignants · Toutes les classes · En un coup d'œil
+// ══════════════════════════════════════════════════════════════════════
+// ── Courbe d'évolution T1→T2→T3 — SVG natif, sans dépendance externe ──────
+// Mini-courbe compacte (sparkline) : utilisée dans chaque ligne de tableau
 const MiniEvolutionChart = ({ values, width=70, height=28, color }) => {
   const vals = values.map(v => v===null||v===undefined ? null : v);
   const present = vals.filter(v=>v!==null);
-  if (present.length < 2) return <span style={{fontSize:11, color:"#cbd5e1"}}>â€”</span>;
+  if (present.length < 2) return <span style={{fontSize:11, color:"#cbd5e1"}}>—</span>;
   const min = 0, max = 100;
   const n = vals.length;
   const pts = vals.map((v,i) => v===null ? null : {
@@ -7000,7 +6999,7 @@ const MiniEvolutionChart = ({ values, width=70, height=28, color }) => {
   );
 };
 
-// Grande courbe annotÃ©e â€” vue d'ensemble avec axes, points et valeurs affichÃ©es
+// Grande courbe annotée — vue d'ensemble avec axes, points et valeurs affichées
 const EvolutionChartLarge = ({ series, height=140 }) => {
   // series: [{label:"T1", value:62}, {label:"T2", value:70}, {label:"T3", value:null}, ...]
   const width = 100; // en %, viewBox responsive
@@ -7008,7 +7007,7 @@ const EvolutionChartLarge = ({ series, height=140 }) => {
   const innerH = height - padTop - padBottom;
   const valides = series.filter(s=>s.value!==null);
   if (valides.length < 2) {
-    return <div style={{padding:"30px 14px", textAlign:"center", color:C.txtLight, fontSize:12}}>Pas assez de donnÃ©es pour tracer une courbe (au moins 2 trimestres avec des notes saisies sont nÃ©cessaires).</div>;
+    return <div style={{padding:"30px 14px", textAlign:"center", color:C.txtLight, fontSize:12}}>Pas assez de données pour tracer une courbe (au moins 2 trimestres avec des notes saisies sont nécessaires).</div>;
   }
   const n = series.length;
   const pts = series.map((s,i) => s.value===null ? null : {
@@ -7021,7 +7020,7 @@ const EvolutionChartLarge = ({ series, height=140 }) => {
   const aireD = path + ` L${ptsValides[ptsValides.length-1].x.toFixed(2)},${(padTop+innerH).toFixed(2)} L${ptsValides[0].x.toFixed(2)},${(padTop+innerH).toFixed(2)} Z`;
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
-      {/* Lignes de repÃ¨re horizontales (0/25/50/75/100%) */}
+      {/* Lignes de repère horizontales (0/25/50/75/100%) */}
       {[0,25,50,75,100].map(g=>{
         const y = padTop + innerH - (g/100)*innerH;
         return <g key={g}>
@@ -7055,7 +7054,7 @@ function SuiviProgrammePage() {
     return next;
   });
 
-  // Calcul du taux de couverture pour un trimestre donnÃ© (1,2,3) â€” rÃ©utilisÃ© pour la comparaison
+  // Calcul du taux de couverture pour un trimestre donné (1,2,3) — réutilisé pour la comparaison
   const calcTauxTrim = (ens, cl, trimNum, data) => {
     const code = resolveProgCode(cl);
     const meta = code ? PROG_META[code] : null;
@@ -7074,7 +7073,7 @@ function SuiviProgrammePage() {
 
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
-      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargementâ€¦</div>
+      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargement…</div>
     </div>
   );
 
@@ -7085,9 +7084,9 @@ function SuiviProgrammePage() {
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a,col:getColor(a.id),ini:getIni(a.nom),classes:ENS_CLASSES_REF[a.id]||[]}))
   );
 
-  // Calculer stats par enseignant Ã— classe
+  // Calculer stats par enseignant × classe
   const rows = enseignants.flatMap(ens => {
-    // DÃ©dupliquer les classes avant de gÃ©nÃ©rer les lignes
+    // Dédupliquer les classes avant de générer les lignes
     const classesUniques = [...new Set(ens.classes||[])];
     return classesUniques.map(cl => {
       const code  = resolveProgCode(cl);
@@ -7113,11 +7112,11 @@ function SuiviProgrammePage() {
       }).length;
 
       const taux  = lp>0 ? Math.min(100, Math.round(lfTrim/lp*100)) : 0;
-      // tpFait limitÃ© Ã  la mÃªme plage que tpP (range) â€” sinon des TP/TD faits en avance
-      // sur un autre trimestre se comptaient dans le trimestre affichÃ©, faussant le taux.
+      // tpFait limité à la même plage que tpP (range) — sinon des TP/TD faits en avance
+      // sur un autre trimestre se comptaient dans le trimestre affiché, faussant le taux.
       const tpFait= (meta?.tp||[]).filter(n => prog.includes(n) && (trim===0 || (range && n>=range[0] && n<=range[1]))).length;
       const ef    = (ELEVES_DB[cl]||[]).length;
-      // DigitalisÃ©es
+      // Digitalisées
       const digKey= `${ens.id}||${cl}||dig`;
       const digProg = (data?.prog?.[digKey]||[]);
       const leconsList = code ? (LECONS_DATA[code]||[]) : [];
@@ -7139,7 +7138,7 @@ function SuiviProgrammePage() {
   const enObjectif= rows.filter(r=>r.taux>=75).length;
   const tauxMoyen = totalRows>0 ? Math.round(rows.reduce((s,r)=>s+r.taux,0)/totalRows) : 0;
 
-  // Regroupement par enseignant â€” un seul nom affichÃ©, dÃ©pliable
+  // Regroupement par enseignant — un seul nom affiché, dépliable
   const groupedByEns = [];
   const seenEns = new Map();
   rows.forEach(r => {
@@ -7157,7 +7156,7 @@ function SuiviProgrammePage() {
   });
   groupedByEns.sort((a,b)=>a.avgTaux-b.avgTaux);
 
-  // â”€â”€ DonnÃ©es pour la vue Comparaison T1/T2/T3 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Données pour la vue Comparaison T1/T2/T3 ──────────────────────
   const rowsComparaison = enseignants.flatMap(ens => {
     const classesUniques = [...new Set(ens.classes||[])];
     return classesUniques.map(cl => ({
@@ -7193,15 +7192,15 @@ function SuiviProgrammePage() {
       {/* Header */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding: isMobile?"12px 14px":"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:10}}>
         <div>
-          <h2 style={{fontSize: isMobile?14:16, fontWeight:800, color:C.txt, margin:0}}>ðŸ“Š Suivi programme</h2>
-          <p style={{fontSize: isMobile?10.5:12, color:C.txtMuted, margin:"4px 0 0"}}>Tous les enseignants Â· Toutes les classes Â· 2025â€“2026</p>
+          <h2 style={{fontSize: isMobile?14:16, fontWeight:800, color:C.txt, margin:0}}>📊 Suivi programme</h2>
+          <p style={{fontSize: isMobile?10.5:12, color:C.txtMuted, margin:"4px 0 0"}}>Tous les enseignants · Toutes les classes · 2025–2026</p>
         </div>
         <div style={{display:"flex", gap:8, alignItems:"center"}}>
           <button onClick={()=>genBilanTrimestre(["ANN","T1","T2","T3"][trim], data)}
             style={{padding: isMobile?"7px 12px":"8px 16px",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,
               color:"#fff",border:"none",borderRadius:10,fontSize: isMobile?11:12,fontWeight:700,
               cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-            ðŸ“„ {isMobile?"Bilan":"GÃ©nÃ©rer bilan"}
+            📄 {isMobile?"Bilan":"Générer bilan"}
           </button>
         </div>
         {/* Filtre trimestre */}
@@ -7218,10 +7217,10 @@ function SuiviProgrammePage() {
       {/* KPIs */}
       <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)", gap:10}}>
         {[
-          {label:"Classes suivies",  val:totalRows,   col:C.blue,  bg:C.bluePale,   emoji:"ðŸ“š"},
-          {label:"Taux moyen",       val:`${tauxMoyen}%`, col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen), emoji:"ðŸ“Š"},
-          {label:"Objectif â‰¥75%",   val:enObjectif,  col:C.green, bg:C.greenPale,  emoji:"âœ…"},
-          {label:"En alerte <50%",  val:enAlerte,    col:enAlerte>0?C.red:C.green, bg:enAlerte>0?C.redPale:C.greenPale, emoji:"âš ï¸"},
+          {label:"Classes suivies",  val:totalRows,   col:C.blue,  bg:C.bluePale,   emoji:"📚"},
+          {label:"Taux moyen",       val:`${tauxMoyen}%`, col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen), emoji:"📊"},
+          {label:"Objectif ≥75%",   val:enObjectif,  col:C.green, bg:C.greenPale,  emoji:"✅"},
+          {label:"En alerte <50%",  val:enAlerte,    col:enAlerte>0?C.red:C.green, bg:enAlerte>0?C.redPale:C.greenPale, emoji:"⚠️"},
         ].map((k,i)=>(
           <div key={i} style={{background:k.bg, borderRadius:11, border:`1px solid ${C.border}`, padding:"12px 14px"}}>
             <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
@@ -7238,8 +7237,8 @@ function SuiviProgrammePage() {
         <div style={{display:"flex", gap:8}}>
           {[
             {id:"tous",     label:"Tous",           count:rows.length},
-            {id:"alerte",   label:"âš  En alerte",    count:enAlerte},
-            {id:"objectif", label:"âœ… Objectif atteint", count:enObjectif},
+            {id:"alerte",   label:"⚠ En alerte",    count:enAlerte},
+            {id:"objectif", label:"✅ Objectif atteint", count:enObjectif},
           ].map(f=>(
             <button key={f.id} onClick={()=>setFiltre(f.id)}
               style={{padding:"6px 14px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
@@ -7259,32 +7258,32 @@ function SuiviProgrammePage() {
                     "Tendance": (r.t1!==null&&r.t3!==null) ? (r.t3-r.t1) : ""
                   }))
                 : rows.map(r=>({
-                    "Enseignant": getNomCourt(r.ens.nom), "Classe": r.cl, "Ã‰lÃ¨ves": r.ef,
-                    "LeÃ§ons faites": r.lf, "LeÃ§ons prÃ©vues": r.lp, "Taux couverture (%)": r.taux,
-                    "TP fait": r.tpFait, "TP prÃ©vu": r.tpP,
+                    "Enseignant": getNomCourt(r.ens.nom), "Classe": r.cl, "Élèves": r.ef,
+                    "Leçons faites": r.lf, "Leçons prévues": r.lp, "Taux couverture (%)": r.taux,
+                    "TP fait": r.tpFait, "TP prévu": r.tpP,
                     "Digital fait": r.ldFait, "Digital total": r.ldTot, "Taux digital (%)": r.tauxDig,
                     "Statut": r.taux<50?"Alerte":r.taux>=75?"Objectif":"En cours"
                   }));
               if (exportRows.length === 0) {
-                showToast("âš  Aucune donnÃ©e Ã  exporter pour ce filtre", false);
+                showToast("⚠ Aucune donnée à exporter pour ce filtre", false);
                 return;
               }
               const ok = exportToExcel(
                 `Suivi_programme_${vueMode==="comparaison"?"comparaison":TRIM_LABELS[["ANN","T1","T2","T3"][trim]]||"annuel"}`,
                 "Suivi", exportRows
               );
-              showToast(ok ? "âœ“ Fichier Excel tÃ©lÃ©chargÃ©" : "âš  Ã‰chec de l'export", ok);
+              showToast(ok ? "✓ Fichier Excel téléchargé" : "⚠ Échec de l'export", ok);
             }}
             style={{padding:"6px 14px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
               border:`1.5px solid #15803d`, background:"#f0fdf4", color:"#15803d", display:"flex", alignItems:"center", gap:6}}>
-            ðŸ“¥ Exporter Excel
+            📥 Exporter Excel
           </button>
           <button onClick={()=>setVueMode(vueMode==="normal"?"comparaison":"normal")}
           style={{padding:"6px 14px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
             border:`1.5px solid ${vueMode==="comparaison"?"#7c3aed":C.border}`,
             background:vueMode==="comparaison"?"#f5f3ff":"transparent",
             color:vueMode==="comparaison"?"#7c3aed":C.txtMuted, display:"flex", alignItems:"center", gap:6}}>
-          ðŸ“ˆ {vueMode==="comparaison" ? "Vue normale" : "Comparer T1 Â· T2 Â· T3"}
+          📈 {vueMode==="comparaison" ? "Vue normale" : "Comparer T1 · T2 · T3"}
         </button>
         </div>
       </div>
@@ -7292,7 +7291,7 @@ function SuiviProgrammePage() {
       {vueMode==="comparaison" ? (
       <div style={{display:"flex", flexDirection:"column", gap:14}}>
       <div style={{background:C.white, borderRadius:14, border:`1px solid ${C.border}`, padding:"16px 18px"}}>
-        <h3 style={{fontSize:12.5, fontWeight:800, color:C.txt, margin:"0 0 8px"}}>ðŸ“ˆ Ã‰volution du taux de couverture global Â· Tous enseignants</h3>
+        <h3 style={{fontSize:12.5, fontWeight:800, color:C.txt, margin:"0 0 8px"}}>📈 Évolution du taux de couverture global · Tous enseignants</h3>
         <EvolutionChartLarge series={serieGlobale}/>
       </div>
       <div style={{background:C.white, borderRadius:14, border:`1px solid ${C.border}`, overflow:"hidden", boxShadow:"0 1px 3px rgba(0,0,0,.04)"}}>
@@ -7300,7 +7299,7 @@ function SuiviProgrammePage() {
         <table style={{width:"100%", minWidth: 640, borderCollapse:"collapse", fontSize:12.5}}>
           <thead>
             <tr style={{background:"#fafbfc", borderBottom:`2px solid ${C.border}`}}>
-              {["Enseignant / Classe","T1","T2","T3","Ã‰volution","Tendance"].map((h,i)=>(
+              {["Enseignant / Classe","T1","T2","T3","Évolution","Tendance"].map((h,i)=>(
                 <th key={i} style={{padding:"11px 14px", textAlign:i===0?"left":"center", color:"#64748b", fontSize:10.5, fontWeight:700, textTransform:"uppercase", letterSpacing:".04em"}}>{h}</th>
               ))}
             </tr>
@@ -7311,14 +7310,14 @@ function SuiviProgrammePage() {
               const avgT = (k) => { const vals=g.classes.map(r=>r[k]).filter(v=>v!==null); return vals.length>0?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length):null; };
               const gT1=avgT("t1"), gT2=avgT("t2"), gT3=avgT("t3");
               const cellTaux = (v) => v===null
-                ? <span style={{fontSize:11,color:"#cbd5e1"}}>â€”</span>
+                ? <span style={{fontSize:11,color:"#cbd5e1"}}>—</span>
                 : <span style={{fontSize:12, fontWeight:800, color:taux2col(v)}}>{v}%</span>;
               const tendance = (v1,v3) => {
-                if (v1===null||v3===null) return <span style={{color:"#cbd5e1"}}>â€”</span>;
+                if (v1===null||v3===null) return <span style={{color:"#cbd5e1"}}>—</span>;
                 const diff = v3-v1;
-                if (diff>5) return <span style={{color:"#16a34a",fontWeight:800}}>â†‘ +{diff}</span>;
-                if (diff<-5) return <span style={{color:"#ef4444",fontWeight:800}}>â†“ {diff}</span>;
-                return <span style={{color:"#94a3b8",fontWeight:700}}>â†’ stable</span>;
+                if (diff>5) return <span style={{color:"#16a34a",fontWeight:800}}>↑ +{diff}</span>;
+                if (diff<-5) return <span style={{color:"#ef4444",fontWeight:800}}>↓ {diff}</span>;
+                return <span style={{color:"#94a3b8",fontWeight:700}}>→ stable</span>;
               };
               return [
                 <tr key={`h-${g.ens.id}`} onClick={()=>toggleExpand(g.ens.id)}
@@ -7327,7 +7326,7 @@ function SuiviProgrammePage() {
                   onMouseLeave={e=>e.currentTarget.style.background=isOpen?"#fafbfc":"transparent"}>
                   <td style={{padding:"13px 14px"}}>
                     <div style={{display:"flex", alignItems:"center", gap:10}}>
-                      <span style={{fontSize:11, color:"#94a3b8", transform:isOpen?"rotate(90deg)":"none", display:"inline-block"}}>â–¶</span>
+                      <span style={{fontSize:11, color:"#94a3b8", transform:isOpen?"rotate(90deg)":"none", display:"inline-block"}}>▶</span>
                       <Avatar ens={g.ens} size={28} fontSize={9}/>
                       <div>
                         <div style={{fontSize:12.5,fontWeight:700,color:"#1e293b"}}>{getNomCourt(g.ens.nom)}</div>
@@ -7357,18 +7356,18 @@ function SuiviProgrammePage() {
         </table>
         </div>
         <div style={{padding:"10px 16px", fontSize:10.5, color:"#94a3b8", borderTop:`1px solid ${C.border}`}}>
-          Tendance = Ã©volution entre T1 et T3 Â· â†‘ amÃ©lioration &gt;5pts Â· â†“ recul &gt;5pts Â· â†’ stable
+          Tendance = évolution entre T1 et T3 · ↑ amélioration &gt;5pts · ↓ recul &gt;5pts · → stable
         </div>
       </div>
       </div>
       ) : (
       <>
-      {/* Tableau synthÃ©tique (desktop) / Cartes (mobile) */}
+      {/* Tableau synthétique (desktop) / Cartes (mobile) */}
       {isMobile ? (
         <div style={{display:"flex", flexDirection:"column", gap:8}}>
           {rows.length===0 ? (
             <div style={{padding:"40px",textAlign:"center",color:C.txtLight,background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}>
-              <div style={{fontSize:28,marginBottom:8}}>ðŸ”</div>Aucune classe dans ce filtre
+              <div style={{fontSize:28,marginBottom:8}}>🔍</div>Aucune classe dans ce filtre
             </div>
           ) : rows.map((r,i)=>{
             const alerte  = r.taux < 50;
@@ -7377,13 +7376,13 @@ function SuiviProgrammePage() {
             return (
               <div key={i} style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`,
                 borderLeft:`4px solid ${alerte?C.red:objectif?C.green:C.border}`, padding:"12px 14px"}}>
-                {/* En-tÃªte : enseignant + classe */}
+                {/* En-tête : enseignant + classe */}
                 <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8}}>
                   <div style={{display:"flex", alignItems:"center", gap:8}}>
                     <Avatar ens={r.ens} size={28} fontSize={10}/>
                     <div>
                       <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>{getNomCourt(r.ens.nom)}</div>
-                      <div style={{fontSize:11,color:C.txtMuted}}>{r.cl} Â· {r.ef} Ã©lÃ¨ves</div>
+                      <div style={{fontSize:11,color:C.txtMuted}}>{r.cl} · {r.ef} élèves</div>
                     </div>
                   </div>
                   <span style={{fontSize:16,fontWeight:900,color:taux2col(r.taux)}}>{r.taux}%</span>
@@ -7394,23 +7393,23 @@ function SuiviProgrammePage() {
                   <div style={{flex:1,height:7,borderRadius:4,overflow:"hidden",background:"#e2e8f0"}}>
                     <div style={{width:`${r.taux}%`,height:"100%",background:taux2col(r.taux),transition:"width .5s"}}/>
                   </div>
-                  {alerte  && <span style={{fontSize:10,color:C.red,fontWeight:700,flexShrink:0}}>âš  Alerte</span>}
-                  {objectif && <span style={{fontSize:10,color:C.green,fontWeight:700,flexShrink:0}}>âœ“ Objectif</span>}
+                  {alerte  && <span style={{fontSize:10,color:C.red,fontWeight:700,flexShrink:0}}>⚠ Alerte</span>}
+                  {objectif && <span style={{fontSize:10,color:C.green,fontWeight:700,flexShrink:0}}>✓ Objectif</span>}
                 </div>
 
-                {/* DÃ©tails en grille 2x2 */}
+                {/* Détails en grille 2x2 */}
                 <div style={{display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, fontSize:11}}>
                   <div style={{background:"#f8fafc",borderRadius:8,padding:"6px 9px"}}>
-                    <div style={{color:C.txtMuted,fontSize:9.5}}>LeÃ§ons</div>
+                    <div style={{color:C.txtMuted,fontSize:9.5}}>Leçons</div>
                     <div style={{fontWeight:700,color:C.txt}}>{r.lf} / {r.lp}</div>
                   </div>
                   <div style={{background:"#f8fafc",borderRadius:8,padding:"6px 9px"}}>
-                    <div style={{color:C.txtMuted,fontSize:9.5}}>TP rÃ©alisÃ©s</div>
+                    <div style={{color:C.txtMuted,fontSize:9.5}}>TP réalisés</div>
                     <div style={{fontWeight:700,color:C.txt}}>{r.tpFait} / {r.tpP} {tauxTP!==null && <span style={{color:taux2col(tauxTP)}}>({tauxTP}%)</span>}</div>
                   </div>
                   <div style={{background:"#e0f2fe",borderRadius:8,padding:"6px 9px", gridColumn:"span 2"}}>
-                    <div style={{color:"#0369a1",fontSize:9.5}}>ðŸ–¥ï¸ Digitalisation</div>
-                    <div style={{fontWeight:700,color:"#0369a1"}}>{r.ldFait} / {r.ldTot} leÃ§ons ({r.tauxDig}%)</div>
+                    <div style={{color:"#0369a1",fontSize:9.5}}>🖥️ Digitalisation</div>
+                    <div style={{fontWeight:700,color:"#0369a1"}}>{r.ldFait} / {r.ldTot} leçons ({r.tauxDig}%)</div>
                   </div>
                 </div>
               </div>
@@ -7430,7 +7429,7 @@ function SuiviProgrammePage() {
           <tbody>
             {groupedByEns.length===0 ? (
               <tr><td colSpan={6} style={{padding:"48px",textAlign:"center",color:C.txtLight}}>
-                <div style={{fontSize:30,marginBottom:10}}>ðŸ”</div>Aucune classe dans ce filtre
+                <div style={{fontSize:30,marginBottom:10}}>🔍</div>Aucune classe dans ce filtre
               </td></tr>
             ) : groupedByEns.flatMap((g) => {
               const isOpen = expandedEns.has(g.ens.id);
@@ -7447,7 +7446,7 @@ function SuiviProgrammePage() {
                   onMouseLeave={e=>e.currentTarget.style.background=isOpen?"#fafbfc":"transparent"}>
                   <td style={{padding:"13px 14px"}} colSpan={2}>
                     <div style={{display:"flex", alignItems:"center", gap:10}}>
-                      <span style={{fontSize:11, color:"#94a3b8", transition:"transform .15s", display:"inline-block", transform:isOpen?"rotate(90deg)":"none"}}>â–¶</span>
+                      <span style={{fontSize:11, color:"#94a3b8", transition:"transform .15s", display:"inline-block", transform:isOpen?"rotate(90deg)":"none"}}>▶</span>
                       <Avatar ens={g.ens} size={30} fontSize={10}/>
                       <div>
                         <div style={{fontSize:12.5,fontWeight:700,color:"#1e293b"}}>{getNomCourt(g.ens.nom)}</div>
@@ -7480,7 +7479,7 @@ function SuiviProgrammePage() {
                     {taux!==null ? (
                       <span style={{fontSize:10.5, fontWeight:800, padding:"2px 7px", borderRadius:20, background:`${color}15`, color}}>{taux}%</span>
                     ) : (
-                      <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>â€”</span>
+                      <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>—</span>
                     )}
                   </div>
                 );
@@ -7493,7 +7492,7 @@ function SuiviProgrammePage() {
                   <tr key={`${g.ens.id}-${r.cl}`} style={{borderBottom:`1px solid #f1f5f9`, background:"#fcfdfe"}}>
                     <td style={{padding:"10px 14px 10px 30px", borderLeft:`2px solid ${C.border}`}} colSpan={2}>
                       <div style={{fontSize:12.5,fontWeight:600,color:"#1e293b"}}>{r.cl}</div>
-                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} Ã©lÃ¨ve{r.ef>1?"s":""}</div>
+                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} élève{r.ef>1?"s":""}</div>
                     </td>
                     <td style={{padding:"10px 14px"}}>{badge(`${r.lf}/${r.lp}`, r.taux, taux2col(r.taux))}</td>
                     <td style={{padding:"10px 14px"}}>{badge(`${r.tpFait}/${r.tpP}`, tauxTP, tauxTP!==null?taux2col(tauxTP):"#94a3b8")}</td>
@@ -7522,35 +7521,35 @@ function SuiviProgrammePage() {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 // PAGE CHANGER MOT DE PASSE
-// Accessible depuis les paramÃ¨tres enseignant
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Accessible depuis les paramètres enseignant
+// ════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PAGE GESTION ANNUELLE â€” Mise Ã  jour des donnÃ©es (animatrice)
-//   - Import CSV des Ã©lÃ¨ves par classe
-//   - Visualisation de l'Ã©tat des donnÃ©es
-//   - PrÃ©paration nouvelle annÃ©e scolaire
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// PAGE GESTION ANNUELLE — Mise à jour des données (animatrice)
+//   - Import CSV des élèves par classe
+//   - Visualisation de l'état des données
+//   - Préparation nouvelle année scolaire
+// ════════════════════════════════════════════════════════════════
 function GestionAnnuellePage() {
   const {showToast, data, setPage} = useApp();
   const {isMobile} = useDevice();
-  const [selClasse, setSelClasse] = useState("6Ã¨me 1");
+  const [selClasse, setSelClasse] = useState("6ème 1");
   const [csvText, setCsvText]     = useState("");
   const [preview, setPreview]     = useState([]);
   const [importing, setImporting] = useState(false);
 
   const toutesClasses = Object.keys(ELEVES_DB).sort();
 
-  // Parser le CSV : format "NOM PrÃ©nom;M" ou "NOM PrÃ©nom,F" â€” une ligne par Ã©lÃ¨ve
+  // Parser le CSV : format "NOM Prénom;M" ou "NOM Prénom,F" — une ligne par élève
   const parseCsv = (text) => {
     const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
     return lines.map((line,i) => {
       const parts = line.split(/[;,\t]/).map(p=>p.trim());
       const nom = parts[0] || "";
       let g = (parts[1]||"").toUpperCase();
-      if(g!=="M" && g!=="F") g = "M"; // dÃ©faut
+      if(g!=="M" && g!=="F") g = "M"; // défaut
       return { nom, g, valid: nom.length>2 };
     }).filter(e=>e.nom);
   };
@@ -7558,16 +7557,16 @@ function GestionAnnuellePage() {
   const handlePreview = () => {
     const parsed = parseCsv(csvText);
     setPreview(parsed);
-    if(parsed.length===0) showToast("Aucun Ã©lÃ¨ve dÃ©tectÃ© dans le texte", false);
-    else showToast(`${parsed.length} Ã©lÃ¨ves dÃ©tectÃ©s`, true);
+    if(parsed.length===0) showToast("Aucun élève détecté dans le texte", false);
+    else showToast(`${parsed.length} élèves détectés`, true);
   };
 
   const handleImport = async () => {
     const valides = preview.filter(e=>e.valid);
-    if(valides.length===0) return showToast("Aucun Ã©lÃ¨ve valide Ã  importer", false);
+    if(valides.length===0) return showToast("Aucun élève valide à importer", false);
     setImporting(true);
 
-    // GÃ©nÃ©rer les IDs et construire la nouvelle liste
+    // Générer les IDs et construire la nouvelle liste
     const clId = selClasse.replace(/[^a-zA-Z0-9]/g,"_");
     const nouveauxEleves = valides.map((e,i)=>({
       id: `${clId}_${i+1}`,
@@ -7575,7 +7574,7 @@ function GestionAnnuellePage() {
       g: e.g
     }));
 
-    // Mettre Ã  jour ELEVES_DB en mÃ©moire
+    // Mettre à jour ELEVES_DB en mémoire
     ELEVES_DB[selClasse] = nouveauxEleves;
 
     // Sauvegarder dans Supabase (table eleves)
@@ -7585,10 +7584,10 @@ function GestionAnnuellePage() {
 
     setImporting(false);
     if(ok) {
-      showToast(`âœ… ${valides.length} Ã©lÃ¨ves importÃ©s dans ${selClasse}`, true);
+      showToast(`✅ ${valides.length} élèves importés dans ${selClasse}`, true);
       setCsvText(""); setPreview([]);
     } else {
-      showToast("âœ… Import local effectuÃ© (Supabase non configurÃ©)", true);
+      showToast("✅ Import local effectué (Supabase non configuré)", true);
       setCsvText(""); setPreview([]);
     }
   };
@@ -7596,13 +7595,13 @@ function GestionAnnuellePage() {
   return (
     <div style={{padding:20, maxWidth:720, margin:"0 auto", display:"flex", flexDirection:"column", gap:16}}>
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"18px 20px"}}>
-        <h2 style={{fontSize:17, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>ðŸ”„ Gestion annuelle des donnÃ©es</h2>
-        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>Importer les listes d'Ã©lÃ¨ves Â· PrÃ©parer une nouvelle annÃ©e scolaire</p>
+        <h2 style={{fontSize:17, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>🔄 Gestion annuelle des données</h2>
+        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>Importer les listes d'élèves · Préparer une nouvelle année scolaire</p>
       </div>
 
-      {/* Ã‰tat actuel */}
+      {/* État actuel */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 18px"}}>
-        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:"0 0 10px"}}>ðŸ“Š Ã‰tat des donnÃ©es</h3>
+        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:"0 0 10px"}}>📊 État des données</h3>
         <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(3,1fr)", gap:10}}>
           <div style={{background:C.greenPale, borderRadius:9, padding:"12px 14px", textAlign:"center"}}>
             <div style={{fontSize:24, fontWeight:900, color:C.green}}>{toutesClasses.length}</div>
@@ -7610,30 +7609,30 @@ function GestionAnnuellePage() {
           </div>
           <div style={{background:"#eff6ff", borderRadius:9, padding:"12px 14px", textAlign:"center"}}>
             <div style={{fontSize:24, fontWeight:900, color:"#1e40af"}}>{Object.values(ELEVES_DB).reduce((s,e)=>s+e.length,0)}</div>
-            <div style={{fontSize:10, color:"#1e40af", fontWeight:600}}>Ã‰lÃ¨ves total</div>
+            <div style={{fontSize:10, color:"#1e40af", fontWeight:600}}>Élèves total</div>
           </div>
           <div style={{background:"#fef3c7", borderRadius:9, padding:"12px 14px", textAlign:"center"}}>
             <div style={{fontSize:24, fontWeight:900, color:"#92400e"}}>2025-26</div>
-            <div style={{fontSize:10, color:"#92400e", fontWeight:600}}>AnnÃ©e scolaire</div>
+            <div style={{fontSize:10, color:"#92400e", fontWeight:600}}>Année scolaire</div>
           </div>
         </div>
       </div>
 
       {/* Import CSV */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 18px", display:"flex", flexDirection:"column", gap:12}}>
-        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:0}}>ðŸ“¥ Importer une liste d'Ã©lÃ¨ves</h3>
+        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:0}}>📥 Importer une liste d'élèves</h3>
 
         <div>
           <label style={{display:"block", fontSize:11, fontWeight:700, color:C.txtMuted, marginBottom:5}}>Classe cible</label>
           <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
             style={{width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:"inherit", background:C.white}}>
-            {toutesClasses.map(cl=><option key={cl} value={cl}>{cl} ({(ELEVES_DB[cl]||[]).length} Ã©lÃ¨ves actuels)</option>)}
+            {toutesClasses.map(cl=><option key={cl} value={cl}>{cl} ({(ELEVES_DB[cl]||[]).length} élèves actuels)</option>)}
           </select>
         </div>
 
         <div>
           <label style={{display:"block", fontSize:11, fontWeight:700, color:C.txtMuted, marginBottom:5}}>
-            Liste des Ã©lÃ¨ves (un par ligne : <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM PrÃ©nom;M</code> ou <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM PrÃ©nom;F</code>)
+            Liste des élèves (un par ligne : <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM Prénom;M</code> ou <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM Prénom;F</code>)
           </label>
           <textarea value={csvText} onChange={e=>setCsvText(e.target.value)}
             placeholder={"MBASSA Jean;M\nFOTSO Marie;F\nNGONO Paul;M"}
@@ -7644,60 +7643,60 @@ function GestionAnnuellePage() {
         <div style={{display:"flex", gap:10}}>
           <button onClick={handlePreview}
             style={{padding:"10px 18px", background:C.white, border:`1.5px solid ${C.green}`, borderRadius:9, fontSize:13, fontWeight:700, color:C.green, cursor:"pointer", fontFamily:"inherit"}}>
-            ðŸ‘ AperÃ§u
+            👁 Aperçu
           </button>
           {preview.length>0 && (
             <button onClick={handleImport} disabled={importing}
               style={{flex:1, padding:"10px 18px", background:importing?"#94a3b8":`linear-gradient(135deg,${C.greenDark},${C.green})`, border:"none", borderRadius:9, fontSize:13, fontWeight:700, color:"#fff", cursor:importing?"not-allowed":"pointer", fontFamily:"inherit"}}>
-              {importing?"Importâ€¦":`âœ“ Importer ${preview.filter(e=>e.valid).length} Ã©lÃ¨ves dans ${selClasse}`}
+              {importing?"Import…":`✓ Importer ${preview.filter(e=>e.valid).length} élèves dans ${selClasse}`}
             </button>
           )}
         </div>
 
-        {/* AperÃ§u */}
+        {/* Aperçu */}
         {preview.length>0 && (
           <div style={{border:`1px solid ${C.border}`, borderRadius:9, overflow:"hidden", maxHeight:260, overflowY:"auto"}}>
             <div style={{padding:"8px 12px", background:"#f8fafc", fontSize:11, fontWeight:700, color:C.txtMuted, position:"sticky", top:0}}>
-              {preview.length} Ã©lÃ¨ves Â· {preview.filter(e=>e.valid).length} valides
+              {preview.length} élèves · {preview.filter(e=>e.valid).length} valides
             </div>
             {preview.map((e,i)=>(
               <div key={i} style={{padding:"7px 12px", borderTop:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:e.valid?1:0.4}}>
                 <span style={{width:24, textAlign:"center", color:C.txtLight, fontSize:10}}>{i+1}</span>
-                <span style={{width:24, textAlign:"center", fontSize:13}}>{e.g==="F"?"ðŸ‘§":"ðŸ‘¦"}</span>
+                <span style={{width:24, textAlign:"center", fontSize:13}}>{e.g==="F"?"👧":"👦"}</span>
                 <span style={{flex:1, fontWeight:600, color:C.txt}}>{e.nom}</span>
-                {!e.valid && <span style={{fontSize:10, color:C.red}}>âš  nom trop court</span>}
+                {!e.valid && <span style={{fontSize:10, color:C.red}}>⚠ nom trop court</span>}
               </div>
             ))}
           </div>
         )}
 
         <div style={{background:"#fffbeb", border:"1px solid #fde68a", borderRadius:9, padding:"11px 14px", fontSize:11.5, color:"#92400e"}}>
-          âš ï¸ <strong>Attention :</strong> l'import remplace TOUTE la liste actuelle de la classe sÃ©lectionnÃ©e. VÃ©rifiez l'aperÃ§u avant de confirmer. Cette action est dÃ©finitive.
+          ⚠️ <strong>Attention :</strong> l'import remplace TOUTE la liste actuelle de la classe sélectionnée. Vérifiez l'aperçu avant de confirmer. Cette action est définitive.
         </div>
       </div>
 
       {/* Aide format */}
       <div style={{background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:10, padding:"14px 16px", fontSize:12, color:"#1e40af"}}>
-        <strong>ðŸ’¡ Comment prÃ©parer votre liste depuis Excel :</strong>
+        <strong>💡 Comment préparer votre liste depuis Excel :</strong>
         <ol style={{margin:"8px 0 0", paddingLeft:20, lineHeight:1.7}}>
-          <li>Dans Excel : colonne A = NOM PrÃ©nom, colonne B = M ou F</li>
-          <li>SÃ©lectionnez les cellules â†’ Copier (Ctrl+C)</li>
+          <li>Dans Excel : colonne A = NOM Prénom, colonne B = M ou F</li>
+          <li>Sélectionnez les cellules → Copier (Ctrl+C)</li>
           <li>Collez ici dans la zone de texte ci-dessus</li>
-          <li>Cliquez Â« AperÃ§u Â» puis Â« Importer Â»</li>
+          <li>Cliquez « Aperçu » puis « Importer »</li>
         </ol>
       </div>
 
-      {/* â”€â”€ Lien vers l'Ã©diteur d'emploi du temps (unifiÃ© dans la page Emploi du temps) â”€â”€ */}
+      {/* ── Lien vers l'éditeur d'emploi du temps (unifié dans la page Emploi du temps) ── */}
       <div style={{background:C.greenPale, borderRadius:12, border:`1px solid ${C.greenBorder}`, padding:"16px 18px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:14, flexWrap:"wrap"}}>
         <div>
-          <h3 style={{fontSize:13, fontWeight:700, color:C.greenDark, margin:0}}>ðŸ“… Emploi du temps</h3>
+          <h3 style={{fontSize:13, fontWeight:700, color:C.greenDark, margin:0}}>📅 Emploi du temps</h3>
           <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>
-            La modification de l'EDT (par enseignant) se fait maintenant directement dans la page Â« Emploi du temps Â», onglet Â« Par enseignant Â».
+            La modification de l'EDT (par enseignant) se fait maintenant directement dans la page « Emploi du temps », onglet « Par enseignant ».
           </p>
         </div>
         <button onClick={()=>setPage("edt")}
           style={{flexShrink:0, padding:"10px 18px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, border:"none", borderRadius:9, fontSize:13, fontWeight:700, color:"#fff", cursor:"pointer", fontFamily:"inherit"}}>
-          â†’ Aller Ã  l'Emploi du temps
+          → Aller à l'Emploi du temps
         </button>
       </div>
     </div>
@@ -7720,8 +7719,8 @@ function ChangePasswordPage() {
 
   const choisirPhoto = (file) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { showToast("âš  Choisis une image (jpg, pngâ€¦)", false); return; }
-    if (file.size > 8*1024*1024) { showToast("âš  Image trop lourde (max 8 Mo)", false); return; }
+    if (!file.type.startsWith("image/")) { showToast("⚠ Choisis une image (jpg, png…)", false); return; }
+    if (file.size > 8*1024*1024) { showToast("⚠ Image trop lourde (max 8 Mo)", false); return; }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };
@@ -7739,11 +7738,11 @@ function ChangePasswordPage() {
           setUser(prev => ({...prev, photo:path}));
           setData(prev => ({...prev, users:{...(prev?.users||{}), [user.id]:{...(prev?.users?.[user.id]||{}), photo:path}}}));
           setPhotoFile(null); setPhotoPreview(null);
-          showToast("âœ“ Photo de profil mise Ã  jour");
-        } else showToast(`âš  Non enregistrÃ©e : ${(sb.lastError||"erreur inconnue").slice(0,80)}`, false);
-      } else showToast("âš  Ã‰chec de l'envoi de la photo", false);
+          showToast("✓ Photo de profil mise à jour");
+        } else showToast(`⚠ Non enregistrée : ${(sb.lastError||"erreur inconnue").slice(0,80)}`, false);
+      } else showToast("⚠ Échec de l'envoi de la photo", false);
     } catch {
-      showToast("âš  Erreur lors du traitement de la photo", false);
+      showToast("⚠ Erreur lors du traitement de la photo", false);
     }
     setUploadingPhoto(false);
   };
@@ -7755,16 +7754,16 @@ function ChangePasswordPage() {
       setUser(prev => ({...prev, photo:null}));
       setData(prev => ({...prev, users:{...(prev?.users||{}), [user.id]:{...(prev?.users?.[user.id]||{}), photo:null}}}));
       setPhotoFile(null); setPhotoPreview(null);
-      showToast("âœ“ Photo retirÃ©e");
-    } else showToast("âš  Erreur lors du retrait", false);
+      showToast("✓ Photo retirée");
+    } else showToast("⚠ Erreur lors du retrait", false);
     setUploadingPhoto(false);
   };
 
   const handleChange = async() => {
     if(!oldPw) return showToast("Saisissez votre mot de passe actuel", false);
-    if(newPw.length < 6) return showToast("Le nouveau mot de passe doit faire au moins 6 caractÃ¨res", false);
+    if(newPw.length < 6) return showToast("Le nouveau mot de passe doit faire au moins 6 caractères", false);
     if(newPw !== conf) return showToast("Les mots de passe ne correspondent pas", false);
-    if(newPw === oldPw) return showToast("Le nouveau mot de passe doit Ãªtre diffÃ©rent", false);
+    if(newPw === oldPw) return showToast("Le nouveau mot de passe doit être différent", false);
 
     setSaving(true);
     const ok = await sb.rpc("change_password", {p_id: user.id, p_old_mdp: oldPw, p_new_mdp: newPw});
@@ -7772,23 +7771,23 @@ function ChangePasswordPage() {
 
     if(ok) {
       setDone(true);
-      showToast("âœ“ Mot de passe modifiÃ© avec succÃ¨s");
+      showToast("✓ Mot de passe modifié avec succès");
       setOldPw(""); setNewPw(""); setConf("");
     } else {
-      showToast("âš  Mot de passe actuel incorrect ou erreur serveur", false);
+      showToast("⚠ Mot de passe actuel incorrect ou erreur serveur", false);
     }
   };
 
   return (
     <div style={{padding:20, maxWidth:440, margin:"0 auto", display:"flex", flexDirection:"column", gap:16}}>
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"18px 20px"}}>
-        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>ðŸ” Changer mon mot de passe</h2>
-        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>{user?.nom} Â· {user?.role}</p>
+        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>🔐 Changer mon mot de passe</h2>
+        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>{user?.nom} · {user?.role}</p>
       </div>
 
       {/* Photo de profil */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding: isMobile?"18px 16px":"18px 20px"}}>
-        <h2 style={{fontSize:14, fontWeight:800, color:C.txt, margin:"0 0 14px"}}>ðŸ“· Ma photo de profil</h2>
+        <h2 style={{fontSize:14, fontWeight:800, color:C.txt, margin:"0 0 14px"}}>📷 Ma photo de profil</h2>
         <div style={{display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"center":"center", gap: isMobile?14:16}}>
           <div style={{width: isMobile?88:72, height: isMobile?88:72, borderRadius:"50%",overflow:"hidden",flexShrink:0,background:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${C.border}`}}>
             {photoPreview ? (
@@ -7796,7 +7795,7 @@ function ChangePasswordPage() {
             ) : photoActuelle ? (
               <img src={sb.photoUrl(photoActuelle)} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
             ) : (
-              <span style={{fontSize: isMobile?30:26,color:"#cbd5e1"}}>ðŸ‘¤</span>
+              <span style={{fontSize: isMobile?30:26,color:"#cbd5e1"}}>👤</span>
             )}
           </div>
           <div style={{display:"flex", flexDirection:"column", gap:8, width: isMobile?"100%":"auto", alignItems: isMobile?"stretch":"flex-start"}}>
@@ -7806,7 +7805,7 @@ function ChangePasswordPage() {
               <>
                 <button type="button" disabled={uploadingPhoto} onClick={enregistrerPhoto}
                   style={{padding: isMobile?"12px 16px":"8px 16px",borderRadius:9,border:"none",background:C.green,color:"#fff",fontSize: isMobile?13.5:12.5,fontWeight:700,cursor:uploadingPhoto?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6,width:"100%"}}>
-                  {uploadingPhoto ? <><Spinner size={12} color="#fff"/> Envoiâ€¦</> : "âœ“ Enregistrer cette photo"}
+                  {uploadingPhoto ? <><Spinner size={12} color="#fff"/> Envoi…</> : "✓ Enregistrer cette photo"}
                 </button>
                 <button type="button" onClick={()=>{setPhotoFile(null);setPhotoPreview(null);}}
                   style={{padding: isMobile?"10px":"6px 10px",borderRadius:8,border:"none",background:"transparent",color:C.txtMuted,fontSize: isMobile?12.5:11.5,cursor:"pointer",fontFamily:"inherit",textAlign:"center",width:"100%"}}>
@@ -7817,7 +7816,7 @@ function ChangePasswordPage() {
               <>
                 <button type="button" onClick={()=>fileInputRef.current?.click()}
                   style={{padding: isMobile?"12px 16px":"8px 16px",borderRadius:9,border:`1.5px solid ${C.green}`,background:C.greenPale,color:C.green,fontSize: isMobile?13.5:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%",textAlign:"center"}}>
-                  ðŸ“· {photoActuelle ? "Changer la photo" : "Ajouter une photo"}
+                  📷 {photoActuelle ? "Changer la photo" : "Ajouter une photo"}
                 </button>
                 {photoActuelle && (
                   <button type="button" disabled={uploadingPhoto} onClick={retirerPhoto}
@@ -7833,16 +7832,16 @@ function ChangePasswordPage() {
 
       {done && (
         <div style={{background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", gap:10, alignItems:"center"}}>
-          <span style={{fontSize:20}}>âœ…</span>
-          <span style={{fontSize:13, fontWeight:600, color:C.green}}>Mot de passe modifiÃ© avec succÃ¨s</span>
+          <span style={{fontSize:20}}>✅</span>
+          <span style={{fontSize:13, fontWeight:600, color:C.green}}>Mot de passe modifié avec succès</span>
         </div>
       )}
 
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"18px 20px", display:"flex", flexDirection:"column", gap:14}}>
         {[
           {label:"Mot de passe actuel", val:oldPw, set:setOldPw, placeholder:"Votre mot de passe actuel"},
-          {label:"Nouveau mot de passe", val:newPw, set:setNewPw, placeholder:"Minimum 6 caractÃ¨res"},
-          {label:"Confirmer le nouveau", val:conf, set:setConf, placeholder:"RÃ©pÃ©ter le nouveau mot de passe"},
+          {label:"Nouveau mot de passe", val:newPw, set:setNewPw, placeholder:"Minimum 6 caractères"},
+          {label:"Confirmer le nouveau", val:conf, set:setConf, placeholder:"Répéter le nouveau mot de passe"},
         ].map(({label, val, set, placeholder}, i) => (
           <div key={i}>
             <label style={{display:"block", fontSize:11, fontWeight:700, color:C.txtMuted, marginBottom:5, textTransform:"uppercase", letterSpacing:".06em"}}>
@@ -7877,31 +7876,31 @@ function ChangePasswordPage() {
             background:saving?"#94a3b8":`linear-gradient(135deg,${C.greenDark},${C.green})`,
             color:"#fff", fontSize:14, fontWeight:700, cursor:saving?"not-allowed":"pointer",
             fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", gap:7}}>
-          {saving ? <><Spinner size={16} color="#fff"/>&nbsp;Modificationâ€¦</> : "âœ“ Modifier mon mot de passe"}
+          {saving ? <><Spinner size={16} color="#fff"/>&nbsp;Modification…</> : "✓ Modifier mon mot de passe"}
         </button>
       </div>
 
       <div style={{background:"#fef9e7", border:"1px solid #f9ca24", borderRadius:10, padding:"12px 16px", fontSize:12, color:"#7d6608"}}>
-        <strong>Conseils :</strong> Utilisez un mot de passe d'au moins 8 caractÃ¨res avec des chiffres et des lettres. Ne partagez jamais votre mot de passe.
+        <strong>Conseils :</strong> Utilisez un mot de passe d'au moins 8 caractères avec des chiffres et des lettres. Ne partagez jamais votre mot de passe.
       </div>
     </div>
   );
 }
 
-// â”€â”€â”€ Placeholder â”€â”€â”€â”€
+// ─── Placeholder ────
 const AppLayout = ({onLogout}) => {
   const {user,page,data,setData,toast,showToast} = useApp();
   const [collapsed,setCollapsed] = useState(()=>window.innerWidth < 1024);
   const isAdmin = user?.role==="animatrice";
-  // Pages qui gÃ¨rent leur propre flex+scroll (retournent flex:1, overflow:hidden)
+  // Pages qui gèrent leur propre flex+scroll (retournent flex:1, overflow:hidden)
   const SELF_SCROLL = ["mes-classes","cahier","documents","eleves"];
   const renderPage = () => {
-    // â”€â”€ Pages AUTO-SCROLLANTES (flex:1 + overflow:hidden sur leur root) â”€â”€
+    // ── Pages AUTO-SCROLLANTES (flex:1 + overflow:hidden sur leur root) ──
     if(page==="mes-classes") return <MesClassesPage/>
     if(page==="cahier")      return <CahierDeTextePage/>
     if(page==="documents")   return isAdmin?<DocumentsPage/>:null
     if(page==="eleves")      return isAdmin?<ElevesPage/>:<MesClassesPage/>
-    // â”€â”€ Pages SIMPLES â€” enveloppÃ©es dans un scroller â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Pages SIMPLES — enveloppées dans un scroller ───────────────────
     const W = ({children}) => (
       <div style={{flex:1, minHeight:0, overflowY:"auto"}}>
         {children}
@@ -7915,13 +7914,13 @@ const AppLayout = ({onLogout}) => {
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="settings")          return <W><ChangePasswordPage/></W>
-    return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="ðŸš§"/></W>
+    return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="🚧"/></W>
   };
   return(
     <div style={{display:"flex",height:"100vh",overflow:"hidden",background:C.bg}}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflow:"hidden"}}>
-        <Topbar title={PAGE_TITLES[page]||"â€”"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed}/>
+        <Topbar title={PAGE_TITLES[page]||"—"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed}/>
         <div style={{flex:1, minHeight:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
           {renderPage()}
         </div>
@@ -7931,12 +7930,12 @@ const AppLayout = ({onLogout}) => {
   );
 };
 
-// â”€â”€â”€ Splash â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Splash ───────────────────────────────────────────────────────
 function Splash({onDone}){
   const [prog,setProg]=useState(0);
-  const [label,setLabel]=useState("Initialisationâ€¦");
+  const [label,setLabel]=useState("Initialisation…");
   useEffect(()=>{
-    const steps=[[300,20,"Connexion Supabaseâ€¦"],[700,55,"Chargement des donnÃ©esâ€¦"],[1100,85,"VÃ©rification des droitsâ€¦"],[1500,100,"PrÃªt !"]];
+    const steps=[[300,20,"Connexion Supabase…"],[700,55,"Chargement des données…"],[1100,85,"Vérification des droits…"],[1500,100,"Prêt !"]];
     const timers=steps.map(([d,p,l])=>setTimeout(()=>{setProg(p);setLabel(l);},d));
     const done=setTimeout(onDone,1900);
     return()=>{timers.forEach(clearTimeout);clearTimeout(done);};
@@ -7946,7 +7945,7 @@ function Splash({onDone}){
       <div style={{animation:"logoIn .7s cubic-bezier(.2,.8,.2,1)"}}><img src={LOGO_LYCEE_B64} alt="SVTEEHB" width={100} height={100} style={{borderRadius:"50%", objectFit:"contain"}}/></div>
       <div style={{textAlign:"center"}}>
         <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:36,color:"#fff",letterSpacing:".06em",margin:"0 0 8px"}}>SVTEEHB</h1>
-        <p style={{color:"rgba(255,255,255,.55)",fontSize:13}}>LycÃ©e de Kakatare Â· Maroua Â· Cameroun</p>
+        <p style={{color:"rgba(255,255,255,.55)",fontSize:13}}>Lycée de Kakatare · Maroua · Cameroun</p>
       </div>
       <div style={{width:220}}>
         <div style={{height:3,background:"rgba(255,255,255,.15)",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${prog}%`,background:C.gold,borderRadius:3,transition:"width .4s ease"}}/></div>
@@ -7956,7 +7955,7 @@ function Splash({onDone}){
   );
 }
 
-// â”€â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Login ────────────────────────────────────────────────────────
 function LoginPage({onLogin}){
   const {isMobile, isSmall, isLandscape, isPortrait, mobileLandscape} = useDevice();
   const [id,setId]         = useState(()=>localStorage.getItem("svt_remember_id")||"");
@@ -7968,14 +7967,14 @@ function LoginPage({onLogin}){
   const [time,setTime]     = useState(new Date());
   const [counter,setCounter] = useState({eleves:0,ens:0});
 
-  // â”€â”€ Horloge â€” isolÃ©e dans useRef pour Ã©viter re-render complet â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Horloge — isolée dans useRef pour éviter re-render complet ────────
   const clockRef = useRef(null);
   useEffect(()=>{
     clockRef.current = setInterval(()=>setTime(new Date()),1000);
     return()=>clearInterval(clockRef.current);
   },[]);
 
-  // â”€â”€ Compteurs animÃ©s au montage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Compteurs animés au montage ──────────────────────────────────────
   useEffect(()=>{
     const targets = {eleves:1166, ens:9};
     const duration = 1800;
@@ -8001,7 +8000,7 @@ function LoginPage({onLogin}){
     if(!pw){setErr("Veuillez saisir votre mot de passe.");return;}
     setLoading(true);
 
-    // â”€â”€ Authentification via Supabase RPC (mdp vÃ©rifiÃ©s cÃ´tÃ© serveur) â”€â”€
+    // ── Authentification via Supabase RPC (mdp vérifiés côté serveur) ──
     let authUser = null;
     try {
       authUser = await sb.rpc("authenticate_user", {p_id:id.trim().toLowerCase(), p_mdp:pw});
@@ -8018,7 +8017,7 @@ function LoginPage({onLogin}){
     // Persister l'identifiant si "Se souvenir de moi"
     if(rememberMe) { localStorage.setItem("svt_remember_id", id.trim().toLowerCase()); }
     else { localStorage.removeItem("svt_remember_id"); }
-    // Enrichir avec les donnÃ©es locales si nÃ©cessaire
+    // Enrichir avec les données locales si nécessaire
     const demoRef = DEMO_ACCOUNTS.find(a=>a.id===authUser.id)||{};
     onLogin({
       ...demoRef,
@@ -8032,12 +8031,12 @@ function LoginPage({onLogin}){
 
 
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // RENDU â€” Design fidÃ¨le Ã  la maquette LYKAMA
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════
+  // RENDU — Design fidèle à la maquette LYKAMA
+  // ══════════════════════════════════════════════════════
 
-  // â”€â”€ SVG HÃ©lice ADN (droite) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€ SVG Grille hexagonale (fond droite) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── SVG Hélice ADN (droite) ─────────────────────────
+  // ── SVG Grille hexagonale (fond droite) ────────────
   const HexGrid = () => (
     <svg viewBox="0 0 200 300" width="200" height="300"
       style={{position:"absolute",right:0,top:"25%",opacity:.12,pointerEvents:"none"}}>
@@ -8050,7 +8049,7 @@ function LoginPage({onLogin}){
     </svg>
   );
 
-  // â”€â”€ IcÃ´ne cadenas + feuille (carte) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Icône cadenas + feuille (carte) ────────────────
   const LockLeafIcon = () => (
     <svg viewBox="0 0 72 72" width="72" height="72">
       {/* Cercle vert principal */}
@@ -8099,10 +8098,10 @@ function LoginPage({onLogin}){
         ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;}
       `}</style>
 
-      {/* â”€â”€ Ã‰lÃ©ments dÃ©coratifs de fond â”€â”€ */}
+      {/* ── Éléments décoratifs de fond ── */}
       <HexGrid/>
 
-      {/* â”€â”€ Contenu principal â”€â”€ */}
+      {/* ── Contenu principal ── */}
       <div style={{
         width:"100%", maxWidth:460,
         position:"relative", zIndex:2,
@@ -8117,7 +8116,7 @@ function LoginPage({onLogin}){
             <rect width="15" height="30" fill="#007A5E"/>
             <rect x="15" width="15" height="30" fill="#CE1126"/>
             <rect x="30" width="15" height="30" fill="#FCD116"/>
-            {/* Ã‰toile Ã  5 branches jaune au centre */}
+            {/* Étoile à 5 branches jaune au centre */}
             <polygon points="22.5,8 23.9,12.6 28.7,12.6 24.9,15.4 26.3,20 22.5,17.2 18.7,20 20.1,15.4 16.3,12.6 21.1,12.6"
               fill="#FCD116"/>
           </svg>
@@ -8126,10 +8125,10 @@ function LoginPage({onLogin}){
             fontSize:12, fontWeight:800,
             letterSpacing:".12em", textTransform:"uppercase",
             color:"#166534",
-          }}>LycÃ©e de Kakatare â€“ Maroua</div>
+          }}>Lycée de Kakatare – Maroua</div>
         </div>
 
-        {/* Logo SVT animÃ© */}
+        {/* Logo SVT animé */}
         <div style={{
           position:"relative", marginBottom:12,
           animation:"float 4s ease-in-out infinite",
@@ -8159,7 +8158,7 @@ function LoginPage({onLogin}){
           letterSpacing:".04em", lineHeight:1,
         }}>SVTEEHB</h2>
 
-        {/* SÃ©parateur â”€â”€â”€ ðŸŒ¿ â”€â”€â”€ */}
+        {/* Séparateur ─── 🌿 ─── */}
         <div style={{
           display:"flex", alignItems:"center",
           gap:12, marginBottom:8, width:"100%",
@@ -8168,7 +8167,7 @@ function LoginPage({onLogin}){
           <div style={{flex:1, maxWidth:60, height:2,
             background:"linear-gradient(to right,transparent,rgba(22,163,74,.4))",
             borderRadius:2}}/>
-          <span style={{fontSize:18}}>ðŸŒ¿</span>
+          <span style={{fontSize:18}}>🌿</span>
           <div style={{flex:1, maxWidth:60, height:2,
             background:"linear-gradient(to left,transparent,rgba(22,163,74,.4))",
             borderRadius:2}}/>
@@ -8179,13 +8178,13 @@ function LoginPage({onLogin}){
           fontSize:12, color:"#4a7c59",
           textAlign:"center", margin:"0 0 24px", lineHeight:1.7,
         }}>
-          Plateforme pÃ©dagogique des Sciences de la Vie,<br/>
+          Plateforme pédagogique des Sciences de la Vie,<br/>
           de la Terre et de l'Environnement
         </p>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        {/* ═══════════════════════════════
             CARTE CONNEXION
-            â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            ═══════════════════════════════ */}
         <div style={{
           width:"100%",
           background:"rgba(255,255,255,.97)",
@@ -8195,7 +8194,7 @@ function LoginPage({onLogin}){
           border:"1px solid rgba(34,197,94,.15)",
         }}>
 
-          {/* IcÃ´ne cadenas+feuille */}
+          {/* Icône cadenas+feuille */}
           <div style={{textAlign:"center", marginBottom:16}}>
             <div style={{display:"inline-block", marginBottom:14}}>
               <LockLeafIcon/>
@@ -8204,7 +8203,7 @@ function LoginPage({onLogin}){
               Heureux de vous revoir !
             </h3>
             <p style={{fontSize:12,color:"#64748b",margin:0}}>
-              Connectez-vous Ã  votre compte pour continuer
+              Connectez-vous à votre compte pour continuer
             </p>
           </div>
 
@@ -8215,12 +8214,12 @@ function LoginPage({onLogin}){
               background:"#fef2f2",border:"1px solid #fecaca",
               borderRadius:10,padding:"10px 12px",marginBottom:14,
             }}>
-              <span style={{fontSize:14}}>âš ï¸</span>
+              <span style={{fontSize:14}}>⚠️</span>
               <span style={{fontSize:12,color:"#dc2626",fontWeight:500}}>{err}</span>
             </div>
           )}
 
-          {/* â”€â”€ Champ Identifiant â”€â”€ */}
+          {/* ── Champ Identifiant ── */}
           <div style={{marginBottom:14}}>
             <label style={{
               display:"flex", alignItems:"center", gap:6,
@@ -8249,11 +8248,11 @@ function LoginPage({onLogin}){
                 }}
                 onFocus={e=>{e.target.style.borderColor="#16a34a";e.target.style.background="#fff";e.target.style.boxShadow="0 0 0 3px rgba(22,163,74,.1)";}}
                 onBlur={e=>{e.target.style.borderColor="#e2e8f0";e.target.style.background="#f8fafc";e.target.style.boxShadow="none";}}/>
-              <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:16}}>ðŸŒ¿</span>
+              <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:16}}>🌿</span>
             </div>
           </div>
 
-          {/* â”€â”€ Champ Mot de passe â”€â”€ */}
+          {/* ── Champ Mot de passe ── */}
           <div style={{marginBottom:8}}>
             <label style={{
               display:"flex", alignItems:"center", gap:6,
@@ -8294,15 +8293,15 @@ function LoginPage({onLogin}){
             </div>
           </div>
 
-          {/* Mot de passe oubliÃ© */}
+          {/* Mot de passe oublié */}
           <div style={{textAlign:"right", marginBottom:18}}>
-            <span onClick={()=>alert("Contactez l'animatrice pÃ©dagogique AÃSSATOU SYLVIE pour rÃ©initialiser votre mot de passe.")}
+            <span onClick={()=>alert("Contactez l'animatrice pédagogique AÏSSATOU SYLVIE pour réinitialiser votre mot de passe.")}
               style={{fontSize:12,color:"#16a34a",cursor:"pointer",fontWeight:600}}>
-              Mot de passe oubliÃ© ?
+              Mot de passe oublié ?
             </span>
           </div>
 
-          {/* â”€â”€ Bouton SE CONNECTER â”€â”€ */}
+          {/* ── Bouton SE CONNECTER ── */}
           <button onClick={submit} disabled={loading} style={{
             width:"100%", padding:"16px",
             background:loading?"#94a3b8":"linear-gradient(160deg,#166534 0%,#16a34a 100%)",
@@ -8316,7 +8315,7 @@ function LoginPage({onLogin}){
             onMouseEnter={e=>{if(!loading){e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 12px 36px rgba(22,163,74,.55)";}}}
             onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=loading?"none":"0 8px 28px rgba(22,163,74,.45)";}}>
             {loading
-              ? <><Spinner size={18} color="#fff"/>&nbsp;Connexionâ€¦</>
+              ? <><Spinner size={18} color="#fff"/>&nbsp;Connexion…</>
               : <>
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M14 12H3"/>
@@ -8325,7 +8324,7 @@ function LoginPage({onLogin}){
                 </>}
           </button>
 
-          {/* â”€â”€ Pied de carte â”€â”€ */}
+          {/* ── Pied de carte ── */}
           <div style={{textAlign:"center"}}>
             <div style={{
               display:"flex",alignItems:"center",justifyContent:"center",gap:6,
@@ -8334,9 +8333,9 @@ function LoginPage({onLogin}){
               <svg viewBox="0 0 20 20" width="14" height="14" fill="#16a34a">
                 <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
               </svg>
-              Connexion sÃ©curisÃ©e
+              Connexion sécurisée
             </div>
-            <div style={{fontSize:10,color:"#cbd5e1"}}>Â© 2026 SVTEEHB â€“ LYKAMA</div>
+            <div style={{fontSize:10,color:"#cbd5e1"}}>© 2026 SVTEEHB – LYKAMA</div>
           </div>
 
         </div>{/* fin carte */}
@@ -8347,9 +8346,9 @@ function LoginPage({onLogin}){
 
 
 
-// â”€â”€â”€ App Root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── App Root ─────────────────────────────────────────────────────
 
-// â”€â”€ Error Boundary global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Error Boundary global ──────────────────────────────────────────
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -8367,7 +8366,7 @@ class ErrorBoundary extends React.Component {
         <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",
           alignItems:"center",justifyContent:"center",background:"#f8fafc",
           fontFamily:"system-ui",padding:20,textAlign:"center"}}>
-          <div style={{fontSize:48,marginBottom:16}}>âš ï¸</div>
+          <div style={{fontSize:48,marginBottom:16}}>⚠️</div>
           <h2 style={{fontSize:18,fontWeight:800,color:"#1e293b",marginBottom:8}}>
             Une erreur est survenue
           </h2>
@@ -8377,7 +8376,7 @@ class ErrorBoundary extends React.Component {
           <button onClick={()=>window.location.reload()}
             style={{padding:"10px 24px",background:"#16a34a",color:"#fff",
               border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer"}}>
-            ðŸ”„ Recharger l'application
+            🔄 Recharger l'application
           </button>
         </div>
       );
@@ -8404,15 +8403,15 @@ export default function App() {
 
   useEffect(()=>{ try{localStorage.setItem("svt_last_page",page);}catch{} },[page]);
   useEffect(()=>{
-    const on=()=>{setOnline(true); showToast("ðŸŸ¢ Connexion rÃ©tablie");};
-    const off=()=>{setOnline(false); showToast("ðŸ“¡ Mode hors ligne â€” donnÃ©es locales utilisÃ©es", false);};
+    const on=()=>{setOnline(true); showToast("🟢 Connexion rétablie");};
+    const off=()=>{setOnline(false); showToast("📡 Mode hors ligne — données locales utilisées", false);};
     window.addEventListener("online",on);window.addEventListener("offline",off);
     return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);};
   },[]);
 
-  // â”€â”€ Synchronisation multi-sessions (Supabase Realtime) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Ã‰coute les changements sur les tables clÃ©s et dÃ©clenche un refreshData silencieux
-  // (anti-rafale : attend 900ms sans nouvel Ã©vÃ©nement avant de rafraÃ®chir, pour Ã©viter
+  // ── Synchronisation multi-sessions (Supabase Realtime) ────────────
+  // Écoute les changements sur les tables clés et déclenche un refreshData silencieux
+  // (anti-rafale : attend 900ms sans nouvel événement avant de rafraîchir, pour éviter
   // de spammer Supabase si plusieurs changements arrivent d'un coup).
   useEffect(()=>{
     if (!user) { setRealtimeStatus("disconnected"); return; }
@@ -8451,12 +8450,12 @@ export default function App() {
       const d = await loadAllData();
       if (d) {
         setData(prev=>({...prev, ...d}));
-        if (!silent) showToast("âœ“ DonnÃ©es actualisÃ©es");
+        if (!silent) showToast("✓ Données actualisées");
       } else {
-        if (!silent) showToast("âš  Actualisation impossible â€” vÃ©rifiez la connexion", false);
+        if (!silent) showToast("⚠ Actualisation impossible — vérifiez la connexion", false);
       }
     } catch {
-      if (!silent) showToast("âš  Actualisation impossible", false);
+      if (!silent) showToast("⚠ Actualisation impossible", false);
     } finally {
       setSyncing(false);
     }
@@ -8464,11 +8463,11 @@ export default function App() {
 
   const handleLogin = useCallback(async(acc)=>{
     setSyncing(true);setScreen("loading");
-    await loadStaticData(); // Charger les donnÃ©es statiques en parallÃ¨le
+    await loadStaticData(); // Charger les données statiques en parallèle
     const d = await loadAllData();
     const safeD = d || { users:{}, prog:{}, epreuves:[], classes:[], exceptions:{} };
     const sbUser = safeD.users?.[acc.id];
-    // Fallback: si Supabase ne retourne pas les classes, utiliser les donnÃ©es EDT
+    // Fallback: si Supabase ne retourne pas les classes, utiliser les données EDT
     const classes = (sbUser?.classes||[]).length > 0
       ? sbUser.classes
       : (acc.classes||ENS_CLASSES_REF[acc.id]||[]);
@@ -8481,7 +8480,7 @@ export default function App() {
 
   const handleLogout = ()=>{setUser(null);setData(null);setPage("dashboard");setScreen("login");};
 
-  // Bouton retour Android â€” intercepter pour naviguer dans l'app
+  // Bouton retour Android — intercepter pour naviguer dans l'app
   useEffect(()=>{
     const handlePop = ()=>{
       if(mobileSearchOpen){ setMobileSearchOpen(false); return; }
@@ -8505,7 +8504,7 @@ export default function App() {
       {screen==="login"   && <LoginPage onLogin={handleLogin}/>}
       {screen==="loading" && (
         <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,flexDirection:"column",gap:16}}>
-          <Spinner size={36} color={C.green}/><p style={{color:C.txtMuted,fontSize:13}}>Chargement des donnÃ©es Supabaseâ€¦</p>
+          <Spinner size={36} color={C.green}/><p style={{color:C.txtMuted,fontSize:13}}>Chargement des données Supabase…</p>
         </div>
       )}
       {screen==="app" && <AppLayout onLogout={handleLogout}/>}
@@ -8518,5 +8517,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
-
 
