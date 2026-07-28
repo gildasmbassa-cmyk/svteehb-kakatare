@@ -19,7 +19,7 @@ if (!SB_URL || !SB_KEY) {
 }
 const REALTIME_URL = SB_URL.replace("https://", "wss://") + "/realtime/v1";
 // Tables surveillÃ©es pour la synchronisation multi-sessions (Realtime)
-const REALTIME_TABLES = ["notes","absences","prog_suivi","epreuves","edt_exceptions","utilisateurs","classes"];
+const REALTIME_TABLES = ["notes","absences","prog_suivi","epreuves","edt_exceptions","edt_base","utilisateurs","classes"];
 
 // â”€â”€ API Supabase (fetch lÃ©ger, pas de SDK) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const sb = {
@@ -8518,4 +8518,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
+
 
