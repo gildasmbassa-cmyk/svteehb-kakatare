@@ -300,16 +300,16 @@ async function syncElevesImport() {
   } catch { /* échec silencieux — on garde les données par défaut */ }
 }
 
-async function loadAllData(departementId = null) {
+async function loadAllData() {
   await syncElevesImport();
   const [classes, users, prog, epreuves, exceptions, notes, absences, edtBase] = await Promise.all([
     sb.get("classes","?select=code,effectif,enseignant&order=code"),
-    sb.get("utilisateurs", departementId ? `?select=id,nom,role,classes,photo,departement_id&departement_id=eq.${departementId}` : "?select=id,nom,role,classes,photo,departement_id"),
-    sb.get("prog_suivi", departementId ? `?select=ens_id,classe,faites&departement_id=eq.${departementId}` : "?select=ens_id,classe,faites"),
+    sb.get("utilisateurs","?select=id,nom,role,classes,photo"),
+    sb.get("prog_suivi","?select=ens_id,classe,faites"),
     sb.get("epreuves",""),
     sb.get("edt_exceptions","?select=ens_id,slot,lbl"),
     sb.get("notes","?select=classe,evaluation,eleve_id,note"),
-    sb.get("absences", departementId ? `?select=ens_id,classe,seance,absents&departement_id=eq.${departementId}` : "?select=ens_id,classe,seance,absents"),
+    sb.get("absences","?select=ens_id,classe,seance,absents"),
   ]);
   const progIndex={};
   (prog||[]).forEach(r=>{progIndex[`${r.ens_id}||${r.classe}`]=Array.isArray(r.faites)?r.faites:[];});
@@ -354,8 +354,6 @@ const C = {
 // ── Contexte ──────────────────────────────────────────────────────
 const AppCtx = createContext(null);
 const useApp = () => useContext(AppCtx);
-const ADMIN_ROLES = ["animatrice", "animateur", "proviseur"];
-const isAdminRole = (role) => ADMIN_ROLES.includes(role);
 // ══════════════════════════════════════════════════════════════════════
 // HOOK : Détecteur automatique mobile / tablette / desktop
 // Réactif au resize — met à jour en temps réel
@@ -1812,8 +1810,8 @@ function ConflitsClassesPanel({ enseignants, data }) {
       // Nettoyée seulement si le retrait de classe a réellement réussi (r).
       const r = await sb.rpc("admin_set_teacher_classes", { p_id: ens.id, p_classes: nouvellesClasses });
       if (r) {
-        await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: ens.id, p_classe: classe });
-        await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: ens.id, p_classe: classe+"||dig" });
+        await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(classe)}`);
+        await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(classe+"||dig")}`);
       } else {
         ok = false;
       }
@@ -1896,7 +1894,7 @@ function EnsGerer({ data, setData, showToast }) {
   const [saving,   setSaving]   = useState(false);
 
   // Source enseignants
-  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
+  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice");
   const enseignants = supabaseEns.length > 0
     ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), ini:u.ini||getIni(u.nom), classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, col:getColor(a.id), ini:getIni(a.nom), classes:ENS_CLASSES_REF[a.id]||[]}));
@@ -1907,7 +1905,7 @@ function EnsGerer({ data, setData, showToast }) {
     // 1. Supprimer de Supabase utilisateurs
     const ok1 = await sb.rpc("admin_delete_teacher", { p_id: ens.id });
     // 2. Supprimer ses prog_suivi
-    const ok2 = await sb.rpc("admin_delete_prog_by_teacher", { p_ens_id: ens.id });
+    const ok2 = await sb.del("prog_suivi", `?ens_id=eq.${ens.id}`);
     // 3. Supprimer ses epreuves
     const ok3 = await sb.rpc("admin_delete_epreuves_by_teacher", { p_ens_id: ens.id });
     // 4. Supprimer ses exceptions d'EDT (sinon orphelines — pourraient ressurgir si l'id est réutilisé)
@@ -2102,7 +2100,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     // Classes ajoutées — à vérifier pour conflit avec un autre enseignant
     const classesAjouteesIci = isEdit ? classes.filter(c => !(ens.classes||[]).includes(c)) : classes;
 
-    const autresEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur" && u.id!==ensId.trim());
+    const autresEns = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice" && u.id!==ensId.trim());
     const conflits = [];
     classesAjouteesIci.forEach(cl => {
       autresEns.forEach(autre => { if ((autre.classes||[]).includes(cl)) conflits.push({ classe:cl, autreEns:autre }); });
@@ -2403,7 +2401,7 @@ function EnsClean({ data, setData, showToast }) {
           const sep = key.indexOf("||");
           const ens_id = key.slice(0, sep);
           const classe = key.slice(sep + 2);
-          const res = await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: ens_id, p_classe: classe });
+          const res = await sb.del("prog_suivi", `?ens_id=eq.${ens_id}&classe=eq.${encodeURIComponent(classe)}`);
           if(!res) ok = false;
         }
         setData(prev=>{
@@ -2424,7 +2422,7 @@ function EnsClean({ data, setData, showToast }) {
       danger: true,
       exec: async()=>{
         setLoading(true);
-        const res = await sb.rpc("admin_delete_all_prog", {}); // supprimer toutes les progressions
+        const res = await sb.del("prog_suivi", "?ens_id=not.is.null"); // supprimer toutes les progressions
         setData(prev=>({...prev, prog:{}}));
         setLoading(false);
         showToast(res ? "✓ Toutes les progressions réinitialisées" : "⚠ Erreur Supabase", res);
@@ -2542,8 +2540,8 @@ function EnsListe({ data, onSelect }) {
   // Fallback : si Supabase ne retourne pas les utilisateurs, utiliser DEMO_ACCOUNTS
   // Source des enseignants : fusionner Supabase + ENS_CLASSES_REF
   // Si un enseignant Supabase n'a pas de classes → utiliser ENS_CLASSES_REF comme fallback
-  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
-  const sourceData = (supabaseEns.length > 0 || data?.deptFilterActive)
+  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice");
+  const sourceData = supabaseEns.length > 0
     // Enrichir les users Supabase avec ENS_CLASSES_REF si classes vides
     ? supabaseEns.map(u=>({
         ...u,
@@ -4658,7 +4656,7 @@ function EpViewTeacher({ user, data, setData, showToast }) {
 
 function EpreuvesPage() {
   const {user, data, setData, showToast} = useApp();
-  const isAdmin = isAdminRole(user?.role);
+  const isAdmin = user?.role === "animatrice";
 
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
@@ -5363,7 +5361,9 @@ const DocTaux = ({ taux }) => {
 
 function DocumentsPage() {
   const {isMobile} = useDevice();
-  const {data, refreshData, showToast, pendingFicheEns, setPendingFicheEns} = useApp();
+  const {showToast, pendingFicheEns, setPendingFicheEns} = useApp();
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [docTab, setDocTab]     = useState("compilation"); // compilation | fiches | bilan
   const [trim, setTrim]         = useState("ANN");
@@ -5373,6 +5373,12 @@ function DocumentsPage() {
   const iframeRef = useRef(null);
   const previewMainRef = useRef(null);
 
+  useEffect(() => {
+    loadData().then(d => {
+      setData(d);
+      setLoading(false);
+    });
+  }, []);
 
   // Navigation ciblée depuis le Tableau de bord ("voir la fiche de cet enseignant")
   useEffect(() => {
@@ -5385,7 +5391,8 @@ function DocumentsPage() {
   const refreshDocsData = async () => {
     setRefreshing(true);
     try {
-      await refreshData();
+      const d = await loadData();
+      setData(d);
       showToast("✓ Données actualisées — fiches à jour");
     } catch {
       showToast("⚠ Actualisation impossible — vérifiez la connexion", false);
@@ -5394,7 +5401,7 @@ function DocumentsPage() {
     }
   };
 
-  const enseignants = data ? Object.values(data?.users||{}).filter(u => u.role !== "proviseur") : [];
+  const enseignants = data ? Object.values(data?.users||{}).filter(u => u.role !== "animatrice") : [];
 
   // ── Aperçu dans iframe ────────────────────────────────────────────
   function afficherApercu(html, label) {
@@ -5531,7 +5538,7 @@ function DocumentsPage() {
             ))}
           </div>
 
-          {!data ? (
+          {loading ? (
             <div style={{ textAlign:"center", padding:30, color:C.txtMuted }}>
               <Spinner size={20} color={C.green}/>
               <div style={{ marginTop:8, fontSize:12 }}>Chargement…</div>
@@ -5911,29 +5918,6 @@ function EdtGrid({ ensId, ens, edtRt, isAdmin, onCellClick }) {
   );
 }
 
-function genEdtHTML(ens, edtRt) {
-  const rt = edtRt[ens.id] || {};
-  let rows = "";
-  HEURES.forEach((h, hi) => {
-    rows += `<tr><td style="padding:6px;border:1px solid #ccc;font-size:9px;font-weight:700;white-space:nowrap">${h}</td>`;
-    JKEYS.forEach(jk => {
-      const val = (rt[jk] || [])[hi] || "";
-      rows += `<td style="padding:6px;border:1px solid #ccc;font-size:9px;text-align:center">${val}</td>`;
-    });
-    rows += `</tr>`;
-  });
-  const headerCols = JOURS.map(j => `<th style="padding:6px;border:1px solid #ccc;background:#1a6b3c;color:#fff;font-size:9px">${j}</th>`).join("");
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>EDT ${ens.nom}</title></head>
-  <body style="font-family:Arial,sans-serif;padding:20px">
-    ${enteteOfficiel("EMPLOI DU TEMPS", ens.nom)}
-    <h3 style="text-align:center;margin:14px 0;font-size:13px">Emploi du temps — ${ens.nom}</h3>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr><th style="padding:6px;border:1px solid #ccc;background:#1a6b3c;color:#fff;font-size:9px">Heures</th>${headerCols}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </body></html>`;
-}
-
 function EdtPage() {
   const {data, user, showToast, refreshData} = useApp();
   const {isMobile} = useDevice();
@@ -5951,12 +5935,12 @@ function EdtPage() {
   const { jk: nowJk, hi: nowHi } = getNowInfo();
 
   const enseignants = useMemo(()=>{
-    const users = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
-    const source = (users.length>0 || data?.deptFilterActive) ? users : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant");
+    const users = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice");
+    const source = users.length>0 ? users : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant");
     return source.map(u=>({...u, col:getColor(u.id), ini:getIni(u.nom)}));
   }, [data]);
 
-  useEffect(()=>{ if (enseignants.length>0 && !enseignants.some(e=>e.id===selEns)) setSelEns(enseignants[0].id); }, [enseignants]);
+  useEffect(()=>{ if (enseignants.length>0 && !selEns) setSelEns(enseignants[0].id); }, [enseignants]);
 
   const toutesClasses = useMemo(()=>{
     const set = new Set();
@@ -5964,7 +5948,7 @@ function EdtPage() {
     return [...set].sort();
   }, [edtRt]);
 
-  useEffect(()=>{ if (toutesClasses.length>0 && !toutesClasses.includes(selCl)) setSelCl(toutesClasses[0]); }, [toutesClasses]);
+  useEffect(()=>{ if (toutesClasses.length>0 && !selCl) setSelCl(toutesClasses[0]); }, [toutesClasses]);
 
   const entrerModeEdition = () => {
     if (!selEns) return;
@@ -6051,8 +6035,8 @@ function EdtPage() {
         const rOk = await sb.rpc("admin_set_teacher_classes", { p_id: autreId, p_classes: nouvellesClassesAutre });
         if (rOk) {
           for (const cl of classesAEnlever) {
-            await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: autreId, p_classe: cl });
-            await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: autreId, p_classe: cl+"||dig" });
+            await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(autreId)}&classe=eq.${encodeURIComponent(cl)}`);
+            await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(autreId)}&classe=eq.${encodeURIComponent(cl+"||dig")}`);
           }
         } else {
           cascadeOk = false;
@@ -6073,8 +6057,8 @@ function EdtPage() {
       // n'a pas réellement eu lieu, donc rien à nettoyer côté progression.
       if (rOk) {
         for (const cl of classesRetirees) {
-          await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: selEns, p_classe: cl });
-          await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: selEns, p_classe: cl+"||dig" });
+          await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(selEns)}&classe=eq.${encodeURIComponent(cl)}`);
+          await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(selEns)}&classe=eq.${encodeURIComponent(cl+"||dig")}`);
         }
       }
     }
@@ -6332,10 +6316,7 @@ const NAV_TEACHER = [
   {id:"edt-teacher",  emoji:"📅", label:"Mon emploi du temps"},
 ];
 
-const NAV_PROVISEUR = [...NAV_ADMIN, {id:"departements", emoji:"🏛️", label:"Départements", sub:"Matières · Animateurs"}];
-
 const PAGE_TITLES = {
-  departements:"Départements",
   dashboard:"Tableau de bord", "mes-classes":"Mes classes",
   programme:"Mon programme", cahier:"Cahier de texte",
   epreuves:"Épreuves", "edt-teacher":"Mon emploi du temps",
@@ -6365,7 +6346,7 @@ function DashboardAdmin() {
   const [stats,setStats] = useState({nbEns:0,nbClasses:0,nbEleves:0,tauxMoyen:0,tauxParEns:[]});
   useEffect(()=>{
     if(!data)return;
-    const ens=Object.values(data.users||{}).filter(u=>u.role!=="proviseur");
+    const ens=Object.values(data.users||{}).filter(u=>u.role!=="animatrice");
     const nbEleves=CLASSES_REELLES.reduce((s,c)=>s+c.effectif,0);
     const tauxParEns=ens.map(e=>{
       let tf=0,tr=0;
@@ -6453,231 +6434,6 @@ function DashboardAdmin() {
 }
 
 // ─── Dashboard Enseignant ─────────────────────────────────────────
-
-// ─── Dashboard Proviseur (vue tous départements) ───────────────────
-const DEPARTEMENTS_LIST = [
-  {id:1,nom:"SVT",emoji:"🌿"},
-  {id:2,nom:"Mathématiques",emoji:"📐"},
-  {id:3,nom:"Sciences Physiques",emoji:"🧪"},
-  {id:4,nom:"Lettres",emoji:"📖"},
-  {id:5,nom:"Sciences Humaines",emoji:"🌍"},
-  {id:6,nom:"Langues Vivantes",emoji:"🗣️"},
-  {id:7,nom:"EPS",emoji:"🏃"},
-  {id:8,nom:"Informatique",emoji:"💻"},
-];
-
-function DashboardProviseur() {
-  const {rawData:data,refreshData} = useApp();
-  const {isMobile} = useDevice();
-  const [loading,setLoading] = useState(true);
-  const [refreshing,setRefreshing] = useState(false);
-  const [stats,setStats] = useState({nbEns:0,nbClasses:0,nbEleves:0,tauxMoyen:0,parDept:[],niveaux:[],evolution:[],absencesParDept:[]});
-
-  useEffect(()=>{
-    if(!data)return;
-    const ens=Object.values(data.users||{}).filter(u=>u.role!=="proviseur");
-    const nbEleves=CLASSES_REELLES.reduce((s,c)=>s+c.effectif,0);
-    const deptOf={}; ens.forEach(e=>{deptOf[e.id]=e.departement_id||1;});
-
-    const tauxParEns=ens.map(e=>{
-      let tf=0,tr=0;
-      (e.classes||[]).forEach(cl=>{const k=`${e.id}||${cl}`;const f=((data.prog||{})[k]||[]).length;const code=resolveProgCode(cl);const meta=code?PROG_META[code]:null;if(meta){tf+=f;tr+=meta.lpRef;}});
-      return{id:e.id,departement_id:e.departement_id||1,taux:tr>0?Math.min(100,Math.round(tf/tr*100)):0};
-    });
-
-    const parDept = DEPARTEMENTS_LIST.map(d=>{
-      const teachers = tauxParEns.filter(e=>e.departement_id===d.id);
-      const taux = teachers.length ? Math.round(teachers.reduce((s,e)=>s+e.taux,0)/teachers.length) : null;
-      const nbAlerte = teachers.filter(e=>e.taux<50).length;
-      return {...d, nbEns:teachers.length, taux, nbAlerte};
-    });
-
-    const tauxMoyen = tauxParEns.length ? Math.round(tauxParEns.reduce((s,e)=>s+e.taux,0)/tauxParEns.length) : 0;
-
-    const groupNiveau = n => n && n.startsWith("2nde") ? "2nde" : n && n.startsWith("1ère") ? "1ère" : n && n.startsWith("Terminale") ? "Terminale" : n;
-    const niveauMap = {};
-    CLASSES_REELLES.forEach(c=>{
-      const niv = groupNiveau(getNiveau(c.code)) || "Autre";
-      niveauMap[niv] = (niveauMap[niv]||0) + c.effectif;
-    });
-    const ordreNiveaux = ["6ème","5ème","4ème","3ème","2nde","1ère","Terminale","Autre"];
-    const niveauxColors = {"6ème":C.blue,"5ème":C.teal,"4ème":C.amber,"3ème":C.purple,"2nde":C.orange,"1ère":C.pink,"Terminale":C.green,"Autre":"#94a3b8"};
-    const niveaux = ordreNiveaux.filter(n=>niveauMap[n]).map(n=>({label:n,value:niveauMap[n],color:niveauxColors[n]}));
-
-    const evolution = ["T1","T2","T3","ANN"].map(trim=>{
-      let totalFait=0, totalRef=0;
-      ens.forEach(e=>{
-        (e.classes||[]).forEach(cl=>{
-          const code=resolveProgCode(cl);
-          const meta=code?PROG_META[code]:null;
-          if(!meta) return;
-          const prog=(data.prog||{})[`${e.id}||${cl}`]||[];
-          let lp=meta.lpRef, lf=prog.length;
-          if(trim!=="ANN"){
-            const range=getTrimRange(code,trim);
-            if(range){
-              lp=LECONS_DATA[code]?.filter(l=>l.n>=range[0]&&l.n<=range[1]).length||lp;
-              lf=prog.filter(n=>n>=range[0]&&n<=range[1]).length;
-            }
-          }
-          totalFait+=lf; totalRef+=lp;
-        });
-      });
-      return {label:trim==="ANN"?"Annuel":trim, value: totalRef>0?Math.min(100,Math.round(totalFait/totalRef*100)):null};
-    });
-
-    const absParDept = {};
-    Object.entries(data.absences||{}).forEach(([k,absents])=>{
-      const ensId = k.split("||")[0];
-      const dId = deptOf[ensId]||1;
-      absParDept[dId] = (absParDept[dId]||0) + (absents?absents.length:0);
-    });
-    const absencesParDept = DEPARTEMENTS_LIST
-      .map(d=>({...d, total: absParDept[d.id]||0}))
-      .filter(d=>d.total>0)
-      .sort((a,b)=>b.total-a.total);
-
-    setStats({nbEns:ens.length,nbClasses:CLASSES_REELLES.length,nbEleves,tauxMoyen,parDept,niveaux,evolution,absencesParDept});
-    setLoading(false);
-  },[data]);
-
-  const tauCol=t=>t===null?C.txtMuted:t>=75?C.green:t>=50?C.amber:C.red;
-
-  const Donut = ({segments, size=130, thickness=16}) => {
-    const total = segments.reduce((s,x)=>s+x.value,0) || 1;
-    const r = (size-thickness)/2;
-    const circ = 2*Math.PI*r;
-    let acc = 0;
-    return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <g transform={`rotate(-90 ${size/2} ${size/2})`}>
-          {segments.map((s,i)=>{
-            const frac = s.value/total;
-            const dash = frac*circ;
-            const el = (
-              <circle key={i} cx={size/2} cy={size/2} r={r} fill="none" stroke={s.color} strokeWidth={thickness}
-                strokeDasharray={`${dash} ${circ-dash}`} strokeDashoffset={-acc}/>
-            );
-            acc += dash;
-            return el;
-          })}
-        </g>
-        <text x="50%" y="47%" textAnchor="middle" fontSize="20" fontWeight="800" fill={C.txt}>{total}</text>
-        <text x="50%" y="62%" textAnchor="middle" fontSize="9" fill={C.txtMuted}>Élèves</text>
-      </svg>
-    );
-  };
-
-  return(
-    <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, Proviseur 🏫</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Lycée de Kakatare</p></div>
-        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.txtMuted}}>2025–2026</div><div style={{fontSize:13,fontWeight:700,color:C.green}}>Vue globale · {DEPARTEMENTS_LIST.length} départements ↗</div></div>
-      </div>
-
-      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Enseignants" value={stats.nbEns} sub="Tous départements" iconEmoji="👥" bg={C.greenPale} loading={loading} delay={0}/>
-        <KpiCard label="Classes" value={stats.nbClasses} sub="Toutes séries" iconEmoji="📚" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
-        <KpiCard label="Élèves" value={stats.nbEleves} sub="Total effectifs" iconEmoji="🎓" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
-        <KpiCard label="Couverture" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"✓ Objectif atteint":"⚠ Sous objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="📊" bg={C.greenPale} loading={loading} delay={0.15}/>
-      </div>
-
-      <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr 1fr", gap:14}}>
-        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:16}}>
-          <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>🎓 Élèves par niveau</h3>
-          {loading ? <Sk h={130} br={65}/> : stats.niveaux.length>0 ? (
-            <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <Donut segments={stats.niveaux}/>
-              <div style={{display:"flex",flexDirection:"column",gap:4,fontSize:10.5}}>
-                {stats.niveaux.map(n=>(
-                  <div key={n.label} style={{display:"flex",alignItems:"center",gap:5}}>
-                    <span style={{width:8,height:8,borderRadius:2,background:n.color,flexShrink:0}}/>
-                    <span style={{color:C.txt,fontWeight:600}}>{n.label}</span>
-                    <span style={{color:C.txtMuted}}>{n.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : <div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune donnée</div>}
-        </div>
-
-        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:16}}>
-          <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📈 Évolution de la couverture</h3>
-          {loading ? <Sk h={130} br={8}/> : <EvolutionChartLarge series={stats.evolution} height={130}/>}
-        </div>
-
-        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:16}}>
-          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>📋 Absences par département</h3>
-          <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Volume total signalé</p>
-          {loading ? <Sk h={100} br={8}/> : stats.absencesParDept.length>0 ? (
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {stats.absencesParDept.slice(0,5).map(d=>(
-                <div key={d.id} style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14,flexShrink:0}}>{d.emoji}</span>
-                  <span style={{fontSize:11,color:C.txt,flex:1}}>{d.nom}</span>
-                  <span style={{fontSize:11,fontWeight:800,color:C.red}}>{d.total}</span>
-                </div>
-              ))}
-            </div>
-          ) : <div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
-        </div>
-      </div>
-
-      <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
-        <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10}}>
-          <div>
-            <h3 style={{margin:"0 0 2px",fontSize:13,fontWeight:700,color:C.txt}}>🏛️ Vue par département</h3>
-            <p style={{margin:0,fontSize:10.5,color:C.txtMuted}}>Couverture moyenne et effectifs enseignants</p>
-          </div>
-          <button onClick={async()=>{ setRefreshing(true); await refreshData(); setRefreshing(false); }}
-            disabled={refreshing}
-            style={{display:"flex", alignItems:"center", gap:6, padding: isMobile?"7px":"6px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, color:C.txtMuted, fontSize:11, fontWeight:700, cursor:refreshing?"not-allowed":"pointer", fontFamily:"inherit", flexShrink:0}}>
-            {refreshing ? <Spinner size={11} color={C.txtMuted}/> : "🔄"} {!isMobile && "Actualiser"}
-          </button>
-        </div>
-        <div style={{marginTop:14, display:"grid", gridTemplateColumns: isMobile?"1fr":"repeat(auto-fill, minmax(220px, 1fr))", gap:10}}>
-          {loading?[1,2,3,4].map(i=><Sk key={i} h={78} br={10}/>):(
-            stats.parDept.map(d=>(
-              <div key={d.id} style={{padding:"14px",background: d.nbEns>0 ? "#f8fafc":"#fafafa",borderRadius:10,border:`1px solid ${C.border}`,borderLeft:`3px solid ${d.nbEns>0?tauCol(d.taux):C.border}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                  <span style={{fontSize:18}}>{d.emoji}</span>
-                  <span style={{fontSize:12,fontWeight:700,color:C.txt,flex:1}}>{d.nom}</span>
-                  {d.nbAlerte>0 && <span style={{fontSize:9,fontWeight:700,color:"#b91c1c",background:"#fef2f2",padding:"2px 6px",borderRadius:10}}>⚠ {d.nbAlerte}</span>}
-                </div>
-                {d.nbEns>0 ? (
-                  <>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                      <span style={{fontSize:10,color:C.txtMuted}}>{d.nbEns} enseignant{d.nbEns>1?"s":""}</span>
-                      <span style={{fontSize:11,fontWeight:800,color:tauCol(d.taux)}}>{d.taux}%</span>
-                    </div>
-                    <ProgBar value={d.taux}/>
-                  </>
-                ) : (
-                  <div style={{fontSize:10.5,color:C.txtLight,fontStyle:"italic"}}>Aucun enseignant rattaché</div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {!loading && (stats.parDept.some(d=>d.nbAlerte>0) || stats.tauxMoyen<50) && (
-        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
-          <h3 style={{margin:"0 0 12px",fontSize:13,fontWeight:700,color:C.txt}}>⚠️ Alertes & points de vigilance</h3>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {stats.parDept.filter(d=>d.nbAlerte>0).map(d=>(
-              <div key={d.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:9}}>
-                <span style={{fontSize:16}}>{d.emoji}</span>
-                <span style={{fontSize:11.5,color:"#7f1d1d"}}>{d.nbAlerte} enseignant{d.nbAlerte>1?"s":""} en dessous de 50% de couverture en <b>{d.nom}</b></span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DashboardTeacher() {
   const {user,data} = useApp();
   const [loading,setLoading] = useState(true);
@@ -6753,8 +6509,8 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   // (voir useState(()=>window.innerWidth<1024) dans AppLayout) — ici on ne force PLUS
   // un repli permanent sur tablette, sinon le bouton de la sidebar devient inopérant.
   const effectiveCollapsed = mobileLandscape ? true : collapsed;
-  const isAdmin = isAdminRole(user?.role);
-  const nav = user?.role==="proviseur" ? NAV_PROVISEUR : isAdmin ? NAV_ADMIN : NAV_TEACHER;
+  const isAdmin = user?.role === "animatrice";
+  const nav = isAdmin ? NAV_ADMIN : NAV_TEACHER;
   // Compter les épreuves en attente pour le badge
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
@@ -6893,7 +6649,7 @@ const GlobalSearch = () => {
       });
     });
     const enseignants = Object.values(data?.users||{})
-      .filter(u=>u.role!=="proviseur" && (u.nom||"").toLowerCase().includes(query));
+      .filter(u=>u.role!=="animatrice" && (u.nom||"").toLowerCase().includes(query));
     const classes = Object.keys(ELEVES_DB).filter(cl => cl.toLowerCase().includes(query));
     return { eleves: eleves.slice(0,6), enseignants: enseignants.slice(0,5), classes: classes.slice(0,5) };
   }, [query, data]);
@@ -7011,7 +6767,7 @@ const GlobalSearch = () => {
 };
 
 const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
-  const {user, realtimeStatus, viewDeptId, setViewDeptId} = useApp();
+  const {user, realtimeStatus} = useApp();
   const {isMobile} = useDevice();
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installed, setInstalled]         = useState(false);
@@ -7064,14 +6820,6 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
           📲 Installer
         </button>
       )}
-      {user?.role==="proviseur" && (
-        <select value={viewDeptId||""} onChange={e=>setViewDeptId(e.target.value?parseInt(e.target.value):null)}
-          title="Filtrer par département"
-          style={{padding:"5px 10px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:700, color:C.txt, fontFamily:"inherit", cursor:"pointer"}}>
-          <option value="">🏛️ Tous les départements</option>
-          {DEPARTEMENTS_LIST.map(d=><option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>)}
-        </select>
-      )}
       <DarkModeToggle/>
       <button onClick={()=>{ if(window.confirm("Se déconnecter ?")) onLogout(); }}
         style={{padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:600, cursor:"pointer", color:C.txtMuted, fontFamily:"inherit"}}>
@@ -7091,7 +6839,7 @@ function genBilanTrimestre(trim, data) {
   const dateJour = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
 
   // Source enseignants avec fallback
-  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
+  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice");
   const enseignants = supabaseEns.length > 0
     ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, classes:ENS_CLASSES_REF[a.id]||[]}));
@@ -7330,8 +7078,8 @@ function SuiviProgrammePage() {
   );
 
   // Source enseignants
-  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
-  const enseignants = ((supabaseEns.length>0 || data?.deptFilterActive)
+  const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="animatrice");
+  const enseignants = (supabaseEns.length>0
     ? supabaseEns.map(u=>({...u,col:u.col||getColor(u.id),ini:u.ini||getIni(u.nom),classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a,col:getColor(a.id),ini:getIni(a.nom),classes:ENS_CLASSES_REF[a.id]||[]}))
   );
@@ -7955,120 +7703,6 @@ function GestionAnnuellePage() {
   );
 }
 
-function DepartementsPage() {
-  const {data, showToast} = useApp();
-  const {isMobile} = useDevice();
-  const [matieres, setMatieres] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [openDept, setOpenDept] = useState(null);
-  const [newMatiere, setNewMatiere] = useState("");
-  const [editingNom, setEditingNom] = useState(null);
-  const [savingId, setSavingId] = useState(null);
-
-  const loadMatieres = async () => {
-    setLoading(true);
-    const rows = await sb.get("matieres", "?select=id,nom,departement_id&order=departement_id,nom");
-    setMatieres(rows || []);
-    setLoading(false);
-  };
-  useEffect(() => { loadMatieres(); }, []);
-
-  const nbEnsParDept = {};
-  Object.values(data?.users||{}).filter(u=>u.role!=="proviseur").forEach(u=>{
-    const d = u.departement_id||1;
-    nbEnsParDept[d] = (nbEnsParDept[d]||0) + 1;
-  });
-
-  const ajouterMatiere = async (deptId) => {
-    if (!newMatiere.trim()) return;
-    setSavingId(`new-${deptId}`);
-    const ok = await sb.rpc("admin_add_matiere", { p_nom: newMatiere.trim(), p_departement_id: deptId });
-    if (ok) { showToast(`✓ ${newMatiere.trim()} ajoutée`); setNewMatiere(""); await loadMatieres(); }
-    else showToast("⚠ Échec de l'ajout", false);
-    setSavingId(null);
-  };
-
-  const supprimerMatiere = async (m) => {
-    if (!window.confirm(`Supprimer "${m.nom}" ?`)) return;
-    setSavingId(m.id);
-    const ok = await sb.rpc("admin_delete_matiere", { p_id: m.id });
-    if (ok) { showToast(`✓ ${m.nom} supprimée`); await loadMatieres(); }
-    else showToast("⚠ Échec de la suppression", false);
-    setSavingId(null);
-  };
-
-  const renommerMatiere = async (m, nom) => {
-    if (!nom.trim() || nom.trim()===m.nom) { setEditingNom(null); return; }
-    setSavingId(m.id);
-    const ok = await sb.rpc("admin_rename_matiere", { p_id: m.id, p_nom: nom.trim() });
-    if (ok) { showToast("✓ Renommée"); await loadMatieres(); }
-    else showToast("⚠ Échec du renommage", false);
-    setEditingNom(null); setSavingId(null);
-  };
-
-  return (
-    <div style={{padding:"20px 20px 40px", display:"flex", flexDirection:"column", gap:16}}>
-      <div>
-        <h2 style={{fontSize:18, fontWeight:800, color:C.txt, margin:0}}>🏛️ Départements & Matières</h2>
-        <p style={{color:C.txtMuted, margin:"3px 0 0", fontSize:12}}>8 départements pédagogiques · Lycée de Kakatare</p>
-      </div>
-
-      <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"repeat(auto-fill, minmax(280px, 1fr))", gap:12}}>
-        {DEPARTEMENTS_LIST.map(d => {
-          const deptMatieres = (matieres||[]).filter(m=>m.departement_id===d.id);
-          const isOpen = openDept===d.id;
-          return (
-            <div key={d.id} style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:16}}>
-              <div onClick={()=>setOpenDept(isOpen?null:d.id)} style={{display:"flex", alignItems:"center", gap:10, cursor:"pointer"}}>
-                <span style={{fontSize:20}}>{d.emoji}</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13, fontWeight:700, color:C.txt}}>{d.nom}</div>
-                  <div style={{fontSize:10.5, color:C.txtMuted}}>{nbEnsParDept[d.id]||0} enseignant{(nbEnsParDept[d.id]||0)>1?"s":""} · {deptMatieres.length} matière{deptMatieres.length>1?"s":""}</div>
-                </div>
-                <span style={{fontSize:12, color:C.txtMuted}}>{isOpen?"▲":"▼"}</span>
-              </div>
-
-              {isOpen && (
-                <div style={{marginTop:12, paddingTop:12, borderTop:`1px solid ${C.border}`, display:"flex", flexDirection:"column", gap:6}}>
-                  {loading ? <Sk h={16} w="60%"/> : deptMatieres.length===0 ? (
-                    <div style={{fontSize:11, color:C.txtLight, fontStyle:"italic"}}>Aucune matière</div>
-                  ) : deptMatieres.map(m => (
-                    <div key={m.id} style={{display:"flex", alignItems:"center", gap:8, padding:"6px 8px", background:"#f8fafc", borderRadius:7}}>
-                      {editingNom===m.id ? (
-                        <input autoFocus defaultValue={m.nom}
-                          onBlur={e=>renommerMatiere(m, e.target.value)}
-                          onKeyDown={e=>{ if(e.key==="Enter") e.target.blur(); if(e.key==="Escape") setEditingNom(null); }}
-                          style={{flex:1, border:`1px solid ${C.green}`, borderRadius:5, padding:"3px 6px", fontSize:11.5, fontFamily:"inherit"}}/>
-                      ) : (
-                        <span onClick={()=>setEditingNom(m.id)} style={{flex:1, fontSize:11.5, color:C.txt, cursor:"pointer"}}>{m.nom}</span>
-                      )}
-                      <button onClick={()=>supprimerMatiere(m)} disabled={savingId===m.id}
-                        style={{border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:13, padding:2}}>
-                        {savingId===m.id ? <Spinner size={11} color={C.red}/> : "🗑️"}
-                      </button>
-                    </div>
-                  ))}
-
-                  <div style={{display:"flex", gap:6, marginTop:4}}>
-                    <input value={openDept===d.id?newMatiere:""} onChange={e=>setNewMatiere(e.target.value)}
-                      onKeyDown={e=>{ if(e.key==="Enter") ajouterMatiere(d.id); }}
-                      placeholder="Nouvelle matière…"
-                      style={{flex:1, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 8px", fontSize:11.5, fontFamily:"inherit"}}/>
-                    <button onClick={()=>ajouterMatiere(d.id)} disabled={savingId===`new-${d.id}`}
-                      style={{padding:"6px 12px", borderRadius:6, border:"none", background:C.green, color:"#fff", fontSize:11.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
-                      {savingId===`new-${d.id}` ? <Spinner size={11}/> : "+ Ajouter"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function ChangePasswordPage() {
   const {user, setUser, data, setData, showToast} = useApp();
   const {isMobile} = useDevice();
@@ -8257,7 +7891,7 @@ function ChangePasswordPage() {
 const AppLayout = ({onLogout}) => {
   const {user,page,data,setData,toast,showToast} = useApp();
   const [collapsed,setCollapsed] = useState(()=>window.innerWidth < 1024);
-  const isAdmin = isAdminRole(user?.role);
+  const isAdmin = user?.role==="animatrice";
   // Pages qui gèrent leur propre flex+scroll (retournent flex:1, overflow:hidden)
   const SELF_SCROLL = ["mes-classes","cahier","documents","eleves"];
   const renderPage = () => {
@@ -8272,14 +7906,13 @@ const AppLayout = ({onLogout}) => {
         {children}
       </div>
     );
-    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
+    if(page==="dashboard")         return <W>{isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
     if(page==="programme")         return <W>{isAdmin?<SuiviProgrammePage/>:<MonProgrammePage/>}</W>
     if(page==="epreuves")          return <W><EpreuvesPage/></W>
     if(page==="edt-teacher")       return <W><MonEdtPage/></W>
     if(page==="edt")               return <W>{isAdmin?<EdtPage/>:<MonEdtPage/>}</W>
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
-    if(page==="departements")      return <W>{user?.role==="proviseur"?<DepartementsPage/>:null}</W>
     if(page==="settings")          return <W><ChangePasswordPage/></W>
     return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="🚧"/></W>
   };
@@ -8333,10 +7966,6 @@ function LoginPage({onLogin}){
   const [rememberMe,setRememberMe] = useState(()=>!!localStorage.getItem("svt_remember_id"));
   const [time,setTime]     = useState(new Date());
   const [counter,setCounter] = useState({eleves:0,ens:0});
-  const [step,setStep] = useState(1); // 1=année/département, 2=identifiants
-  const [annee,setAnnee] = useState("2025-2026");
-  const [selDept,setSelDept] = useState("");
-  const [isProviseurMode,setIsProviseurMode] = useState(false);
 
   // ── Horloge — isolée dans useRef pour éviter re-render complet ────────
   const clockRef = useRef(null);
@@ -8381,22 +8010,6 @@ function LoginPage({onLogin}){
 
     if(!authUser) {
       setErr("Identifiant ou mot de passe incorrect, ou connexion au serveur impossible.");
-      setLoading(false);
-      return;
-    }
-
-    if (isProviseurMode && authUser.role !== "proviseur") {
-      setErr("Ce compte n'est pas un compte proviseur.");
-      setLoading(false);
-      return;
-    }
-    if (!isProviseurMode && authUser.role === "proviseur") {
-      setErr("Utilisez l'accès Proviseur.");
-      setLoading(false);
-      return;
-    }
-    if (!isProviseurMode && authUser.departement_id && String(authUser.departement_id) !== String(selDept)) {
-      setErr("Ce compte n'appartient pas à ce département.");
       setLoading(false);
       return;
     }
@@ -8594,58 +8207,6 @@ function LoginPage({onLogin}){
             </p>
           </div>
 
-          {step===1 && (
-            <>
-              <div style={{marginBottom:14}}>
-                <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:7}}>Année scolaire</label>
-                <select value={annee} onChange={e=>setAnnee(e.target.value)}
-                  style={{width:"100%",padding:"13px 14px",border:"1.5px solid #e2e8f0",borderRadius:14,fontSize:14,color:"#1e293b",background:"#f8fafc",fontFamily:"inherit"}}>
-                  <option value="2025-2026">2025 – 2026</option>
-                  <option value="2024-2025">2024 – 2025</option>
-                </select>
-              </div>
-
-              <div onClick={()=>{setIsProviseurMode(!isProviseurMode); setSelDept(""); setErr("");}}
-                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isProviseurMode?"#16a34a":"#e2e8f0"}`,background:isProviseurMode?"#f0fdf4":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
-                <span style={{fontSize:13,fontWeight:700,color:isProviseurMode?"#166534":"#1e293b"}}>👤 Accès Proviseur</span>
-                <div style={{width:38,height:20,borderRadius:10,background:isProviseurMode?"#16a34a":"#cbd5e1",position:"relative",transition:"all .2s"}}>
-                  <div style={{position:"absolute",top:2,left:isProviseurMode?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"all .2s"}}/>
-                </div>
-              </div>
-
-              {!isProviseurMode && (
-                <div style={{marginBottom:14}}>
-                  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:7}}>Département</label>
-                  <select value={selDept} onChange={e=>setSelDept(e.target.value)}
-                    style={{width:"100%",padding:"13px 14px",border:"1.5px solid #e2e8f0",borderRadius:14,fontSize:14,color:"#1e293b",background:"#f8fafc",fontFamily:"inherit"}}>
-                    <option value="">— Sélectionner —</option>
-                    {DEPARTEMENTS_LIST.map(d=><option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {err && (
-                <div style={{display:"flex",alignItems:"center",gap:8,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 12px",marginBottom:14}}>
-                  <span style={{fontSize:14}}>⚠️</span>
-                  <span style={{fontSize:12,color:"#dc2626",fontWeight:500}}>{err}</span>
-                </div>
-              )}
-
-              <button onClick={()=>{
-                  if(!isProviseurMode && !selDept){ setErr("Sélectionnez un département."); return; }
-                  setErr(""); setStep(2);
-                }}
-                style={{width:"100%",padding:"16px",background:"linear-gradient(160deg,#166534 0%,#16a34a 100%)",color:"#fff",border:"none",borderRadius:16,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em",textTransform:"uppercase",boxShadow:"0 8px 28px rgba(22,163,74,.45)",marginBottom:20}}>
-                Continuer →
-              </button>
-            </>
-          )}
-          {step===2 && (
-          <>
-          <div onClick={()=>{setStep(1); setErr("");}}
-            style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#16a34a",fontWeight:700,cursor:"pointer",marginBottom:14}}>
-            ← Retour
-          </div>
           {/* Erreur */}
           {err && (
             <div style={{
@@ -8763,8 +8324,6 @@ function LoginPage({onLogin}){
                 </>}
           </button>
 
-          </>
-          )}
           {/* ── Pied de carte ── */}
           <div style={{textAlign:"center"}}>
             <div style={{
@@ -8826,33 +8385,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-
-// ─── Filtrage département (scope Proviseur) ────────────────────────
-function filterDataByDept(data, deptId) {
-  if (!data || !deptId) return data;
-  const deptOf = {};
-  Object.values(data.users||{}).forEach(u=>{ deptOf[u.id]=u.departement_id; });
-
-  const users = {};
-  Object.entries(data.users||{}).forEach(([id,u])=>{ if(u.departement_id===deptId) users[id]=u; });
-
-  const prog = {};
-  Object.entries(data.prog||{}).forEach(([k,v])=>{ if(deptOf[k.split("||")[0]]===deptId) prog[k]=v; });
-
-  const absences = {};
-  Object.entries(data.absences||{}).forEach(([k,v])=>{ if(deptOf[k.split("||")[0]]===deptId) absences[k]=v; });
-
-  const epreuves = (data.epreuves||[]).filter(e=>deptOf[e.ens_id]===deptId);
-
-  const exceptions = {};
-  Object.entries(data.exceptions||{}).forEach(([ensId,v])=>{ if(deptOf[ensId]===deptId) exceptions[ensId]=v; });
-
-  const edtBase = {};
-  Object.entries(data.edtBase||{}).forEach(([ensId,v])=>{ if(deptOf[ensId]===deptId) edtBase[ensId]=v; });
-
-  return { ...data, users, prog, absences, epreuves, exceptions, edtBase, deptFilterActive: true };
-}
-
 export default function App() {
   const [screen,setScreen] = useState("splash");
   const [user,setUser]     = useState(null);
@@ -8863,7 +8395,6 @@ export default function App() {
   const [pendingClasseSelect, setPendingClasseSelect] = useState(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [data,setData]     = useState(null);
-  const [viewDeptId,setViewDeptId] = useState(null); // filtre département actif (Proviseur uniquement)
   const [online,setOnline] = useState(navigator.onLine);
   const [staticLoaded,setStaticLoaded] = useState(false);
   const [syncing,setSyncing] = useState(false);
@@ -8913,11 +8444,10 @@ export default function App() {
     setToast({msg,ok});setTimeout(()=>setToast(null),3000);
   },[]);
 
-  const deptIdRef = useRef(null);
   const refreshData = useCallback(async(silent=false)=>{
     setSyncing(true);
     try {
-      const d = await loadAllData(deptIdRef.current);
+      const d = await loadAllData();
       if (d) {
         setData(prev=>({...prev, ...d}));
         if (!silent) showToast("✓ Données actualisées");
@@ -8934,8 +8464,7 @@ export default function App() {
   const handleLogin = useCallback(async(acc)=>{
     setSyncing(true);setScreen("loading");
     await loadStaticData(); // Charger les données statiques en parallèle
-    deptIdRef.current = isAdminRole(acc.role) && acc.role !== "proviseur" ? acc.departement_id : null;
-    const d = await loadAllData(deptIdRef.current);
+    const d = await loadAllData();
     const safeD = d || { users:{}, prog:{}, epreuves:[], classes:[], exceptions:{} };
     const sbUser = safeD.users?.[acc.id];
     // Fallback: si Supabase ne retourne pas les classes, utiliser les données EDT
@@ -8966,9 +8495,7 @@ export default function App() {
 
   useEffect(()=>{ if(screen==="app"&&page) window.history.pushState({page},"",""); },[page,screen]);
 
-  const scopedData = useMemo(()=>filterDataByDept(data, user?.role==="proviseur"?viewDeptId:null), [data, viewDeptId, user?.role]);
-
-  const ctx = {user,setUser,page,setPage,data:scopedData,rawData:data,setData,viewDeptId,setViewDeptId,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus};
+  const ctx = {user,setUser,page,setPage,data,setData,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus};
 
   return(
     <AppCtx.Provider value={ctx}>

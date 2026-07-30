@@ -1812,8 +1812,8 @@ function ConflitsClassesPanel({ enseignants, data }) {
       // Nettoyée seulement si le retrait de classe a réellement réussi (r).
       const r = await sb.rpc("admin_set_teacher_classes", { p_id: ens.id, p_classes: nouvellesClasses });
       if (r) {
-        await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: ens.id, p_classe: classe });
-        await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: ens.id, p_classe: classe+"||dig" });
+        await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(classe)}`);
+        await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(classe+"||dig")}`);
       } else {
         ok = false;
       }
@@ -1907,7 +1907,7 @@ function EnsGerer({ data, setData, showToast }) {
     // 1. Supprimer de Supabase utilisateurs
     const ok1 = await sb.rpc("admin_delete_teacher", { p_id: ens.id });
     // 2. Supprimer ses prog_suivi
-    const ok2 = await sb.rpc("admin_delete_prog_by_teacher", { p_ens_id: ens.id });
+    const ok2 = await sb.del("prog_suivi", `?ens_id=eq.${ens.id}`);
     // 3. Supprimer ses epreuves
     const ok3 = await sb.rpc("admin_delete_epreuves_by_teacher", { p_ens_id: ens.id });
     // 4. Supprimer ses exceptions d'EDT (sinon orphelines — pourraient ressurgir si l'id est réutilisé)
@@ -2403,7 +2403,7 @@ function EnsClean({ data, setData, showToast }) {
           const sep = key.indexOf("||");
           const ens_id = key.slice(0, sep);
           const classe = key.slice(sep + 2);
-          const res = await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: ens_id, p_classe: classe });
+          const res = await sb.del("prog_suivi", `?ens_id=eq.${ens_id}&classe=eq.${encodeURIComponent(classe)}`);
           if(!res) ok = false;
         }
         setData(prev=>{
@@ -2424,7 +2424,7 @@ function EnsClean({ data, setData, showToast }) {
       danger: true,
       exec: async()=>{
         setLoading(true);
-        const res = await sb.rpc("admin_delete_all_prog", {}); // supprimer toutes les progressions
+        const res = await sb.del("prog_suivi", "?ens_id=not.is.null"); // supprimer toutes les progressions
         setData(prev=>({...prev, prog:{}}));
         setLoading(false);
         showToast(res ? "✓ Toutes les progressions réinitialisées" : "⚠ Erreur Supabase", res);
@@ -5363,7 +5363,9 @@ const DocTaux = ({ taux }) => {
 
 function DocumentsPage() {
   const {isMobile} = useDevice();
-  const {data, refreshData, showToast, pendingFicheEns, setPendingFicheEns} = useApp();
+  const {showToast, pendingFicheEns, setPendingFicheEns} = useApp();
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [docTab, setDocTab]     = useState("compilation"); // compilation | fiches | bilan
   const [trim, setTrim]         = useState("ANN");
@@ -5373,6 +5375,12 @@ function DocumentsPage() {
   const iframeRef = useRef(null);
   const previewMainRef = useRef(null);
 
+  useEffect(() => {
+    loadData().then(d => {
+      setData(d);
+      setLoading(false);
+    });
+  }, []);
 
   // Navigation ciblée depuis le Tableau de bord ("voir la fiche de cet enseignant")
   useEffect(() => {
@@ -5385,7 +5393,8 @@ function DocumentsPage() {
   const refreshDocsData = async () => {
     setRefreshing(true);
     try {
-      await refreshData();
+      const d = await loadData();
+      setData(d);
       showToast("✓ Données actualisées — fiches à jour");
     } catch {
       showToast("⚠ Actualisation impossible — vérifiez la connexion", false);
@@ -5394,7 +5403,7 @@ function DocumentsPage() {
     }
   };
 
-  const enseignants = data ? Object.values(data?.users||{}).filter(u => u.role !== "proviseur") : [];
+  const enseignants = data ? Object.values(data?.users||{}).filter(u => u.role !== "animatrice") : [];
 
   // ── Aperçu dans iframe ────────────────────────────────────────────
   function afficherApercu(html, label) {
@@ -5531,7 +5540,7 @@ function DocumentsPage() {
             ))}
           </div>
 
-          {!data ? (
+          {loading ? (
             <div style={{ textAlign:"center", padding:30, color:C.txtMuted }}>
               <Spinner size={20} color={C.green}/>
               <div style={{ marginTop:8, fontSize:12 }}>Chargement…</div>
@@ -5911,29 +5920,6 @@ function EdtGrid({ ensId, ens, edtRt, isAdmin, onCellClick }) {
   );
 }
 
-function genEdtHTML(ens, edtRt) {
-  const rt = edtRt[ens.id] || {};
-  let rows = "";
-  HEURES.forEach((h, hi) => {
-    rows += `<tr><td style="padding:6px;border:1px solid #ccc;font-size:9px;font-weight:700;white-space:nowrap">${h}</td>`;
-    JKEYS.forEach(jk => {
-      const val = (rt[jk] || [])[hi] || "";
-      rows += `<td style="padding:6px;border:1px solid #ccc;font-size:9px;text-align:center">${val}</td>`;
-    });
-    rows += `</tr>`;
-  });
-  const headerCols = JOURS.map(j => `<th style="padding:6px;border:1px solid #ccc;background:#1a6b3c;color:#fff;font-size:9px">${j}</th>`).join("");
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>EDT ${ens.nom}</title></head>
-  <body style="font-family:Arial,sans-serif;padding:20px">
-    ${enteteOfficiel("EMPLOI DU TEMPS", ens.nom)}
-    <h3 style="text-align:center;margin:14px 0;font-size:13px">Emploi du temps — ${ens.nom}</h3>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr><th style="padding:6px;border:1px solid #ccc;background:#1a6b3c;color:#fff;font-size:9px">Heures</th>${headerCols}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </body></html>`;
-}
-
 function EdtPage() {
   const {data, user, showToast, refreshData} = useApp();
   const {isMobile} = useDevice();
@@ -5956,7 +5942,7 @@ function EdtPage() {
     return source.map(u=>({...u, col:getColor(u.id), ini:getIni(u.nom)}));
   }, [data]);
 
-  useEffect(()=>{ if (enseignants.length>0 && !enseignants.some(e=>e.id===selEns)) setSelEns(enseignants[0].id); }, [enseignants]);
+  useEffect(()=>{ if (enseignants.length>0 && !selEns) setSelEns(enseignants[0].id); }, [enseignants]);
 
   const toutesClasses = useMemo(()=>{
     const set = new Set();
@@ -5964,7 +5950,7 @@ function EdtPage() {
     return [...set].sort();
   }, [edtRt]);
 
-  useEffect(()=>{ if (toutesClasses.length>0 && !toutesClasses.includes(selCl)) setSelCl(toutesClasses[0]); }, [toutesClasses]);
+  useEffect(()=>{ if (toutesClasses.length>0 && !selCl) setSelCl(toutesClasses[0]); }, [toutesClasses]);
 
   const entrerModeEdition = () => {
     if (!selEns) return;
@@ -6051,8 +6037,8 @@ function EdtPage() {
         const rOk = await sb.rpc("admin_set_teacher_classes", { p_id: autreId, p_classes: nouvellesClassesAutre });
         if (rOk) {
           for (const cl of classesAEnlever) {
-            await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: autreId, p_classe: cl });
-            await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: autreId, p_classe: cl+"||dig" });
+            await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(autreId)}&classe=eq.${encodeURIComponent(cl)}`);
+            await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(autreId)}&classe=eq.${encodeURIComponent(cl+"||dig")}`);
           }
         } else {
           cascadeOk = false;
@@ -6073,8 +6059,8 @@ function EdtPage() {
       // n'a pas réellement eu lieu, donc rien à nettoyer côté progression.
       if (rOk) {
         for (const cl of classesRetirees) {
-          await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: selEns, p_classe: cl });
-          await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: selEns, p_classe: cl+"||dig" });
+          await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(selEns)}&classe=eq.${encodeURIComponent(cl)}`);
+          await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(selEns)}&classe=eq.${encodeURIComponent(cl+"||dig")}`);
         }
       }
     }
@@ -7331,7 +7317,7 @@ function SuiviProgrammePage() {
 
   // Source enseignants
   const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
-  const enseignants = ((supabaseEns.length>0 || data?.deptFilterActive)
+  const enseignants = (supabaseEns.length>0
     ? supabaseEns.map(u=>({...u,col:u.col||getColor(u.id),ini:u.ini||getIni(u.nom),classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a,col:getColor(a.id),ini:getIni(a.nom),classes:ENS_CLASSES_REF[a.id]||[]}))
   );
@@ -7982,7 +7968,7 @@ function DepartementsPage() {
   const ajouterMatiere = async (deptId) => {
     if (!newMatiere.trim()) return;
     setSavingId(`new-${deptId}`);
-    const ok = await sb.rpc("admin_add_matiere", { p_nom: newMatiere.trim(), p_departement_id: deptId });
+    const ok = await sb.upsert("matieres", { nom: newMatiere.trim(), departement_id: deptId });
     if (ok) { showToast(`✓ ${newMatiere.trim()} ajoutée`); setNewMatiere(""); await loadMatieres(); }
     else showToast("⚠ Échec de l'ajout", false);
     setSavingId(null);
@@ -7991,7 +7977,7 @@ function DepartementsPage() {
   const supprimerMatiere = async (m) => {
     if (!window.confirm(`Supprimer "${m.nom}" ?`)) return;
     setSavingId(m.id);
-    const ok = await sb.rpc("admin_delete_matiere", { p_id: m.id });
+    const ok = await sb.del("matieres", `?id=eq.${m.id}`);
     if (ok) { showToast(`✓ ${m.nom} supprimée`); await loadMatieres(); }
     else showToast("⚠ Échec de la suppression", false);
     setSavingId(null);
@@ -8000,7 +7986,7 @@ function DepartementsPage() {
   const renommerMatiere = async (m, nom) => {
     if (!nom.trim() || nom.trim()===m.nom) { setEditingNom(null); return; }
     setSavingId(m.id);
-    const ok = await sb.rpc("admin_rename_matiere", { p_id: m.id, p_nom: nom.trim() });
+    const ok = await sb.patchRow("matieres", m.id, { nom: nom.trim() });
     if (ok) { showToast("✓ Renommée"); await loadMatieres(); }
     else showToast("⚠ Échec du renommage", false);
     setEditingNom(null); setSavingId(null);
@@ -8333,10 +8319,6 @@ function LoginPage({onLogin}){
   const [rememberMe,setRememberMe] = useState(()=>!!localStorage.getItem("svt_remember_id"));
   const [time,setTime]     = useState(new Date());
   const [counter,setCounter] = useState({eleves:0,ens:0});
-  const [step,setStep] = useState(1); // 1=année/département, 2=identifiants
-  const [annee,setAnnee] = useState("2025-2026");
-  const [selDept,setSelDept] = useState("");
-  const [isProviseurMode,setIsProviseurMode] = useState(false);
 
   // ── Horloge — isolée dans useRef pour éviter re-render complet ────────
   const clockRef = useRef(null);
@@ -8381,22 +8363,6 @@ function LoginPage({onLogin}){
 
     if(!authUser) {
       setErr("Identifiant ou mot de passe incorrect, ou connexion au serveur impossible.");
-      setLoading(false);
-      return;
-    }
-
-    if (isProviseurMode && authUser.role !== "proviseur") {
-      setErr("Ce compte n'est pas un compte proviseur.");
-      setLoading(false);
-      return;
-    }
-    if (!isProviseurMode && authUser.role === "proviseur") {
-      setErr("Utilisez l'accès Proviseur.");
-      setLoading(false);
-      return;
-    }
-    if (!isProviseurMode && authUser.departement_id && String(authUser.departement_id) !== String(selDept)) {
-      setErr("Ce compte n'appartient pas à ce département.");
       setLoading(false);
       return;
     }
@@ -8594,58 +8560,6 @@ function LoginPage({onLogin}){
             </p>
           </div>
 
-          {step===1 && (
-            <>
-              <div style={{marginBottom:14}}>
-                <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:7}}>Année scolaire</label>
-                <select value={annee} onChange={e=>setAnnee(e.target.value)}
-                  style={{width:"100%",padding:"13px 14px",border:"1.5px solid #e2e8f0",borderRadius:14,fontSize:14,color:"#1e293b",background:"#f8fafc",fontFamily:"inherit"}}>
-                  <option value="2025-2026">2025 – 2026</option>
-                  <option value="2024-2025">2024 – 2025</option>
-                </select>
-              </div>
-
-              <div onClick={()=>{setIsProviseurMode(!isProviseurMode); setSelDept(""); setErr("");}}
-                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isProviseurMode?"#16a34a":"#e2e8f0"}`,background:isProviseurMode?"#f0fdf4":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
-                <span style={{fontSize:13,fontWeight:700,color:isProviseurMode?"#166534":"#1e293b"}}>👤 Accès Proviseur</span>
-                <div style={{width:38,height:20,borderRadius:10,background:isProviseurMode?"#16a34a":"#cbd5e1",position:"relative",transition:"all .2s"}}>
-                  <div style={{position:"absolute",top:2,left:isProviseurMode?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"all .2s"}}/>
-                </div>
-              </div>
-
-              {!isProviseurMode && (
-                <div style={{marginBottom:14}}>
-                  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:7}}>Département</label>
-                  <select value={selDept} onChange={e=>setSelDept(e.target.value)}
-                    style={{width:"100%",padding:"13px 14px",border:"1.5px solid #e2e8f0",borderRadius:14,fontSize:14,color:"#1e293b",background:"#f8fafc",fontFamily:"inherit"}}>
-                    <option value="">— Sélectionner —</option>
-                    {DEPARTEMENTS_LIST.map(d=><option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {err && (
-                <div style={{display:"flex",alignItems:"center",gap:8,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 12px",marginBottom:14}}>
-                  <span style={{fontSize:14}}>⚠️</span>
-                  <span style={{fontSize:12,color:"#dc2626",fontWeight:500}}>{err}</span>
-                </div>
-              )}
-
-              <button onClick={()=>{
-                  if(!isProviseurMode && !selDept){ setErr("Sélectionnez un département."); return; }
-                  setErr(""); setStep(2);
-                }}
-                style={{width:"100%",padding:"16px",background:"linear-gradient(160deg,#166534 0%,#16a34a 100%)",color:"#fff",border:"none",borderRadius:16,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em",textTransform:"uppercase",boxShadow:"0 8px 28px rgba(22,163,74,.45)",marginBottom:20}}>
-                Continuer →
-              </button>
-            </>
-          )}
-          {step===2 && (
-          <>
-          <div onClick={()=>{setStep(1); setErr("");}}
-            style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#16a34a",fontWeight:700,cursor:"pointer",marginBottom:14}}>
-            ← Retour
-          </div>
           {/* Erreur */}
           {err && (
             <div style={{
@@ -8763,8 +8677,6 @@ function LoginPage({onLogin}){
                 </>}
           </button>
 
-          </>
-          )}
           {/* ── Pied de carte ── */}
           <div style={{textAlign:"center"}}>
             <div style={{

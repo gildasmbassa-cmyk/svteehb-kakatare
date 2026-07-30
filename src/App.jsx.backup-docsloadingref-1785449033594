@@ -5531,7 +5531,7 @@ function DocumentsPage() {
             ))}
           </div>
 
-          {!data ? (
+          {loading ? (
             <div style={{ textAlign:"center", padding:30, color:C.txtMuted }}>
               <Spinner size={20} color={C.green}/>
               <div style={{ marginTop:8, fontSize:12 }}>Chargement…</div>

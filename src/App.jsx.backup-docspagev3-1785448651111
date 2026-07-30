@@ -5363,7 +5363,9 @@ const DocTaux = ({ taux }) => {
 
 function DocumentsPage() {
   const {isMobile} = useDevice();
-  const {data, refreshData, showToast, pendingFicheEns, setPendingFicheEns} = useApp();
+  const {showToast, pendingFicheEns, setPendingFicheEns} = useApp();
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [docTab, setDocTab]     = useState("compilation"); // compilation | fiches | bilan
   const [trim, setTrim]         = useState("ANN");
@@ -5373,6 +5375,12 @@ function DocumentsPage() {
   const iframeRef = useRef(null);
   const previewMainRef = useRef(null);
 
+  useEffect(() => {
+    loadData().then(d => {
+      setData(d);
+      setLoading(false);
+    });
+  }, []);
 
   // Navigation ciblée depuis le Tableau de bord ("voir la fiche de cet enseignant")
   useEffect(() => {
@@ -5385,7 +5393,8 @@ function DocumentsPage() {
   const refreshDocsData = async () => {
     setRefreshing(true);
     try {
-      await refreshData();
+      const d = await loadData();
+      setData(d);
       showToast("✓ Données actualisées — fiches à jour");
     } catch {
       showToast("⚠ Actualisation impossible — vérifiez la connexion", false);
@@ -5531,7 +5540,7 @@ function DocumentsPage() {
             ))}
           </div>
 
-          {!data ? (
+          {loading ? (
             <div style={{ textAlign:"center", padding:30, color:C.txtMuted }}>
               <Spinner size={20} color={C.green}/>
               <div style={{ marginTop:8, fontSize:12 }}>Chargement…</div>

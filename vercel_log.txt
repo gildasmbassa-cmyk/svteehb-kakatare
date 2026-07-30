@@ -1,0 +1,31 @@
+﻿node.exe : Vercel CLI 57.0.0 (Node.js 24.18.0)
+Au caractère Ligne:1 : 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\ABC\AppData\Roaming\np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Vercel CLI 57.0.0 (Node.js 24.18.0):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Retrieving projectÔÇª
+Deploying gildas-projects2/svteehblykama
+Uploading [--------------------] (0.0B/459B)
+Uploading [====================] (459.0B/459B)
+  Inspect         https://vercel.com/gildas-projects2/svteehblykama/84C5GcRGrj7WYFUd4Sgc39N9W5c9
+  Production      https://svteehblykama-l54b1u5hp-gildas-projects2.vercel.app
+BuildingÔÇª
+Running build in Washington, D.C., USA (East) ÔÇô iad1
+Build machine configuration: 2 cores, 8 GB
+Retrieving list of deployment files...
+Retrieving list of deployment files...
+Downloading 21 deployment files...
+Restored build cache from previous deployment (38ov4SLHAjkZyrsMHbd1oEorxS7K)
+Running "vercel build"
+Vercel CLI 56.5.0
+Installing dependencies...
+up to date in 580ms
+7 packages are looking for funding
+run `npm fund` for details
+Running "npm run build"
+> svteehb-kakatare@1.0.0 build
+> vite build
+Error: Command "npm run build" exited with 1
+https://svteehblykama-l54b1u5hp-gildas-projects2.vercel.app
