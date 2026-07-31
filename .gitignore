@@ -1,4 +1,13 @@
-﻿# Scripts de patch temporaires (Claude)
+﻿# Dépendances et build
+node_modules/
+dist/
+.vercel/
+
+# Secrets
+.env.local
+.env
+
+# Scripts de patch temporaires (Claude)
 /*.cjs
 
 # Sauvegardes automatiques App.jsx
@@ -7,3 +16,4 @@ src/App.jsx.backup*
 # Fichiers de travail temporaires
 App_copy.txt
 vercel_log.txt
+login-decor-b64.txt
