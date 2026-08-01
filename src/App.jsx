@@ -354,6 +354,25 @@ const C = {
 // ── Contexte ──────────────────────────────────────────────────────
 const AppCtx = createContext(null);
 const useApp = () => useContext(AppCtx);
+
+// ─── Traductions (FR = clé, EN = valeur) ────────────────────────────
+const TRANSLATIONS_EN = {
+  "Tableau de bord": "Dashboard",
+  "Enseignants": "Teachers",
+  "Élèves": "Students",
+  "Suivi programme": "Curriculum tracking",
+  "Épreuves": "Exams",
+  "Emploi du temps": "Timetable",
+  "Documents": "Documents",
+  "Gestion annuelle": "Annual management",
+  "Départements": "Departments",
+  "Mes classes": "My classes",
+  "Cahier de texte": "Class logbook",
+  "Mon programme": "My curriculum",
+  "Mon emploi du temps": "My timetable",
+  "Déconnexion": "Log out",
+  "Paramètres": "Settings",
+};
 const ADMIN_ROLES = ["animatrice", "animateur", "proviseur"];
 const isAdminRole = (role) => ADMIN_ROLES.includes(role);
 // ══════════════════════════════════════════════════════════════════════
@@ -6752,7 +6771,7 @@ const PlaceholderPage = ({title,emoji}) => (
 
 // ── Sidebar ─────────────────────────────────────────────────────────
 const Sidebar = ({collapsed, setCollapsed}) => {
-  const {user, page, setPage, data} = useApp();
+  const {user, page, setPage, data, t} = useApp();
   const {isMobile, mobileLandscape, isTablet} = useDevice();
   // Forcer collapsed sur mobile/tablette en paysage pour libérer l'espace
   // Le repli initial sur petits écrans est déjà géré par l'état initial de `collapsed`
@@ -6802,7 +6821,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
           const isActive = page === item.id;
           return (
             <div key={item.id} onClick={()=>setPage(item.id)}
-              title={effectiveCollapsed ? item.label : ""}
+              title={effectiveCollapsed ? t(item.label) : ""}
               style={{
                 display:"flex", alignItems:"center", gap:10,
                 padding: effectiveCollapsed ? "10px 0" : "9px 16px",
@@ -6818,7 +6837,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
               onMouseEnter={e=>{if(!isActive)e.currentTarget.style.background="rgba(255,255,255,.06)";}}
               onMouseLeave={e=>{if(!isActive)e.currentTarget.style.background="transparent";}}>
               <span style={{fontSize:16, flexShrink:0}}>{item.emoji}</span>
-              {!collapsed && <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{item.label}</span>}
+              {!collapsed && <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{t(item.label)}</span>}
               {!collapsed && item.id==="epreuves" && nbEpAttente>0 && (
                 <span style={{marginLeft:"auto",fontSize:9,fontWeight:800,background:C.red,color:"#fff",borderRadius:20,padding:"1px 6px",flexShrink:0}}>{nbEpAttente}</span>
               )}
@@ -7017,7 +7036,7 @@ const GlobalSearch = () => {
 };
 
 const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
-  const {user, realtimeStatus, viewDeptId, setViewDeptId} = useApp();
+  const {user, realtimeStatus, viewDeptId, setViewDeptId, lang, setLang, t} = useApp();
   const {isMobile} = useDevice();
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installed, setInstalled]         = useState(false);
@@ -7078,10 +7097,14 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
           {DEPARTEMENTS_LIST.map(d=><option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>)}
         </select>
       )}
+      <button onClick={()=>setLang(lang==="fr"?"en":"fr")} title="Langue / Language"
+        style={{padding:"5px 9px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:700, color:C.txtMuted, fontFamily:"inherit", cursor:"pointer", flexShrink:0}}>
+        {lang==="fr" ? "FR" : "EN"}
+      </button>
       <DarkModeToggle/>
       <button onClick={()=>{ if(window.confirm("Se déconnecter ?")) onLogout(); }}
         style={{padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:600, cursor:"pointer", color:C.txtMuted, fontFamily:"inherit", flexShrink:0, whiteSpace:"nowrap"}}>
-        Déconnexion
+        {t("Déconnexion")}
       </button>
     </header>
   );
@@ -8871,6 +8894,9 @@ export default function App() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [data,setData]     = useState(null);
   const [viewDeptId,setViewDeptId] = useState(null); // filtre département actif (Proviseur uniquement)
+  const [lang,setLang] = useState(()=>{ try { return localStorage.getItem("svt_lang")||"fr"; } catch { return "fr"; } });
+  useEffect(()=>{ try { localStorage.setItem("svt_lang", lang); } catch {} },[lang]);
+  const t = (fr) => (lang === "en" ? (TRANSLATIONS_EN[fr] || fr) : fr);
   const [online,setOnline] = useState(navigator.onLine);
   const [staticLoaded,setStaticLoaded] = useState(false);
   const [syncing,setSyncing] = useState(false);
@@ -8975,7 +9001,7 @@ export default function App() {
 
   const scopedData = useMemo(()=>filterDataByDept(data, user?.role==="proviseur"?viewDeptId:null), [data, viewDeptId, user?.role]);
 
-  const ctx = {user,setUser,page,setPage,data:scopedData,rawData:data,setData,viewDeptId,setViewDeptId,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus};
+  const ctx = {user,setUser,page,setPage,data:scopedData,rawData:data,setData,viewDeptId,setViewDeptId,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus,lang,setLang,t};
 
   return(
     <AppCtx.Provider value={ctx}>
