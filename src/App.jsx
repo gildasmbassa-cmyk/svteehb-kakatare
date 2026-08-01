@@ -89,7 +89,14 @@ const sb = {
   photoUrl: (path) => path ? `${SB_URL}/storage/v1/object/public/teacher-photos/${encodeURIComponent(path)}` : null,
   async rpc(fn, params={}) {
     try {
-      const PROTECTED_RPCS = ["admin_delete_all_prog","admin_delete_matiere","admin_set_teacher_classes"];
+      const PROTECTED_RPCS = [
+        "admin_delete_all_prog","admin_delete_matiere","admin_set_teacher_classes",
+        "admin_add_matiere","admin_rename_matiere","admin_delete_absences_by_teacher",
+        "admin_delete_all_epreuves","admin_delete_edt_slots_by_teacher","admin_delete_epreuves_by_teacher",
+        "admin_delete_prog_by_classe","admin_delete_prog_by_teacher","admin_delete_teacher",
+        "admin_set_edt_slots","admin_set_password","admin_upsert_teacher",
+        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import",
+      ];
       const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
         method:"POST",
