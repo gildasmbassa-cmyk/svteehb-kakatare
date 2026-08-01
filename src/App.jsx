@@ -101,7 +101,7 @@ const sb = {
         return null;
       }
       const d = await r.json();
-      return Array.isArray(d)&&d.length>0 ? d[0] : (d||null);
+      return Array.isArray(d) ? (d.length>0 ? d[0] : null) : (d||null);
     } catch (e) { sb.lastError = e?.message||String(e); return null; }
   },
 };
