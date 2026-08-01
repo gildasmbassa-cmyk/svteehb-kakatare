@@ -2049,6 +2049,7 @@ function EnsGerer({ data, setData, showToast }) {
 // ── Formulaire Ajout / Modification enseignant ────────────────────────
 function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   const {isMobile} = useDevice();
+  const {user} = useApp();
   const isEdit = !!ens;
   const [nom,     setNom]     = useState(ens?.nom||"");
   const [ensId,   setEnsId]   = useState(ens?.id||"");
@@ -2121,7 +2122,8 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     // Classes ajoutées — à vérifier pour conflit avec un autre enseignant
     const classesAjouteesIci = isEdit ? classes.filter(c => !(ens.classes||[]).includes(c)) : classes;
 
-    const autresEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur" && u.id!==ensId.trim());
+    const currentDept = user?.departement_id ?? ens?.departement_id ?? null;
+    const autresEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur" && u.id!==ensId.trim() && (currentDept==null || (u.departement_id||1)===currentDept));
     const conflits = [];
     classesAjouteesIci.forEach(cl => {
       autresEns.forEach(autre => { if ((autre.classes||[]).includes(cl)) conflits.push({ classe:cl, autreEns:autre }); });
