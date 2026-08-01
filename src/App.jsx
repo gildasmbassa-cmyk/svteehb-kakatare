@@ -89,10 +89,12 @@ const sb = {
   photoUrl: (path) => path ? `${SB_URL}/storage/v1/object/public/teacher-photos/${encodeURIComponent(path)}` : null,
   async rpc(fn, params={}) {
     try {
+      const PROTECTED_RPCS = ["admin_delete_all_prog","admin_delete_matiere","admin_set_teacher_classes"];
+      const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
         method:"POST",
         headers:{...sb.h(), Prefer:"return=representation"},
-        body:JSON.stringify(params)
+        body:JSON.stringify(body)
       });
       if(!r.ok) {
         const errBody = await r.text().catch(()=>"");
@@ -8968,6 +8970,7 @@ export default function App() {
 
   const handleLogin = useCallback(async(acc)=>{
     setSyncing(true);setScreen("loading");
+    window.__svtSessionToken = acc.token || null;
     await loadStaticData(); // Charger les données statiques en parallèle
     deptIdRef.current = isAdminRole(acc.role) && acc.role !== "proviseur" ? acc.departement_id : null;
     const d = await loadAllData(deptIdRef.current);
