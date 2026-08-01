@@ -6836,7 +6836,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed && (
           <div style={{overflow:"hidden"}}>
             <div style={{fontSize:12, fontWeight:700, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{user?.nom}</div>
-            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur(trice)":"Enseignant"} · ⚙️ Paramètres</div>
+            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur pédagogique":"Enseignant"} · ⚙️ Paramètres</div>
           </div>
         )}
       </div>
@@ -7044,7 +7044,7 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
     if(result.outcome==='accepted') { setInstalled(true); setInstallPrompt(null); }
   };
   return (
-    <header style={{height:52, background:"rgba(255,255,255,.95)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12, padding:"0 18px", position:"sticky", top:0, zIndex:30, flexShrink:0}}>
+    <header style={{height:52, background:"rgba(255,255,255,.95)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12, padding:"0 18px", position:"sticky", top:0, zIndex:30, flexShrink:0, overflowX:"auto", scrollbarWidth:"none"}}>
       <button onClick={()=>setCollapsed(!collapsed)}
         style={{width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.white, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, color:C.txtMuted}}>
         {collapsed ? "→" : "←"}
@@ -7073,14 +7073,14 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
       {user?.role==="proviseur" && (
         <select value={viewDeptId||""} onChange={e=>setViewDeptId(e.target.value?parseInt(e.target.value):null)}
           title="Filtrer par département"
-          style={{padding:"5px 10px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:700, color:C.txt, fontFamily:"inherit", cursor:"pointer"}}>
+          style={{padding:"5px 8px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:700, color:C.txt, fontFamily:"inherit", cursor:"pointer", maxWidth:130, flexShrink:0}}>
           <option value="">🏛️ Tous les départements</option>
           {DEPARTEMENTS_LIST.map(d=><option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>)}
         </select>
       )}
       <DarkModeToggle/>
       <button onClick={()=>{ if(window.confirm("Se déconnecter ?")) onLogout(); }}
-        style={{padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:600, cursor:"pointer", color:C.txtMuted, fontFamily:"inherit"}}>
+        style={{padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:600, cursor:"pointer", color:C.txtMuted, fontFamily:"inherit", flexShrink:0, whiteSpace:"nowrap"}}>
         Déconnexion
       </button>
     </header>
