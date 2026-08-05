@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
+import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
 import EDT_REEL from "./data/edt_reel.json";
@@ -364,24 +365,6 @@ const C = {
 const AppCtx = createContext(null);
 const useApp = () => useContext(AppCtx);
 
-// ─── Traductions (FR = clé, EN = valeur) ────────────────────────────
-const TRANSLATIONS_EN = {
-  "Tableau de bord": "Dashboard",
-  "Enseignants": "Teachers",
-  "Élèves": "Students",
-  "Suivi programme": "Curriculum tracking",
-  "Épreuves": "Exams",
-  "Emploi du temps": "Timetable",
-  "Documents": "Documents",
-  "Gestion annuelle": "Annual management",
-  "Départements": "Departments",
-  "Mes classes": "My classes",
-  "Cahier de texte": "Class logbook",
-  "Mon programme": "My curriculum",
-  "Mon emploi du temps": "My timetable",
-  "Déconnexion": "Log out",
-  "Paramètres": "Settings",
-};
 const ADMIN_ROLES = ["animatrice", "animateur", "proviseur"];
 const isAdminRole = (role) => ADMIN_ROLES.includes(role);
 // ══════════════════════════════════════════════════════════════════════
@@ -1481,8 +1464,7 @@ function ElevesPage() {
               </div>
 
               {/* Table des élèves */}
-              <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}><div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{minWidth:480,width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#f8fafc",borderBottom:`1px solid ${C.border}`}}>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:48}}>N°</th>
@@ -1525,6 +1507,7 @@ function ElevesPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}
@@ -6491,16 +6474,6 @@ function DashboardAdmin() {
 // ─── Dashboard Enseignant ─────────────────────────────────────────
 
 // ─── Dashboard Proviseur (vue tous départements) ───────────────────
-const DEPARTEMENTS_LIST = [
-  {id:1,nom:"SVT",emoji:"🌿"},
-  {id:2,nom:"Mathématiques",emoji:"📐"},
-  {id:3,nom:"Sciences Physiques",emoji:"🧪"},
-  {id:4,nom:"Lettres",emoji:"📖"},
-  {id:5,nom:"Sciences Humaines",emoji:"🌍"},
-  {id:6,nom:"Langues Vivantes",emoji:"🗣️"},
-  {id:7,nom:"EPS",emoji:"🏃"},
-  {id:8,nom:"Informatique",emoji:"💻"},
-];
 
 function DashboardProviseur() {
   const {rawData:data,refreshData} = useApp();
@@ -9035,4 +9008,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
+
 
