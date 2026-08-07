@@ -6352,6 +6352,7 @@ const NAV_TEACHER = [
 ];
 
 const NAV_PROVISEUR = [...NAV_ADMIN, {id:"departements", emoji:"🏛️", label:"Départements", sub:"Matières · Animateurs"}];
+const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"}];
 
 const PAGE_TITLES = {
   departements:"Départements",
@@ -6687,6 +6688,97 @@ function DashboardProviseur() {
   );
 }
 
+function DashboardSurveillance() {
+  const {rawData:data} = useApp();
+  const {isMobile} = useDevice();
+  const [loading,setLoading] = useState(true);
+  const [stats,setStats] = useState({total:0,parEleve:[],parDept:[],nbAlerte:0});
+
+  useEffect(()=>{
+    if(!data) return;
+    const deptOf = {};
+    Object.values(data.users||{}).forEach(u=>{ deptOf[u.id]=u.departement_id||1; });
+
+    const parEleveMap = {};
+    let total = 0;
+    Object.entries(data.absences||{}).forEach(([k,absents])=>{
+      const [,classe,seance] = k.split("||");
+      (absents||[]).forEach(eleveId=>{
+        total++;
+        if(!parEleveMap[eleveId]) parEleveMap[eleveId] = {id:eleveId, classe, count:0, dernier:seance};
+        parEleveMap[eleveId].count++;
+        if(seance>parEleveMap[eleveId].dernier) parEleveMap[eleveId].dernier = seance;
+      });
+    });
+    const parEleve = Object.values(parEleveMap)
+      .map(e=>({...e, nom:(ELEVES_DB[e.classe]||[]).find(x=>x.id===e.id)?.nom || e.id}))
+      .sort((a,b)=>b.count-a.count)
+      .slice(0,25);
+    const nbAlerte = Object.values(parEleveMap).filter(e=>e.count>=3).length;
+
+    const absParDept = {};
+    Object.entries(data.absences||{}).forEach(([k,absents])=>{
+      const dId = deptOf[k.split("||")[0]]||1;
+      absParDept[dId] = (absParDept[dId]||0) + (absents?absents.length:0);
+    });
+    const parDept = DEPARTEMENTS_LIST.map(d=>({...d,total:absParDept[d.id]||0})).sort((a,b)=>b.total-a.total);
+
+    setStats({total,parEleve,parDept,nbAlerte});
+    setLoading(false);
+  },[data]);
+
+  return(
+    <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
+      <div>
+        <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance générale 🛡️</h2>
+        <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Vue école entière</p>
+      </div>
+
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <KpiCard label="Absences enregistrées" value={stats.total} sub="Toutes classes, tous départements" iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
+        <KpiCard label="Élèves en alerte" value={stats.nbAlerte} sub="≥ 3 absences enregistrées" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
+        <KpiCard label="Départements touchés" value={stats.parDept.filter(d=>d.total>0).length} sub={`sur ${DEPARTEMENTS_LIST.length}`} iconEmoji="🏛️" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
+      </div>
+
+      <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"1.4fr 1fr", gap:14}}>
+        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:16}}>
+          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>🔍 Élèves les plus absents</h3>
+          <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Cumul sur toute la période — top 25</p>
+          {loading ? <Sk h={200} br={8}/> : stats.parEleve.length>0 ? (
+            <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:420,overflowY:"auto"}}>
+              {stats.parEleve.map((e,i)=>(
+                <div key={e.id+e.classe} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 4px",borderBottom:i<stats.parEleve.length-1?`1px solid ${C.border}`:"none"}}>
+                  <span style={{fontSize:11,color:C.txtMuted,width:20}}>{i+1}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+                    <div style={{fontSize:10,color:C.txtMuted}}>{e.classe} · dernière le {e.dernier}</div>
+                  </div>
+                  <span style={{fontSize:12,fontWeight:800,color:e.count>=3?C.red:C.amber,flexShrink:0}}>{e.count}</span>
+                </div>
+              ))}
+            </div>
+          ) : <div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
+        </div>
+
+        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:16}}>
+          <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>🏛️ Par département</h3>
+          {loading ? <Sk h={150} br={8}/> : stats.parDept.some(d=>d.total>0) ? (
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {stats.parDept.filter(d=>d.total>0).map(d=>(
+                <div key={d.id} style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14,flexShrink:0}}>{d.emoji}</span>
+                  <span style={{fontSize:11,color:C.txt,flex:1}}>{d.nom}</span>
+                  <span style={{fontSize:11,fontWeight:800,color:C.red}}>{d.total}</span>
+                </div>
+              ))}
+            </div>
+          ) : <div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardTeacher() {
   const {user,data} = useApp();
   const [loading,setLoading] = useState(true);
@@ -6763,7 +6855,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   // un repli permanent sur tablette, sinon le bouton de la sidebar devient inopérant.
   const effectiveCollapsed = mobileLandscape ? true : collapsed;
   const isAdmin = isAdminRole(user?.role);
-  const nav = user?.role==="proviseur" ? NAV_PROVISEUR : isAdmin ? NAV_ADMIN : NAV_TEACHER;
+  const nav = user?.role==="proviseur" ? NAV_PROVISEUR : user?.role==="surveillant_general" ? NAV_SURVEILLANCE : isAdmin ? NAV_ADMIN : NAV_TEACHER;
   // Compter les épreuves en attente pour le badge
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
@@ -6839,7 +6931,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed && (
           <div style={{overflow:"hidden"}}>
             <div style={{fontSize:12, fontWeight:700, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{user?.nom}</div>
-            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur pédagogique":"Enseignant"} · ⚙️ Paramètres</div>
+            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":user?.role==="surveillant_general"?"Surveillance générale":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur pédagogique":"Enseignant"} · ⚙️ Paramètres</div>
           </div>
         )}
       </div>
@@ -8285,7 +8377,7 @@ const AppLayout = ({onLogout}) => {
         {children}
       </div>
     );
-    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
+    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:user?.role==="surveillant_general"?<DashboardSurveillance/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
     if(page==="programme")         return <W>{isAdmin?<SuiviProgrammePage/>:<MonProgrammePage/>}</W>
     if(page==="epreuves")          return <W><EpreuvesPage/></W>
     if(page==="edt-teacher")       return <W><MonEdtPage/></W>
