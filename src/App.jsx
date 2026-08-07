@@ -6352,6 +6352,7 @@ const NAV_TEACHER = [
 ];
 
 const NAV_PROVISEUR = [...NAV_ADMIN, {id:"departements", emoji:"🏛️", label:"Départements", sub:"Matières · Animateurs"}];
+const NAV_CENSEUR = NAV_ADMIN.filter(n=>n.id!=="enseignants" && n.id!=="gestion-annuelle");
 const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"}];
 
 const PAGE_TITLES = {
@@ -6855,7 +6856,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   // un repli permanent sur tablette, sinon le bouton de la sidebar devient inopérant.
   const effectiveCollapsed = mobileLandscape ? true : collapsed;
   const isAdmin = isAdminRole(user?.role);
-  const nav = user?.role==="proviseur" ? NAV_PROVISEUR : user?.role==="surveillant_general" ? NAV_SURVEILLANCE : isAdmin ? NAV_ADMIN : NAV_TEACHER;
+  const nav = user?.role==="proviseur" ? NAV_PROVISEUR : user?.role==="surveillant_general" ? NAV_SURVEILLANCE : user?.role==="censeur" ? NAV_CENSEUR : isAdmin ? NAV_ADMIN : NAV_TEACHER;
   // Compter les épreuves en attente pour le badge
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
@@ -6931,7 +6932,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed && (
           <div style={{overflow:"hidden"}}>
             <div style={{fontSize:12, fontWeight:700, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{user?.nom}</div>
-            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":user?.role==="surveillant_general"?"Surveillance générale":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur pédagogique":"Enseignant"} · ⚙️ Paramètres</div>
+            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":user?.role==="surveillant_general"?"Surveillance générale":user?.role==="censeur"?"Censeur":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur pédagogique":"Enseignant"} · ⚙️ Paramètres</div>
           </div>
         )}
       </div>
@@ -8370,18 +8371,18 @@ const AppLayout = ({onLogout}) => {
     if(page==="mes-classes") return <MesClassesPage/>
     if(page==="cahier")      return <CahierDeTextePage/>
     if(page==="documents")   return isAdmin?<DocumentsPage/>:null
-    if(page==="eleves")      return isAdmin?<ElevesPage/>:<MesClassesPage/>
+    if(page==="eleves")      return (isAdmin||user?.role==="censeur")?<ElevesPage/>:<MesClassesPage/>
     // ── Pages SIMPLES — enveloppées dans un scroller ───────────────────
     const W = ({children}) => (
       <div style={{flex:1, minHeight:0, overflowY:"auto"}}>
         {children}
       </div>
     );
-    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:user?.role==="surveillant_general"?<DashboardSurveillance/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
-    if(page==="programme")         return <W>{isAdmin?<SuiviProgrammePage/>:<MonProgrammePage/>}</W>
+    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:user?.role==="surveillant_general"?<DashboardSurveillance/>:(isAdmin||user?.role==="censeur")?<DashboardAdmin/>:<DashboardTeacher/>}</W>
+    if(page==="programme")         return <W>{(isAdmin||user?.role==="censeur")?<SuiviProgrammePage/>:<MonProgrammePage/>}</W>
     if(page==="epreuves")          return <W><EpreuvesPage/></W>
     if(page==="edt-teacher")       return <W><MonEdtPage/></W>
-    if(page==="edt")               return <W>{isAdmin?<EdtPage/>:<MonEdtPage/>}</W>
+    if(page==="edt")               return <W>{(isAdmin||user?.role==="censeur")?<EdtPage/>:<MonEdtPage/>}</W>
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="departements")      return <W>{user?.role==="proviseur"?<DepartementsPage/>:null}</W>
@@ -8443,6 +8444,7 @@ function LoginPage({onLogin}){
   const [selDept,setSelDept] = useState("");
   const [isProviseurMode,setIsProviseurMode] = useState(false);
   const [isSurveillanceMode,setIsSurveillanceMode] = useState(false);
+  const [isCenseurMode,setIsCenseurMode] = useState(false);
 
   // ── Horloge — isolée dans useRef pour éviter re-render complet ────────
   const clockRef = useRef(null);
@@ -8508,12 +8510,17 @@ function LoginPage({onLogin}){
       setLoading(false);
       return;
     }
-    if (!isProviseurMode && !isSurveillanceMode && (authUser.role === "proviseur" || authUser.role === "surveillant_general")) {
+    if (isCenseurMode && authUser.role !== "censeur") {
+      setErr("Ce compte n'est pas un compte censeur.");
+      setLoading(false);
+      return;
+    }
+    if (!isProviseurMode && !isSurveillanceMode && !isCenseurMode && (authUser.role === "proviseur" || authUser.role === "surveillant_general" || authUser.role === "censeur")) {
       setErr("Utilisez l'accès correspondant à ce compte.");
       setLoading(false);
       return;
     }
-    if (!isProviseurMode && !isSurveillanceMode && authUser.departement_id && String(authUser.departement_id) !== String(selDept)) {
+    if (!isProviseurMode && !isSurveillanceMode && !isCenseurMode && authUser.departement_id && String(authUser.departement_id) !== String(selDept)) {
       setErr("Ce compte n'appartient pas à ce département.");
       setLoading(false);
       return;
@@ -8715,7 +8722,7 @@ function LoginPage({onLogin}){
           {step===1 && (
             <>
 
-              <div onClick={()=>{setIsProviseurMode(!isProviseurMode); setIsSurveillanceMode(false); setSelDept(""); setErr("");}}
+              <div onClick={()=>{setIsProviseurMode(!isProviseurMode); setIsSurveillanceMode(false); setIsCenseurMode(false); setSelDept(""); setErr("");}}
                 style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isProviseurMode?"#16a34a":"#e2e8f0"}`,background:isProviseurMode?"#f0fdf4":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
                 <span style={{fontSize:13,fontWeight:700,color:isProviseurMode?"#166534":"#1e293b"}}>👤 Accès Proviseur</span>
                 <div style={{width:38,height:20,borderRadius:10,background:isProviseurMode?"#16a34a":"#cbd5e1",position:"relative",transition:"all .2s"}}>
@@ -8723,7 +8730,7 @@ function LoginPage({onLogin}){
                 </div>
               </div>
 
-              <div onClick={()=>{setIsSurveillanceMode(!isSurveillanceMode); setIsProviseurMode(false); setSelDept(""); setErr("");}}
+              <div onClick={()=>{setIsSurveillanceMode(!isSurveillanceMode); setIsProviseurMode(false); setIsCenseurMode(false); setSelDept(""); setErr("");}}
                 style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isSurveillanceMode?"#2563eb":"#e2e8f0"}`,background:isSurveillanceMode?"#eff6ff":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
                 <span style={{fontSize:13,fontWeight:700,color:isSurveillanceMode?"#1d4ed8":"#1e293b"}}>🛡️ Accès Surveillance Générale</span>
                 <div style={{width:38,height:20,borderRadius:10,background:isSurveillanceMode?"#2563eb":"#cbd5e1",position:"relative",transition:"all .2s"}}>
@@ -8731,7 +8738,15 @@ function LoginPage({onLogin}){
                 </div>
               </div>
 
-              {!isProviseurMode && !isSurveillanceMode && (
+              <div onClick={()=>{setIsCenseurMode(!isCenseurMode); setIsProviseurMode(false); setIsSurveillanceMode(false); setSelDept(""); setErr("");}}
+                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isCenseurMode?"#7c3aed":"#e2e8f0"}`,background:isCenseurMode?"#f5f3ff":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
+                <span style={{fontSize:13,fontWeight:700,color:isCenseurMode?"#6d28d9":"#1e293b"}}>📐 Accès Censeur</span>
+                <div style={{width:38,height:20,borderRadius:10,background:isCenseurMode?"#7c3aed":"#cbd5e1",position:"relative",transition:"all .2s"}}>
+                  <div style={{position:"absolute",top:2,left:isCenseurMode?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"all .2s"}}/>
+                </div>
+              </div>
+
+              {!isProviseurMode && !isSurveillanceMode && !isCenseurMode && (
                 <div style={{marginBottom:14}}>
                   <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:7}}>Département</label>
                   <select value={selDept} onChange={e=>setSelDept(e.target.value)}
@@ -8750,7 +8765,7 @@ function LoginPage({onLogin}){
               )}
 
               <button onClick={()=>{
-                  if(!isProviseurMode && !isSurveillanceMode && !selDept){ setErr("Sélectionnez un département."); return; }
+                  if(!isProviseurMode && !isSurveillanceMode && !isCenseurMode && !selDept){ setErr("Sélectionnez un département."); return; }
                   setErr(""); setStep(2);
                 }}
                 style={{width:"100%",padding:"16px",background:"linear-gradient(160deg,#166534 0%,#16a34a 100%)",color:"#fff",border:"none",borderRadius:16,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em",textTransform:"uppercase",boxShadow:"0 8px 28px rgba(22,163,74,.45)",marginBottom:20}}>
