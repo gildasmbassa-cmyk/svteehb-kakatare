@@ -6690,96 +6690,270 @@ function DashboardProviseur() {
 }
 
 function DashboardSurveillance() {
-  const {rawData:data} = useApp();
+  const {rawData:data,user} = useApp();
   const {isMobile} = useDevice();
-  const [loading,setLoading] = useState(true);
-  const [stats,setStats] = useState({total:0,parEleve:[],parDept:[],nbAlerte:0});
+  const [loading,setLoading]   = useState(true);
+  const [tab,setTab]           = useState("absences");
+  const [vieSco,setVieSco]     = useState([]);
+  const [vieLoading,setVieLoading] = useState(true);
+  const [stats,setStats]       = useState({total:0,parEleve:[],parDept:[],nbAlerte:0});
+  const [showForm,setShowForm] = useState(false);
+  const [saving,setSaving]     = useState(false);
+  const [form,setForm]         = useState({eleve_id:"",classe:"",motif:"",details:"",gravite:"faible"});
+  const [selClasse,setSelClasse] = useState("");
+  const [elevesSel,setElevesSel] = useState([]);
+  const [formErr,setFormErr]   = useState("");
 
   useEffect(()=>{
     if(!data) return;
-    const deptOf = {};
-    Object.values(data.users||{}).forEach(u=>{ deptOf[u.id]=u.departement_id||1; });
-
-    const parEleveMap = {};
-    let total = 0;
+    const deptOf={};
+    Object.values(data.users||{}).forEach(u=>{deptOf[u.id]=u.departement_id||1;});
+    const parEleveMap={};let total=0;
     Object.entries(data.absences||{}).forEach(([k,absents])=>{
-      const [,classe,seance] = k.split("||");
+      const [,classe,seance]=k.split("||");
       (absents||[]).forEach(eleveId=>{
         total++;
-        if(!parEleveMap[eleveId]) parEleveMap[eleveId] = {id:eleveId, classe, count:0, dernier:seance};
+        if(!parEleveMap[eleveId]) parEleveMap[eleveId]={id:eleveId,classe,count:0,dernier:seance};
         parEleveMap[eleveId].count++;
-        if(seance>parEleveMap[eleveId].dernier) parEleveMap[eleveId].dernier = seance;
+        if(seance>parEleveMap[eleveId].dernier)parEleveMap[eleveId].dernier=seance;
       });
     });
-    const parEleve = Object.values(parEleveMap)
-      .map(e=>({...e, nom:(ELEVES_DB[e.classe]||[]).find(x=>x.id===e.id)?.nom || e.id}))
-      .sort((a,b)=>b.count-a.count)
-      .slice(0,25);
-    const nbAlerte = Object.values(parEleveMap).filter(e=>e.count>=3).length;
-
-    const absParDept = {};
+    const parEleve=Object.values(parEleveMap)
+      .map(e=>({...e,nom:(ELEVES_DB[e.classe]||[]).find(x=>x.id===e.id)?.nom||e.id}))
+      .sort((a,b)=>b.count-a.count).slice(0,25);
+    const nbAlerte=Object.values(parEleveMap).filter(e=>e.count>=3).length;
+    const absParDept={};
     Object.entries(data.absences||{}).forEach(([k,absents])=>{
-      const dId = deptOf[k.split("||")[0]]||1;
-      absParDept[dId] = (absParDept[dId]||0) + (absents?absents.length:0);
+      const dId=deptOf[k.split("||")[0]]||1;
+      absParDept[dId]=(absParDept[dId]||0)+(absents?absents.length:0);
     });
-    const parDept = DEPARTEMENTS_LIST.map(d=>({...d,total:absParDept[d.id]||0})).sort((a,b)=>b.total-a.total);
-
+    const parDept=DEPARTEMENTS_LIST.map(d=>({...d,total:absParDept[d.id]||0})).sort((a,b)=>b.total-a.total);
     setStats({total,parEleve,parDept,nbAlerte});
     setLoading(false);
   },[data]);
 
+  const loadVieSco = async()=>{
+    setVieLoading(true);
+    const rows = await sb.get("vie_scolaire","?select=*&order=date.desc,created_at.desc&limit=300");
+    setVieSco(rows||[]);
+    setVieLoading(false);
+  };
+  useEffect(()=>{ loadVieSco(); },[]);
+
+  useEffect(()=>{
+    if(!selClasse){setElevesSel([]);setForm(f=>({...f,eleve_id:"",classe:""}));return;}
+    setElevesSel(ELEVES_DB[selClasse]||[]);
+    setForm(f=>({...f,classe:selClasse,eleve_id:""}));
+  },[selClasse]);
+
+  const typeMap = {retards:"retard",sanctions:"sanction",incidents:"incident"};
+
+  const openForm = ()=>{
+    setFormErr("");
+    setForm({eleve_id:"",classe:"",motif:"",details:"",gravite:"faible"});
+    setSelClasse("");
+    setShowForm(!showForm);
+  };
+
+  const saveEntry = async()=>{
+    if(!form.eleve_id||!form.classe){setFormErr("Sélectionnez une classe et un élève.");return;}
+    setFormErr("");setSaving(true);
+    const payload={
+      type:typeMap[tab]||"retard",
+      eleve_id:form.eleve_id, classe:form.classe,
+      motif:form.motif||null, details:form.details||null,
+      gravite:(tab==="retards")?"faible":form.gravite||"faible",
+      enregistre_par:user?.id||"surveillance",
+    };
+    const ok = await sb.upsert("vie_scolaire",payload);
+    if(ok){ await loadVieSco(); setShowForm(false); }
+    else { setFormErr("Erreur lors de l'enregistrement. Vérifiez la connexion."); }
+    setSaving(false);
+  };
+
+  const filteredVie = vieSco.filter(v=>v.type===(typeMap[tab]||"retard"));
+
+  const TABS=[
+    {id:"absences",  label:"Absences",  emoji:"\uD83D\uDCCB"},
+    {id:"retards",   label:"Retards",   emoji:"\u23F0"},
+    {id:"sanctions", label:"Sanctions", emoji:"\u26A0\uFE0F"},
+    {id:"incidents", label:"Incidents", emoji:"\uD83D\uDEA8"},
+  ];
+
+  const GraviteBadge=({g})=>{
+    const cfgG={faible:{bg:"#fefce8",fg:"#854d0e"},moyen:{bg:"#fff7ed",fg:"#c2410c"},grave:{bg:"#fef2f2",fg:"#b91c1c"}};
+    const gc=cfgG[g]||cfgG.faible;
+    return React.createElement("span",{style:{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,background:gc.bg,color:gc.fg}},g||"faible");
+  };
+
+  const NomEleve=({eleveId,classe})=>{
+    const nom=(ELEVES_DB[classe]||[]).find(x=>x.id===eleveId)?.nom||eleveId;
+    return React.createElement("span",null,nom);
+  };
+
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
-      <div>
-        <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance générale 🛡️</h2>
-        <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Vue école entière</p>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+        <div>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance g\u00e9n\u00e9rale \uD83D\uDEE1\uFE0F</h2>
+          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} \u00b7 Vue \u00e9cole enti\u00e8re</p>
+        </div>
+        {tab!=="absences" && (
+          <button onClick={openForm}
+            style={{padding:"9px 18px",borderRadius:10,border:"none",background:showForm?C.border:C.green,color:showForm?C.txt:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+            {showForm?"\u2715 Annuler":"\u2795 Enregistrer"}
+          </button>
+        )}
       </div>
 
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Absences enregistrées" value={stats.total} sub="Toutes classes, tous départements" iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
-        <KpiCard label="Élèves en alerte" value={stats.nbAlerte} sub="≥ 3 absences enregistrées" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
-        <KpiCard label="Départements touchés" value={stats.parDept.filter(d=>d.total>0).length} sub={`sur ${DEPARTEMENTS_LIST.length}`} iconEmoji="🏛️" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
+        <KpiCard label="Absences" value={stats.total} sub="Toutes classes" iconEmoji="\uD83D\uDCCB" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
+        <KpiCard label="\u00c9l\u00e8ves en alerte" value={stats.nbAlerte} sub="\u2265 3 absences" iconEmoji="\u26A0\uFE0F" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
+        <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="Enregistr\u00e9s" iconEmoji="\u23F0" bg={C.amberPale} subColor={C.amber} loading={vieLoading} delay={0.1}/>
+        <KpiCard label="Sanctions" value={vieSco.filter(v=>v.type==="sanction").length} sub="Enregistr\u00e9es" iconEmoji="\u26A0\uFE0F" bg={C.redPale} subColor={C.red} loading={vieLoading} delay={0.15}/>
       </div>
 
-      <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"1.4fr 1fr", gap:14}}>
-        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:16}}>
-          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>🔍 Élèves les plus absents</h3>
-          <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Cumul sur toute la période — top 25</p>
-          {loading ? <Sk h={200} br={8}/> : stats.parEleve.length>0 ? (
-            <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:420,overflowY:"auto"}}>
-              {stats.parEleve.map((e,i)=>(
-                <div key={e.id+e.classe} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 4px",borderBottom:i<stats.parEleve.length-1?`1px solid ${C.border}`:"none"}}>
-                  <span style={{fontSize:11,color:C.txtMuted,width:20}}>{i+1}</span>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
-                    <div style={{fontSize:10,color:C.txtMuted}}>{e.classe} · dernière le {e.dernier}</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>{setTab(t.id);setShowForm(false);}}
+            style={{padding:"8px 16px",borderRadius:20,border:"1.5px solid "+(tab===t.id?C.green:C.border),
+              background:tab===t.id?C.greenPale:C.white,color:tab===t.id?C.green:C.txtMuted,
+              fontWeight:700,fontSize:12.5,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+            {t.emoji} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {showForm && tab!=="absences" && (
+        <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:18,display:"flex",flexDirection:"column",gap:12}}>
+          <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
+            {tab==="retards"?"\u23F0 Enregistrer un retard":tab==="sanctions"?"\u26A0\uFE0F Enregistrer une sanction":"\uD83D\uDEA8 D\u00e9clarer un incident"}
+          </h3>
+          {formErr && <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"8px 12px",fontSize:12.5,color:"#b91c1c"}}>{formErr}</div>}
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Classe *</label>
+              <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
+                style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc"}}>
+                <option value="">\u2014 S\u00e9lectionner \u2014</option>
+                {CLASSES_REELLES.map(c=><option key={c.code} value={c.code}>{c.code}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>\u00c9l\u00e8ve *</label>
+              <select value={form.eleve_id} onChange={e=>setForm(f=>({...f,eleve_id:e.target.value}))}
+                disabled={!selClasse}
+                style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:selClasse?"#f8fafc":"#f1f5f9",opacity:selClasse?1:.6}}>
+                <option value="">\u2014 S\u00e9lectionner \u2014</option>
+                {elevesSel.map(e=><option key={e.id} value={e.id}>{e.nom}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Motif</label>
+              <input type="text" value={form.motif} onChange={e=>setForm(f=>({...f,motif:e.target.value}))}
+                placeholder="Motif principal..."
+                style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc",boxSizing:"border-box"}}/>
+            </div>
+            {tab!=="retards" && (
+              <div>
+                <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Gravit\u00e9</label>
+                <select value={form.gravite} onChange={e=>setForm(f=>({...f,gravite:e.target.value}))}
+                  style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc"}}>
+                  <option value="faible">Faible</option>
+                  <option value="moyen">Moyen</option>
+                  <option value="grave">Grave</option>
+                </select>
+              </div>
+            )}
+            <div style={{gridColumn:"1 / -1"}}>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>D\u00e9tails</label>
+              <textarea value={form.details} onChange={e=>setForm(f=>({...f,details:e.target.value}))}
+                placeholder="D\u00e9tails compl\u00e9mentaires..."
+                style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc",resize:"vertical",minHeight:64,boxSizing:"border-box"}}/>
+            </div>
+          </div>
+          <button onClick={saveEntry} disabled={saving}
+            style={{alignSelf:"flex-end",padding:"10px 24px",borderRadius:10,border:"none",background:saving?"#94a3b8":C.green,color:"#fff",fontWeight:700,fontSize:13,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8}}>
+            {saving?<><Spinner size={12} color="#fff"/> Enregistrement\u2026</>:"\u2713 Enregistrer"}
+          </button>
+        </div>
+      )}
+
+      {tab==="absences" ? (
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.4fr 1fr",gap:14}}>
+          <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+            <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>\uD83D\uDD0D \u00c9l\u00e8ves les plus absents</h3>
+            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Cumul sur toute la p\u00e9riode \u2014 top 25</p>
+            {loading?<Sk h={200} br={8}/>:stats.parEleve.length>0?(
+              <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:420,overflowY:"auto"}}>
+                {stats.parEleve.map((e,i)=>(
+                  <div key={e.id+e.classe} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 4px",borderBottom:i<stats.parEleve.length-1?"1px solid "+C.border:"none"}}>
+                    <span style={{fontSize:11,color:C.txtMuted,width:20}}>{i+1}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+                      <div style={{fontSize:10,color:C.txtMuted}}>{e.classe} \u00b7 derni\u00e8re le {e.dernier}</div>
+                    </div>
+                    <span style={{fontSize:12,fontWeight:800,color:e.count>=3?C.red:C.amber,flexShrink:0}}>{e.count}</span>
                   </div>
-                  <span style={{fontSize:12,fontWeight:800,color:e.count>=3?C.red:C.amber,flexShrink:0}}>{e.count}</span>
-                </div>
-              ))}
-            </div>
-          ) : <div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
+                ))}
+              </div>
+            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistr\u00e9e</div>}
+          </div>
+          <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>\uD83C\uDFDB\uFE0F Par d\u00e9partement</h3>
+            {loading?<Sk h={150} br={8}/>:stats.parDept.some(d=>d.total>0)?(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {stats.parDept.filter(d=>d.total>0).map(d=>(
+                  <div key={d.id} style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:14,flexShrink:0}}>{d.emoji}</span>
+                    <span style={{fontSize:11,color:C.txt,flex:1}}>{d.nom}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:C.red}}>{d.total}</span>
+                  </div>
+                ))}
+              </div>
+            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistr\u00e9e</div>}
+          </div>
         </div>
-
-        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:16}}>
-          <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>🏛️ Par département</h3>
-          {loading ? <Sk h={150} br={8}/> : stats.parDept.some(d=>d.total>0) ? (
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {stats.parDept.filter(d=>d.total>0).map(d=>(
-                <div key={d.id} style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14,flexShrink:0}}>{d.emoji}</span>
-                  <span style={{fontSize:11,color:C.txt,flex:1}}>{d.nom}</span>
-                  <span style={{fontSize:11,fontWeight:800,color:C.red}}>{d.total}</span>
-                </div>
-              ))}
-            </div>
-          ) : <div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
+      ) : (
+        <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,overflow:"hidden"}}>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,minWidth:480}}>
+              <thead>
+                <tr style={{background:"#f8fafc",borderBottom:"1px solid "+C.border}}>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Date</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>\u00c9l\u00e8ve</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Classe</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Motif</th>
+                  {tab!=="retards" && <th style={{padding:"10px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>Gravit\u00e9</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {vieLoading?(
+                  <tr><td colSpan={5} style={{padding:24,textAlign:"center",color:C.txtLight}}>Chargement\u2026</td></tr>
+                ):filteredVie.length===0?(
+                  <tr><td colSpan={5} style={{padding:32,textAlign:"center",color:C.txtLight}}>
+                    <div style={{fontSize:24,marginBottom:6}}>\uD83D\uDCED</div>
+                    Aucun enregistrement
+                  </td></tr>
+                ):filteredVie.map((v,i)=>(
+                  <tr key={v.id} style={{borderBottom:"1px solid "+C.border,background:i%2===0?C.white:"#fafafa"}}>
+                    <td style={{padding:"10px 12px",color:C.txtMuted,whiteSpace:"nowrap"}}>
+                      {new Date(v.date).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}
+                    </td>
+                    <td style={{padding:"10px 12px",fontWeight:600,color:C.txt}}><NomEleve eleveId={v.eleve_id} classe={v.classe}/></td>
+                    <td style={{padding:"10px 12px",color:C.txtMuted}}>{v.classe}</td>
+                    <td style={{padding:"10px 12px",color:C.txt,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.motif||"\u2014"}</td>
+                    {tab!=="retards" && <td style={{padding:"10px 12px",textAlign:"center"}}><GraviteBadge g={v.gravite}/></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-
 function DashboardTeacher() {
   const {user,data} = useApp();
   const [loading,setLoading] = useState(true);
