@@ -8430,500 +8430,388 @@ function Splash({onDone}){
 
 // ─── Login ────────────────────────────────────────────────────────
 function LoginPage({onLogin}){
-  const {isMobile, isSmall, isLandscape, isPortrait, mobileLandscape} = useDevice();
-  const [id,setId]         = useState(()=>localStorage.getItem("svt_remember_id")||"");
-  const [pw,setPw]         = useState("");
-  const [showPw,setShowPw] = useState(false);
-  const [err,setErr]       = useState("");
+  const {isMobile} = useDevice();
+
+  /* ── Auth state (inchangé) ──────────────────────────── */
+  const [id,setId]           = useState(()=>localStorage.getItem("svt_remember_id")||"");
+  const [pw,setPw]           = useState("");
+  const [showPw,setShowPw]   = useState(false);
+  const [err,setErr]         = useState("");
   const [loading,setLoading] = useState(false);
   const [rememberMe,setRememberMe] = useState(()=>!!localStorage.getItem("svt_remember_id"));
-  const [time,setTime]     = useState(new Date());
-  const [counter,setCounter] = useState({eleves:0,ens:0});
-  const [step,setStep] = useState(1); // 1=année/département, 2=identifiants
-  const [annee,setAnnee] = useState("2025-2026");
   const [selDept,setSelDept] = useState("");
-  const [isProviseurMode,setIsProviseurMode] = useState(false);
-  const [isSurveillanceMode,setIsSurveillanceMode] = useState(false);
-  const [isCenseurMode,setIsCenseurMode] = useState(false);
 
-  // ── Horloge — isolée dans useRef pour éviter re-render complet ────────
-  const clockRef = useRef(null);
-  useEffect(()=>{
-    clockRef.current = setInterval(()=>setTime(new Date()),1000);
-    return()=>clearInterval(clockRef.current);
-  },[]);
-
-  // ── Compteurs animés au montage ──────────────────────────────────────
-  // ── Compteur enseignants réel (élèves = données locales déjà chargées) ──
+  /* ── Compteurs réels ────────────────────────────────── */
+  const [counter,setCounter]   = useState({eleves:0,ens:0});
   const [ensCountReal,setEnsCountReal] = useState(null);
   useEffect(()=>{
-    sb.get("utilisateurs", "?select=id&role=in.(enseignant,animateur)").then(rows=>{ if(rows) setEnsCountReal(rows.length); });
+    sb.get("utilisateurs","?select=id&role=in.(enseignant,animateur)").then(rows=>{if(rows)setEnsCountReal(rows.length);});
   },[]);
-
   useEffect(()=>{
-    if (ensCountReal === null) return;
-    const targets = {eleves:getTotalEleves(), ens:ensCountReal};
-    const duration = 1800;
-    const steps = 60;
-    const interval = duration / steps;
-    let step = 0;
-    const timer = setInterval(()=>{
-      step++;
-      const p = Math.min(step/steps, 1);
-      const ease = 1 - Math.pow(1-p, 3); // easeOutCubic
-      setCounter({
-        eleves: Math.round(targets.eleves * ease),
-        ens:    Math.round(targets.ens    * ease),
-      });
-      if(step >= steps) clearInterval(timer);
-    }, interval);
+    if(ensCountReal===null)return;
+    const targets={eleves:getTotalEleves(),ens:ensCountReal};
+    let step=0;const steps=60;
+    const timer=setInterval(()=>{
+      step++;const p=Math.min(step/steps,1);const e=1-Math.pow(1-p,3);
+      setCounter({eleves:Math.round(targets.eleves*e),ens:Math.round(targets.ens*e)});
+      if(step>=steps)clearInterval(timer);
+    },1800/60);
     return()=>clearInterval(timer);
   },[ensCountReal]);
 
+  /* ── Navigation portail ─────────────────────────────── */
+  const [portalStep,setPortalStep] = useState(0); // 0=landing, 1=portail
+
+  /* ── Profil sélectionné ─────────────────────────────── */
+  const [selProfile,setSelProfile] = useState("enseignant");
+  const [mobileFormOpen,setMobileFormOpen] = useState(false);
+
+  const PROFILES = [
+    {key:"direction",  label:"Direction",             sub:"Proviseur",             desc:"Gestion globale de l'établissement", emoji:"👨🏾‍💼", role:"proviseur",          needsDept:false},
+    {key:"censeur",    label:"Censeur",               sub:"Organisation pédagogique", desc:"Classes, notes, suivi discipline",  emoji:"📚",  role:"censeur",            needsDept:false},
+    {key:"sg",         label:"Surveillance Générale", sub:"Vie scolaire & discipline", desc:"Absences, retards, incidents",    emoji:"🛡️", role:"surveillant_general", needsDept:false},
+    {key:"enseignant", label:"Enseignant",            sub:"Corps professoral",      desc:"Cours, cahier de textes, évaluations", emoji:"👨🏾‍🏫", role:"enseignant",   needsDept:true},
+    {key:"eleve",      label:"Élève",                 sub:"Espace apprenant",       desc:"Résultats, emploi du temps",         emoji:"🎓",  role:null, soon:true},
+    {key:"parent",     label:"Parent",                sub:"Suivi scolaire",         desc:"Suivi scolaire de l'élève",          emoji:"👪",  role:null, soon:true},
+  ];
+
+  const profile = PROFILES.find(p=>p.key===selProfile);
+
+  /* ── Soumission (logique inchangée) ─────────────────── */
   const submit = async()=>{
     setErr("");
     if(!id.trim()){setErr("Veuillez saisir votre identifiant.");return;}
     if(!pw){setErr("Veuillez saisir votre mot de passe.");return;}
+    if(profile.needsDept&&!selDept){setErr("Sélectionnez un département.");return;}
     setLoading(true);
-
-    // ── Authentification via Supabase RPC (mdp vérifiés côté serveur) ──
-    let authUser = null;
-    try {
-      authUser = await sb.rpc("authenticate_user", {p_id:id.trim().toLowerCase(), p_mdp:pw});
-    } catch(e) {
-      authUser = null;
-    }
-
-    if(!authUser) {
-      setErr("Identifiant ou mot de passe incorrect, ou connexion au serveur impossible.");
-      setLoading(false);
-      return;
-    }
-
-    if (isProviseurMode && authUser.role !== "proviseur") {
-      setErr("Ce compte n'est pas un compte proviseur.");
-      setLoading(false);
-      return;
-    }
-    if (isSurveillanceMode && authUser.role !== "surveillant_general") {
-      setErr("Ce compte n'est pas un compte surveillance générale.");
-      setLoading(false);
-      return;
-    }
-    if (isCenseurMode && authUser.role !== "censeur") {
-      setErr("Ce compte n'est pas un compte censeur.");
-      setLoading(false);
-      return;
-    }
-    if (!isProviseurMode && !isSurveillanceMode && !isCenseurMode && (authUser.role === "proviseur" || authUser.role === "surveillant_general" || authUser.role === "censeur")) {
-      setErr("Utilisez l'accès correspondant à ce compte.");
-      setLoading(false);
-      return;
-    }
-    if (!isProviseurMode && !isSurveillanceMode && !isCenseurMode && authUser.departement_id && String(authUser.departement_id) !== String(selDept)) {
-      setErr("Ce compte n'appartient pas à ce département.");
-      setLoading(false);
-      return;
-    }
-
-    // Persister l'identifiant si "Se souvenir de moi"
-    if(rememberMe) { localStorage.setItem("svt_remember_id", id.trim().toLowerCase()); }
-    else { localStorage.removeItem("svt_remember_id"); }
-    // Enrichir avec les données locales si nécessaire
-    const demoRef = DEMO_ACCOUNTS.find(a=>a.id===authUser.id)||{};
-    onLogin({
-      ...demoRef,
-      ...authUser,
-      col:           getColor(authUser.id),
-      ini:           getIni(authUser.nom),
-      mustChangePwd: !!authUser.must_change_pwd,
-    });
+    let authUser=null;
+    try{ authUser=await sb.rpc("authenticate_user",{p_id:id.trim().toLowerCase(),p_mdp:pw}); }
+    catch(e){ authUser=null; }
+    if(!authUser){setErr("Identifiant ou mot de passe incorrect.");setLoading(false);return;}
+    if(profile.role==="proviseur"          && authUser.role!=="proviseur")          {setErr("Ce compte n'est pas un compte Direction.");setLoading(false);return;}
+    if(profile.role==="censeur"            && authUser.role!=="censeur")            {setErr("Ce compte n'est pas un compte Censeur.");setLoading(false);return;}
+    if(profile.role==="surveillant_general"&& authUser.role!=="surveillant_general"){setErr("Ce compte n'est pas un compte Surveillance Générale.");setLoading(false);return;}
+    if(profile.role==="enseignant" && (authUser.role==="proviseur"||authUser.role==="censeur"||authUser.role==="surveillant_general")){setErr("Utilisez l'accès correspondant à ce compte.");setLoading(false);return;}
+    if(profile.needsDept && authUser.departement_id && String(authUser.departement_id)!==String(selDept)){setErr("Ce compte n'appartient pas à ce département.");setLoading(false);return;}
+    if(rememberMe)localStorage.setItem("svt_remember_id",id.trim().toLowerCase());
+    else localStorage.removeItem("svt_remember_id");
+    const demoRef=DEMO_ACCOUNTS.find(a=>a.id===authUser.id)||{};
+    onLogin({...demoRef,...authUser,col:getColor(authUser.id),ini:getIni(authUser.nom),mustChangePwd:!!authUser.must_change_pwd});
   };
 
+  /* ── Couleurs tokens ─────────────────────────────────── */
+  const clr = {
+    forest:"#0B4D2C", forestDark:"#083D22", forestLight:"#E8F5EE",
+    gold:"#D4AF37", goldLight:"#FBF5D8",
+    navy:"#0F172A", slate:"#64748B", slateLight:"#F1F5F9",
+    white:"#FFFFFF", border:"#E2E8F0",
+  };
 
+  /* ════════════════════════════════════════════════
+     ÉTAPE 0 : LANDING
+  ════════════════════════════════════════════════ */
+  if(portalStep===0) return (
+    <div style={{
+      minHeight:"100vh", position:"relative", overflow:"hidden",
+      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      background:`url(${LOGIN_BG_B64}) center/cover no-repeat`,
+    }}>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
+        @keyframes scaleIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+        .lp-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+        .lp-card-hover:hover{border-color:${clr.forest}!important;box-shadow:0 8px 24px rgba(11,77,44,.15)!important;transform:translateY(-2px);}
+        .lp-card-hover:focus{outline:2px solid ${clr.forest};outline-offset:3px;}
+        .lp-input:focus{outline:none;border-color:${clr.forest}!important;box-shadow:0 0 0 3px rgba(11,77,44,.12);}
+      `}</style>
 
+      {/* Overlay vert foncé */}
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(160deg,rgba(8,61,34,.88) 0%,rgba(11,77,44,.82) 50%,rgba(15,23,42,.88) 100%)"}}/>
 
-  // ══════════════════════════════════════════════════════
-  // RENDU — Design fidèle à la maquette LYKAMA
-  // ══════════════════════════════════════════════════════
+      {/* Motif points or (subtil) */}
+      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",opacity:.08,pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
+        <defs><pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+          <circle cx="1.5" cy="1.5" r="1.5" fill="#D4AF37"/>
+        </pattern></defs>
+        <rect width="100%" height="100%" fill="url(#dots)"/>
+      </svg>
 
-  // ── SVG Hélice ADN (droite) ─────────────────────────
-  // ── SVG Grille hexagonale (fond droite) ────────────
-  const HexGrid = () => (
-    <svg viewBox="0 0 200 300" width="200" height="300"
-      style={{position:"absolute",right:0,top:"25%",opacity:.12,pointerEvents:"none"}}>
-      {[0,1,2,3].map(col=>[0,1,2,3,4].map(row=>{
-        const x = col*52 + (row%2)*26;
-        const y = row*44;
-        const pts = `${x+26},${y} ${x+52},${y+15} ${x+52},${y+43} ${x+26},${y+58} ${x},${y+43} ${x},${y+15}`;
-        return <polygon key={`${col}-${row}`} points={pts} fill="none" stroke="#166534" strokeWidth="1.5"/>;
-      }))}
-    </svg>
+      {/* Contenu */}
+      <div style={{position:"relative",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",padding:isMobile?"24px 20px":"40px 32px",animation:"fadeUp .7s ease",maxWidth:520,width:"100%"}}>
+        {/* Logo */}
+        <div style={{width:isMobile?88:108,height:isMobile?88:108,borderRadius:"50%",overflow:"hidden",border:`4px solid ${clr.gold}`,boxShadow:"0 8px 32px rgba(0,0,0,.4)",marginBottom:24,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <img src={LOGO_LYCEE_B64} alt="Logo" style={{width:"90%",height:"90%",objectFit:"contain"}}/>
+        </div>
+
+        {/* Drapeau + établissement */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+          <svg viewBox="0 0 45 30" width="36" height="24" style={{borderRadius:3,boxShadow:"0 2px 6px rgba(0,0,0,.3)",flexShrink:0}}>
+            <rect width="15" height="30" fill="#007A5E"/>
+            <rect x="15" width="15" height="30" fill="#CE1126"/>
+            <rect x="30" width="15" height="30" fill="#FCD116"/>
+            <polygon points="22.5,8 23.9,12.6 28.7,12.6 24.9,15.4 26.3,20 22.5,17.2 18.7,20 20.1,15.4 16.3,12.6 21.1,12.6" fill="#FCD116"/>
+          </svg>
+          <span style={{fontSize:11,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:clr.gold,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>République du Cameroun</span>
+        </div>
+
+        <h1 style={{fontSize:isMobile?"clamp(22px,6vw,28px)":"clamp(28px,4vw,36px)",fontWeight:800,color:"#fff",textAlign:"center",margin:"0 0 6px",fontFamily:"'Playfair Display',serif",lineHeight:1.2}}>
+          Lycée de Kakatare – Maroua
+        </h1>
+        <p style={{fontSize:isMobile?13:14,color:"rgba(255,255,255,.75)",textAlign:"center",margin:"0 0 4px",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500}}>
+          Plateforme numérique de gestion scolaire
+        </p>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(212,175,55,.18)",border:`1px solid ${clr.gold}60`,borderRadius:20,padding:"4px 14px",marginBottom:32}}>
+          <span style={{fontSize:12,fontWeight:700,color:clr.gold,fontFamily:"'Plus Jakarta Sans',sans-serif",letterSpacing:".05em"}}>Année scolaire 2025–2026</span>
+        </div>
+
+        {/* Métriques (chiffres réels animés) */}
+        <div style={{display:"flex",gap:32,marginBottom:36,justifyContent:"center"}}>
+          {[
+            {val:counter.eleves,label:"Élèves inscrits",color:"#4ade80"},
+            {val:counter.ens,   label:"Enseignants",    color:clr.gold},
+          ].map(({val,label,color})=>(
+            <div key={label} style={{textAlign:"center"}}>
+              <div style={{fontSize:isMobile?26:32,fontWeight:900,color,fontFamily:"'Playfair Display',serif",lineHeight:1}}>{val.toLocaleString("fr-FR")}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:2,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <button
+          className="lp-btn"
+          onClick={()=>setPortalStep(1)}
+          style={{
+            background:`linear-gradient(135deg,${clr.gold},#b8860b)`,
+            color:clr.navy, fontWeight:800, fontSize:isMobile?14:15,
+            padding:isMobile?"14px 28px":"16px 40px",
+            borderRadius:14, border:"none", cursor:"pointer",
+            boxShadow:"0 8px 24px rgba(212,175,55,.4)",
+            fontFamily:"'Plus Jakarta Sans',sans-serif",
+            transition:"all .2s ease", letterSpacing:".02em",
+          }}>
+          Accéder au Portail Numérique →
+        </button>
+
+        <p style={{marginTop:16,fontSize:11,color:"rgba(255,255,255,.4)",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"center",display:"flex",alignItems:"center",gap:6}}>
+          <span>🔒</span> Connexion sécurisée SSL • SVTEEHB Kakatare
+        </p>
+      </div>
+    </div>
   );
 
-  // ── Icône cadenas + feuille (carte) ────────────────
-  const LockLeafIcon = () => (
-    <svg viewBox="0 0 72 72" width="72" height="72">
-      {/* Cercle vert principal */}
-      <circle cx="36" cy="34" r="32" fill="url(#lockGrad)"/>
-      <defs>
-        <linearGradient id="lockGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#166534"/>
-          <stop offset="100%" stopColor="#16a34a"/>
-        </linearGradient>
-      </defs>
-      {/* Cadenas corps */}
-      <rect x="24" y="30" width="24" height="18" rx="4" fill="white"/>
-      {/* Anneau cadenas */}
-      <path d="M27,30 L27,24 Q27,18 36,18 Q45,18 45,24 L45,30"
-        fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
-      {/* Trou de serrure */}
-      <circle cx="36" cy="37" r="3" fill="#16a34a"/>
-      <rect x="34.5" y="38" width="3" height="5" rx="1" fill="#16a34a"/>
-      {/* Feuille en bas-droite */}
-      <circle cx="54" cy="56" r="14" fill="#166534" stroke="white" strokeWidth="2.5"/>
-      <path d="M54,63 Q46,56 50,50 Q56,46 60,52 Q62,58 54,63Z" fill="#4ade80"/>
-      <path d="M54,63 Q50,58 50,50" fill="none" stroke="#dcfce7" strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
+  /* ════════════════════════════════════════════════
+     ÉTAPE 1 : PORTAIL (sélection profil + formulaire)
+  ════════════════════════════════════════════════ */
+
+  const FormPanel = ()=>(
+    <div style={{background:clr.white,borderRadius:20,border:`1px solid ${clr.border}`,boxShadow:"0 8px 32px rgba(0,0,0,.1)",padding:"28px 24px",position:"relative",overflow:"hidden"}}>
+      {/* Liseré dégradé */}
+      <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:`linear-gradient(90deg,${clr.forest},${clr.gold},${clr.navy})`}}/>
+
+      <h3 style={{fontSize:17,fontWeight:800,color:clr.navy,margin:"0 0 4px",fontFamily:"'Playfair Display',serif"}}>
+        Connexion {PROFILES.find(p=>p.key===selProfile)?.label||""}
+      </h3>
+      <p style={{fontSize:12,color:clr.slate,margin:"0 0 20px",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+        Saisissez vos identifiants pour accéder à votre espace
+      </p>
+
+      {err && (
+        <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#b91c1c",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+          ⚠️ {err}
+        </div>
+      )}
+
+      {/* Identifiant */}
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,marginBottom:6,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+          Matricule / Identifiant
+        </label>
+        <input
+          className="lp-input"
+          type="text" value={id} onChange={e=>setId(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter")submit();}}
+          placeholder="Votre identifiant"
+          style={{width:"100%",padding:"11px 14px",border:`1.5px solid ${clr.border}`,borderRadius:10,fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",background:clr.slateLight,color:clr.navy,transition:"all .2s",boxSizing:"border-box"}}
+        />
+      </div>
+
+      {/* Département (seulement Enseignant) */}
+      {profile.needsDept && (
+        <div style={{marginBottom:14}}>
+          <label style={{display:"block",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,marginBottom:6,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+            Département
+          </label>
+          <select
+            className="lp-input"
+            value={selDept} onChange={e=>setSelDept(e.target.value)}
+            style={{width:"100%",padding:"11px 14px",border:`1.5px solid ${clr.border}`,borderRadius:10,fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",background:clr.slateLight,color:selDept?clr.navy:"#94a3b8",transition:"all .2s",boxSizing:"border-box",appearance:"none"}}>
+            <option value="">— Sélectionner —</option>
+            {DEPARTEMENTS_LIST.map(d=>(
+              <option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Mot de passe */}
+      <div style={{marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+          <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+            Mot de passe
+          </label>
+        </div>
+        <div style={{position:"relative"}}>
+          <input
+            className="lp-input"
+            type={showPw?"text":"password"} value={pw} onChange={e=>setPw(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter")submit();}}
+            placeholder="Votre mot de passe"
+            style={{width:"100%",padding:"11px 42px 11px 14px",border:`1.5px solid ${clr.border}`,borderRadius:10,fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",background:clr.slateLight,color:clr.navy,transition:"all .2s",boxSizing:"border-box"}}
+          />
+          <button onClick={()=>setShowPw(!showPw)} type="button" style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:14,color:clr.slate}}>
+            {showPw?"🙈":"👁️"}
+          </button>
+        </div>
+      </div>
+
+      {/* Se souvenir */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:18}}>
+        <input type="checkbox" id="remember" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)} style={{accentColor:clr.forest,width:15,height:15,cursor:"pointer"}}/>
+        <label htmlFor="remember" style={{fontSize:12,color:clr.slate,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",userSelect:"none"}}>Se souvenir de moi</label>
+      </div>
+
+      {/* Bouton */}
+      <button
+        className="lp-btn"
+        onClick={submit} disabled={loading}
+        style={{
+          width:"100%",padding:"13px",borderRadius:12,border:"none",cursor:loading?"not-allowed":"pointer",
+          background:loading?"#94a3b8":`linear-gradient(135deg,${clr.forest},#125c34)`,
+          color:"#fff",fontWeight:700,fontSize:15,fontFamily:"'Plus Jakarta Sans',sans-serif",
+          boxShadow:loading?"none":`0 4px 16px ${clr.forest}40`,
+          transition:"all .2s ease", display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+        }}>
+        {loading?<><Spinner size={14} color="#fff"/> Connexion en cours…</>:"Se connecter →"}
+      </button>
+
+      <p style={{textAlign:"center",marginTop:14,fontSize:11,color:clr.slate,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+        🔒 Connexion sécurisée • Lycée de Kakatare
+      </p>
+
+      {/* Retour */}
+      <button onClick={()=>{if(isMobile&&mobileFormOpen){setMobileFormOpen(false);}else{setPortalStep(0);}}} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",cursor:"pointer",fontSize:12,color:clr.slate,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:600}}>
+        ← Retour
+      </button>
+    </div>
   );
+
+  /* ── Carte profil ───────────────────────────────────── */
+  const ProfileCard = ({p})=>{
+    const isSelected = selProfile===p.key;
+    return (
+      <div
+        className={p.soon?"":"lp-card-hover"}
+        tabIndex={p.soon?-1:0}
+        onClick={()=>{
+          if(p.soon)return;
+          setSelProfile(p.key); setErr("");
+          if(isMobile)setMobileFormOpen(true);
+        }}
+        onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!p.soon){setSelProfile(p.key);setErr("");if(isMobile)setMobileFormOpen(true);}}}
+        style={{
+          background:isSelected?clr.forestLight:clr.white,
+          border:`2px solid ${isSelected?clr.forest:clr.border}`,
+          borderRadius:16, padding:"16px 14px",
+          cursor:p.soon?"not-allowed":"pointer",
+          position:"relative", transition:"all .2s ease",
+          opacity:p.soon?.5:1, userSelect:"none",
+          boxShadow:isSelected?"0 4px 16px rgba(11,77,44,.15)":"none",
+        }}>
+        {/* Badge sélectionné */}
+        {isSelected && !p.soon && (
+          <div style={{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:"50%",background:clr.forest,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:800}}>✓</div>
+        )}
+        {/* Bientôt */}
+        {p.soon && (
+          <span style={{position:"absolute",top:8,right:8,fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",background:"#f1f5f9",color:clr.slate,padding:"2px 7px",borderRadius:8,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Bientôt</span>
+        )}
+        <div style={{width:44,height:44,borderRadius:12,background:isSelected?clr.forest:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginBottom:10,transition:"all .2s"}}>
+          {p.emoji}
+        </div>
+        <div style={{fontSize:14,fontWeight:700,color:isSelected?clr.forestDark:clr.navy,marginBottom:2,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{p.label}</div>
+        <div style={{fontSize:11,fontWeight:600,color:clr.forest,marginBottom:4,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{p.sub}</div>
+        <div style={{fontSize:11,color:clr.slate,lineHeight:1.45,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{p.desc}</div>
+      </div>
+    );
+  };
+
+  /* ── Layout desktop / mobile ───────────────────────── */
+  const isDesktop = !isMobile;
 
   return (
     <div style={{
       minHeight:"100vh",
-      background:`linear-gradient(170deg,rgba(240,249,240,.24) 0%,rgba(232,245,233,.26) 30%,rgba(240,253,244,.28) 60%,rgba(236,253,245,.3) 100%), url(${LOGIN_BG_B64})`,
-      backgroundSize:"cover",
-      backgroundPosition:"center",
-      backgroundRepeat:"no-repeat",
-      display:"flex", flexDirection:"column",
-      alignItems:"center", justifyContent:"flex-start",
-      padding:"0 16px 48px",
-      position:"relative", overflow:"hidden",
-      fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif",
+      background:`linear-gradient(180deg,${clr.forestLight} 0%, #fff 40%)`,
+      padding:isDesktop?"48px 24px":"20px 16px 40px",
+      fontFamily:"'Plus Jakarta Sans',sans-serif",
     }}>
       <style>{`
-        @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
-        @keyframes pulse{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.15);}}
-        @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
-        @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
-        input:focus{outline:none;}
-        input::placeholder{color:#94a3b8;}
-        ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+        @keyframes scaleIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+        .lp-btn{transition:all .2s ease;}
+        .lp-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+        .lp-card-hover{transition:all .2s ease!important;}
+        .lp-card-hover:hover{border-color:${clr.forest}!important;box-shadow:0 6px 20px rgba(11,77,44,.14)!important;transform:translateY(-2px);}
+        .lp-input:focus{outline:none!important;border-color:${clr.forest}!important;box-shadow:0 0 0 3px rgba(11,77,44,.12)!important;}
+        select.lp-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;}
+        @media(max-width:768px){.portal-grid{grid-template-columns:1fr!important;}}
       `}</style>
 
-      {/* ── Éléments décoratifs de fond ── */}
-      <HexGrid/>
-
-      {/* ── Contenu principal ── */}
-      <div style={{
-        width:"100%", maxWidth:460,
-        position:"relative", zIndex:2,
-        display:"flex", flexDirection:"column",
-        alignItems:"center", paddingTop:32,
-        animation:"slideUp .5s ease",
-      }}>
-
-        {/* Drapeau + institution */}
-        <div style={{textAlign:"center", marginBottom:10}}>
-          <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><svg viewBox="0 0 45 30" width="45" height="30" style={{borderRadius:3,boxShadow:"0 2px 6px rgba(0,0,0,.2)",flexShrink:0}}>
-            <rect width="15" height="30" fill="#007A5E"/>
-            <rect x="15" width="15" height="30" fill="#CE1126"/>
-            <rect x="30" width="15" height="30" fill="#FCD116"/>
-            {/* Étoile à 5 branches jaune au centre */}
-            <polygon points="22.5,8 23.9,12.6 28.7,12.6 24.9,15.4 26.3,20 22.5,17.2 18.7,20 20.1,15.4 16.3,12.6 21.1,12.6"
-              fill="#FCD116"/>
-          </svg>
-          </div>
-          <div style={{
-            fontSize:12, fontWeight:800,
-            letterSpacing:".12em", textTransform:"uppercase",
-            color:"#166534",
-          }}>Lycée de Kakatare – Maroua</div>
-        </div>
-
-        {/* Logo SVT animé */}
-        <div style={{
-          position:"relative", marginBottom:12,
-          animation:"float 4s ease-in-out infinite",
-        }}>
-          <div style={{
-            position:"absolute", inset:-16, borderRadius:"50%",
-            background:"radial-gradient(circle,rgba(34,197,94,.2) 0%,transparent 70%)",
-            animation:"pulse 2.5s ease-in-out infinite",
-          }}/>
-          <div style={{filter:"drop-shadow(0 8px 24px rgba(22,163,74,.4))"}}>
-            <img src={LOGO_LYCEE_B64} alt="SVTEEHB" width={150} height={150} style={{borderRadius:"50%", objectFit:"contain"}}/>
-          </div>
-        </div>
-
-        {/* Titre principal */}
-        <h1 style={{
-          fontSize:"clamp(14px,4vw,17px)",
-          fontWeight:800, color:"#0B4D2C",
-          textAlign:"center", margin:"0 0 2px",
-          textTransform:"uppercase", letterSpacing:".1em",
-        }}>Conseil d'Enseignement</h1>
-
-        <h2 style={{
-          fontSize:"clamp(32px,9vw,46px)",
-          fontFamily:"'Playfair Display',serif",
-          fontWeight:800, color:"#0B4D2C",
-          textAlign:"center", margin:"0 0 10px",
-          letterSpacing:".01em", lineHeight:1,
-        }}>Lykama</h2>
-
-        {/* Séparateur ─── 🌿 ─── */}
-        <div style={{
-          display:"flex", alignItems:"center",
-          gap:12, marginBottom:8, width:"100%",
-          justifyContent:"center",
-        }}>
-          <div style={{flex:1, maxWidth:60, height:2,
-            background:"linear-gradient(to right,transparent,rgba(212,175,55,.55))",
-            borderRadius:2}}/>
-          <span style={{fontSize:18}}>🌿</span>
-          <div style={{flex:1, maxWidth:60, height:2,
-            background:"linear-gradient(to left,transparent,rgba(212,175,55,.55))",
-            borderRadius:2}}/>
-        </div>
-
-        {/* Sous-titre */}
-        <p style={{
-          fontSize:12, color:"#4a7c59",
-          textAlign:"center", margin:"0 0 24px", lineHeight:1.7,
-        }}>
-          Plateforme pédagogique numérique<br/>
-          du Lycée de Kakatare
+      {/* En-tête portail */}
+      <div style={{textAlign:"center",marginBottom:isDesktop?36:24,animation:"fadeUp .5s ease"}}>
+        <button onClick={()=>setPortalStep(0)} style={{background:"none",border:"none",cursor:"pointer",marginBottom:12,display:"inline-flex",alignItems:"center",gap:6,color:clr.slate,fontSize:13,fontWeight:600,padding:"6px 12px",borderRadius:8}}>
+          ← Accueil
+        </button>
+        <h2 style={{fontSize:isDesktop?"clamp(24px,3vw,32px)":"clamp(20px,6vw,26px)",fontWeight:800,color:clr.navy,margin:"0 0 8px",fontFamily:"'Playfair Display',serif"}}>
+          Bienvenue sur votre espace numérique
+        </h2>
+        <p style={{fontSize:14,color:clr.slate,margin:0}}>
+          Choisissez votre profil pour accéder à votre environnement
         </p>
+      </div>
 
-        {/* ═══════════════════════════════
-            CARTE CONNEXION
-            ═══════════════════════════════ */}
-        <div style={{
-          width:"100%",
-          background:"rgba(255,255,255,.92)",
-          backdropFilter:"blur(12px)",
-          WebkitBackdropFilter:"blur(12px)",
-          borderRadius:26,
-          boxShadow:"0 24px 64px rgba(0,0,0,.14),0 4px 20px rgba(11,77,44,.14)",
-          padding:"28px 22px 22px",
-          border:"1px solid rgba(212,175,55,.25)",
-          position:"relative", overflow:"hidden",
-        }}>
-          <div style={{position:"absolute", top:0, left:0, right:0, height:4,
-            background:"linear-gradient(90deg,#0B4D2C,#D4AF37,#0F172A)"}}/>
-
-          {/* Icône cadenas+feuille */}
-          <div style={{textAlign:"center", marginBottom:16}}>
-            <div style={{display:"inline-block", marginBottom:14}}>
-              <LockLeafIcon/>
-            </div>
-            <h3 style={{fontSize:21,fontWeight:800,color:"#1e293b",margin:"0 0 4px"}}>
-              Heureux de vous revoir !
-            </h3>
-            <p style={{fontSize:12,color:"#64748b",margin:0}}>
-              Connectez-vous à votre compte pour continuer
-            </p>
+      {/* Layout principal */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns:isDesktop?"1fr 380px":"1fr",
+        gap:isDesktop?32:20,
+        maxWidth:1060, margin:"0 auto",
+        animation:"fadeUp .6s ease .1s both",
+      }}>
+        {/* Grille profils */}
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+            {PROFILES.map(p=><ProfileCard key={p.key} p={p}/>)}
           </div>
-
-          {step===1 && (
-            <>
-
-              <div onClick={()=>{setIsProviseurMode(!isProviseurMode); setIsSurveillanceMode(false); setIsCenseurMode(false); setSelDept(""); setErr("");}}
-                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isProviseurMode?"#16a34a":"#e2e8f0"}`,background:isProviseurMode?"#f0fdf4":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
-                <span style={{fontSize:13,fontWeight:700,color:isProviseurMode?"#166534":"#1e293b"}}>👤 Accès Proviseur</span>
-                <div style={{width:38,height:20,borderRadius:10,background:isProviseurMode?"#16a34a":"#cbd5e1",position:"relative",transition:"all .2s"}}>
-                  <div style={{position:"absolute",top:2,left:isProviseurMode?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"all .2s"}}/>
-                </div>
-              </div>
-
-              <div onClick={()=>{setIsSurveillanceMode(!isSurveillanceMode); setIsProviseurMode(false); setIsCenseurMode(false); setSelDept(""); setErr("");}}
-                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isSurveillanceMode?"#2563eb":"#e2e8f0"}`,background:isSurveillanceMode?"#eff6ff":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
-                <span style={{fontSize:13,fontWeight:700,color:isSurveillanceMode?"#1d4ed8":"#1e293b"}}>🛡️ Accès Surveillance Générale</span>
-                <div style={{width:38,height:20,borderRadius:10,background:isSurveillanceMode?"#2563eb":"#cbd5e1",position:"relative",transition:"all .2s"}}>
-                  <div style={{position:"absolute",top:2,left:isSurveillanceMode?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"all .2s"}}/>
-                </div>
-              </div>
-
-              <div onClick={()=>{setIsCenseurMode(!isCenseurMode); setIsProviseurMode(false); setIsSurveillanceMode(false); setSelDept(""); setErr("");}}
-                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,border:`1.5px solid ${isCenseurMode?"#7c3aed":"#e2e8f0"}`,background:isCenseurMode?"#f5f3ff":"#f8fafc",marginBottom:14,cursor:"pointer"}}>
-                <span style={{fontSize:13,fontWeight:700,color:isCenseurMode?"#6d28d9":"#1e293b"}}>📐 Accès Censeur</span>
-                <div style={{width:38,height:20,borderRadius:10,background:isCenseurMode?"#7c3aed":"#cbd5e1",position:"relative",transition:"all .2s"}}>
-                  <div style={{position:"absolute",top:2,left:isCenseurMode?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"all .2s"}}/>
-                </div>
-              </div>
-
-              {!isProviseurMode && !isSurveillanceMode && !isCenseurMode && (
-                <div style={{marginBottom:14}}>
-                  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:7}}>Département</label>
-                  <select value={selDept} onChange={e=>setSelDept(e.target.value)}
-                    style={{width:"100%",padding:"13px 14px",border:"1.5px solid #e2e8f0",borderRadius:14,fontSize:14,color:"#1e293b",background:"#f8fafc",fontFamily:"inherit"}}>
-                    <option value="">— Sélectionner —</option>
-                    {DEPARTEMENTS_LIST.map(d=><option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {err && (
-                <div style={{display:"flex",alignItems:"center",gap:8,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 12px",marginBottom:14}}>
-                  <span style={{fontSize:14}}>⚠️</span>
-                  <span style={{fontSize:12,color:"#dc2626",fontWeight:500}}>{err}</span>
-                </div>
-              )}
-
-              <button onClick={()=>{
-                  if(!isProviseurMode && !isSurveillanceMode && !isCenseurMode && !selDept){ setErr("Sélectionnez un département."); return; }
-                  setErr(""); setStep(2);
-                }}
-                style={{width:"100%",padding:"16px",background:"linear-gradient(160deg,#166534 0%,#16a34a 100%)",color:"#fff",border:"none",borderRadius:16,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em",textTransform:"uppercase",boxShadow:"0 8px 28px rgba(22,163,74,.45)",marginBottom:20}}>
-                Continuer →
-              </button>
-            </>
-          )}
-          {step===2 && (
-          <>
-          <div onClick={()=>{setStep(1); setErr("");}}
-            style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#16a34a",fontWeight:700,cursor:"pointer",marginBottom:14}}>
-            ← Retour
-          </div>
-          {/* Erreur */}
-          {err && (
-            <div style={{
-              display:"flex",alignItems:"center",gap:8,
-              background:"#fef2f2",border:"1px solid #fecaca",
-              borderRadius:10,padding:"10px 12px",marginBottom:14,
-            }}>
-              <span style={{fontSize:14}}>⚠️</span>
-              <span style={{fontSize:12,color:"#dc2626",fontWeight:500}}>{err}</span>
+          {/* Mobile : formulaire en accordéon sous les cartes */}
+          {isMobile&&mobileFormOpen&&(
+            <div style={{marginTop:20,animation:"scaleIn .25s ease"}}>
+              <FormPanel/>
             </div>
           )}
+        </div>
 
-          {/* ── Champ Identifiant ── */}
-          <div style={{marginBottom:14}}>
-            <label style={{
-              display:"flex", alignItems:"center", gap:6,
-              fontSize:13, fontWeight:700, color:"#1e293b", marginBottom:7,
-            }}>
-              <svg viewBox="0 0 20 20" width="16" height="16" fill="#16a34a">
-                <path d="M10 10a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 1114 0H3z"/>
-              </svg>
-              Identifiant
-            </label>
-            <div style={{position:"relative"}}>
-              <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)"}}>
-                <svg viewBox="0 0 20 20" width="18" height="18" fill="#94a3b8">
-                  <path d="M10 10a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 1114 0H3z"/>
-                </svg>
-              </span>
-              <input value={id} onChange={e=>setId(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&submit()}
-                placeholder="Entrez votre identifiant"
-                autoCapitalize="none" autoCorrect="off"
-                style={{
-                  width:"100%",padding:"13px 42px 13px 44px",
-                  border:"1.5px solid #e2e8f0",borderRadius:14,
-                  fontSize:14,color:"#1e293b",background:"#f8fafc",
-                  fontFamily:"inherit",transition:"all .2s",
-                }}
-                onFocus={e=>{e.target.style.borderColor="#16a34a";e.target.style.background="#fff";e.target.style.boxShadow="0 0 0 3px rgba(22,163,74,.1)";}}
-                onBlur={e=>{e.target.style.borderColor="#e2e8f0";e.target.style.background="#f8fafc";e.target.style.boxShadow="none";}}/>
-              <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:16}}>🌿</span>
-            </div>
+        {/* Formulaire (desktop) */}
+        {isDesktop&&(
+          <div style={{animation:"scaleIn .3s ease"}}>
+            <FormPanel/>
           </div>
-
-          {/* ── Champ Mot de passe ── */}
-          <div style={{marginBottom:8}}>
-            <label style={{
-              display:"flex", alignItems:"center", gap:6,
-              fontSize:13, fontWeight:700, color:"#1e293b", marginBottom:7,
-            }}>
-              <svg viewBox="0 0 20 20" width="16" height="16" fill="#16a34a">
-                <path d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/>
-              </svg>
-              Mot de passe
-            </label>
-            <div style={{position:"relative"}}>
-              <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)"}}>
-                <svg viewBox="0 0 20 20" width="18" height="18" fill="#94a3b8">
-                  <path d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/>
-                </svg>
-              </span>
-              <input type={showPw?"text":"password"} value={pw}
-                onChange={e=>setPw(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&submit()}
-                placeholder="Entrez votre mot de passe"
-                style={{
-                  width:"100%",padding:"13px 44px 13px 44px",
-                  border:"1.5px solid #e2e8f0",borderRadius:14,
-                  fontSize:14,color:"#1e293b",background:"#f8fafc",
-                  fontFamily:"inherit",transition:"all .2s",
-                }}
-                onFocus={e=>{e.target.style.borderColor="#16a34a";e.target.style.background="#fff";e.target.style.boxShadow="0 0 0 3px rgba(22,163,74,.1)";}}
-                onBlur={e=>{e.target.style.borderColor="#e2e8f0";e.target.style.background="#f8fafc";e.target.style.boxShadow="none";}}/>
-              <button type="button" onClick={()=>setShowPw(!showPw)} style={{
-                position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
-                background:"none",border:"none",cursor:"pointer",padding:4,
-              }}>
-                {showPw
-                  ? <svg viewBox="0 0 20 20" width="20" height="20" fill="#94a3b8"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-6-5.5a7.028 7.028 0 00-2.79.588l.77.771A5.944 5.944 0 0110 2.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0117.5 8c-.28.47-.692 1.08-1.239 1.722l.598.516zM6.932 5.854l.856.856a4.04 4.04 0 00-.89 2.29l1.01.012a3.025 3.025 0 01.642-1.722l.856.856a2 2 0 001.01 3.454l.957.957a4 4 0 01-5.297-5.703zm4.143 5.504l-2.642-2.642a3.977 3.977 0 001.937 1.937l.705.705zm3.41-3.81l.856.856a2 2 0 01-2.537 2.537l.856.856a4.04 4.04 0 001.825-4.249zm2.5 2.5l.856.856a13.134 13.134 0 001.98-3.122A13.134 13.134 0 0017.5 8c-.28-.47-.692-1.08-1.239-1.722l.598-.516z"/></svg>
-                  : <svg viewBox="0 0 20 20" width="20" height="20" fill="#94a3b8"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/></svg>
-                }
-              </button>
-            </div>
-          </div>
-
-          {/* Mot de passe oublié */}
-          <div style={{textAlign:"right", marginBottom:18}}>
-            <span onClick={()=>alert("Contactez votre animateur pédagogique ou le proviseur pour réinitialiser votre mot de passe.")}
-              style={{fontSize:12,color:"#16a34a",cursor:"pointer",fontWeight:600}}>
-              Mot de passe oublié ?
-            </span>
-          </div>
-
-          {/* ── Bouton SE CONNECTER ── */}
-          <button onClick={submit} disabled={loading} style={{
-            width:"100%", padding:"16px",
-            background:loading?"#94a3b8":"linear-gradient(160deg,#166534 0%,#16a34a 100%)",
-            color:"#fff", border:"none", borderRadius:16,
-            fontSize:15, fontWeight:800, cursor:loading?"not-allowed":"pointer",
-            fontFamily:"inherit", letterSpacing:".08em", textTransform:"uppercase",
-            boxShadow:loading?"none":"0 8px 28px rgba(22,163,74,.45)",
-            display:"flex", alignItems:"center", justifyContent:"center", gap:10,
-            marginBottom:20, transition:"transform .15s, box-shadow .15s",
-          }}
-            onMouseEnter={e=>{if(!loading){e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 12px 36px rgba(22,163,74,.55)";}}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=loading?"none":"0 8px 28px rgba(22,163,74,.45)";}}>
-            {loading
-              ? <><Spinner size={18} color="#fff"/>&nbsp;Connexion…</>
-              : <>
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M14 12H3"/>
-                  </svg>
-                  Se connecter
-                </>}
-          </button>
-
-          </>
-          )}
-          {/* ── Pied de carte ── */}
-          <div style={{textAlign:"center"}}>
-            <div style={{
-              display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-              fontSize:12,color:"#64748b",marginBottom:4,
-            }}>
-              <svg viewBox="0 0 20 20" width="14" height="14" fill="#16a34a">
-                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-              </svg>
-              Connexion sécurisée
-            </div>
-            <div style={{fontSize:10,color:"#cbd5e1"}}>© 2026 Lykama</div>
-          </div>
-
-        </div>{/* fin carte */}
-      </div>{/* fin contenu */}
+        )}
+      </div>
     </div>
   );
 }
-
 
 
 // ─── App Root ─────────────────────────────────────────────────────
