@@ -8778,7 +8778,7 @@ function LoginPage({onLogin}){
      ÉTAPE 1 : PORTAIL (sélection profil + formulaire)
   ════════════════════════════════════════════════ */
 
-  const FormPanel = ()=>(
+  const formPanelJSX = (
     <div style={{background:clr.white,borderRadius:20,border:`1px solid ${clr.border}`,boxShadow:"0 8px 32px rgba(0,0,0,.1)",padding:"28px 24px",position:"relative",overflow:"hidden"}}>
       {/* Liseré dégradé */}
       <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:`linear-gradient(90deg,${clr.forest},${clr.gold},${clr.navy})`}}/>
@@ -8971,7 +8971,7 @@ function LoginPage({onLogin}){
           {/* Mobile : formulaire en accordéon sous les cartes */}
           {isMobile&&mobileFormOpen&&(
             <div style={{marginTop:20,animation:"scaleIn .25s ease"}}>
-              <FormPanel/>
+              {formPanelJSX}
             </div>
           )}
         </div>
@@ -8979,7 +8979,7 @@ function LoginPage({onLogin}){
         {/* Formulaire (desktop) */}
         {isDesktop&&(
           <div style={{animation:"scaleIn .3s ease"}}>
-            <FormPanel/>
+            {formPanelJSX}
           </div>
         )}
       </div>
@@ -9197,5 +9197,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
+
 
 
