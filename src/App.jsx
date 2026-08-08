@@ -9025,6 +9025,24 @@ function LoginPage({onLogin}){
         </div>
       )}
 
+      {/* Niveau SG */}
+      {selProfile==="sg" && (
+        <div style={{marginBottom:14}}>
+          <label style={{display:"block",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,marginBottom:6,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+            Niveau supervisé
+          </label>
+          <select
+            value={selNiveau}
+            onChange={e=>{setSelNiveau(e.target.value);const sg=SG_NIVEAUX.find(n=>n.label===e.target.value);if(sg)setId(sg.id);}}
+            style={{width:"100%",padding:"11px 14px",border:"1.5px solid "+clr.border,borderRadius:10,fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",background:clr.slateLight,color:selNiveau?clr.navy:"#94a3b8",transition:"all .2s",boxSizing:"border-box",appearance:"none"}}>
+            <option value="">— Sélectionner votre niveau —</option>
+            {SG_NIVEAUX.map(n=>(
+              <option key={n.id} value={n.label}>{n.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Identifiant */}
       <div style={{marginBottom:14}}>
         <label style={{display:"block",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,marginBottom:6,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
