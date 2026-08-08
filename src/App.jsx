@@ -6690,13 +6690,20 @@ function DashboardProviseur() {
 }
 
 function DashboardSurveillance() {
-  const {rawData:data,user} = useApp();
+  const {rawData:data, user} = useApp();
   const {isMobile} = useDevice();
+
+  // Classes que ce SG supervise (null = tous)
+  const sgClasses = user?.classes?.length > 0 ? user.classes : null;
+  const niveauLabel = sgClasses
+    ? (sgClasses[0]?.startsWith('6')?'6ème':sgClasses[0]?.startsWith('5')?'5ème':sgClasses[0]?.startsWith('4')?'4ème':sgClasses[0]?.startsWith('3')?'3ème':sgClasses[0]?.startsWith('2')?'2nde':'1ère & Tle')
+    : 'Toute l\'école';
+
   const [loading,setLoading]   = useState(true);
   const [tab,setTab]           = useState("absences");
   const [vieSco,setVieSco]     = useState([]);
   const [vieLoading,setVieLoading] = useState(true);
-  const [stats,setStats]       = useState({total:0,parEleve:[],parDept:[],nbAlerte:0});
+  const [stats,setStats]       = useState({total:0,parEleve:[],parDept:[],nbAlerte:0,hebdo:[]});
   const [showForm,setShowForm] = useState(false);
   const [saving,setSaving]     = useState(false);
   const [form,setForm]         = useState({eleve_id:"",classe:"",motif:"",details:"",gravite:"faible"});
@@ -6704,38 +6711,73 @@ function DashboardSurveillance() {
   const [elevesSel,setElevesSel] = useState([]);
   const [formErr,setFormErr]   = useState("");
 
+  // Semaine ISO (lun-dim) d'une date
+  const getWeekKey = (dateStr) => {
+    const d = new Date(dateStr);
+    if(isNaN(d)) return dateStr;
+    const day = d.getDay()||7;
+    const lun = new Date(d); lun.setDate(d.getDate()-day+1);
+    return lun.toISOString().slice(0,10);
+  };
+  const weekLabel = (wk) => {
+    const d = new Date(wk);
+    const fin = new Date(d); fin.setDate(d.getDate()+6);
+    return 'Sem. du '+d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})+' au '+fin.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+  };
+
   useEffect(()=>{
     if(!data) return;
-    const deptOf={};
-    Object.values(data.users||{}).forEach(u=>{deptOf[u.id]=u.departement_id||1;});
-    const parEleveMap={};let total=0;
+    const parEleveMap={};
+    const hebdoMap={};
+    let total=0;
     Object.entries(data.absences||{}).forEach(([k,absents])=>{
       const [,classe,seance]=k.split("||");
+      // Filtre par classes du SG
+      if(sgClasses && !sgClasses.includes(classe)) return;
       (absents||[]).forEach(eleveId=>{
         total++;
-        if(!parEleveMap[eleveId]) parEleveMap[eleveId]={id:eleveId,classe,count:0,dernier:seance};
+        const wk = getWeekKey(seance);
+        // Par élève
+        if(!parEleveMap[eleveId]) parEleveMap[eleveId]={id:eleveId,classe,count:0,dernier:seance,semaines:{}};
         parEleveMap[eleveId].count++;
+        parEleveMap[eleveId].semaines[wk]=(parEleveMap[eleveId].semaines[wk]||0)+1;
         if(seance>parEleveMap[eleveId].dernier)parEleveMap[eleveId].dernier=seance;
+        // Par semaine
+        if(!hebdoMap[wk]) hebdoMap[wk]={wk,total:0,nbEleves:new Set()};
+        hebdoMap[wk].total++;
+        hebdoMap[wk].nbEleves.add(eleveId);
       });
     });
     const parEleve=Object.values(parEleveMap)
       .map(e=>({...e,nom:(ELEVES_DB[e.classe]||[]).find(x=>x.id===e.id)?.nom||e.id}))
-      .sort((a,b)=>b.count-a.count).slice(0,25);
+      .sort((a,b)=>b.count-a.count).slice(0,30);
     const nbAlerte=Object.values(parEleveMap).filter(e=>e.count>=3).length;
+    const hebdo=Object.values(hebdoMap)
+      .map(w=>({...w,nbEleves:w.nbEleves.size}))
+      .sort((a,b)=>b.wk.localeCompare(a.wk)).slice(0,8);
+    // Par dept (uniquement si vue globale)
+    const deptOf={};
+    Object.values(data.users||{}).forEach(u=>{deptOf[u.id]=u.departement_id||1;});
     const absParDept={};
-    Object.entries(data.absences||{}).forEach(([k,absents])=>{
-      const dId=deptOf[k.split("||")[0]]||1;
-      absParDept[dId]=(absParDept[dId]||0)+(absents?absents.length:0);
-    });
+    if(!sgClasses){
+      Object.entries(data.absences||{}).forEach(([k,absents])=>{
+        const dId=deptOf[k.split("||")[0]]||1;
+        absParDept[dId]=(absParDept[dId]||0)+(absents?absents.length:0);
+      });
+    }
     const parDept=DEPARTEMENTS_LIST.map(d=>({...d,total:absParDept[d.id]||0})).sort((a,b)=>b.total-a.total);
-    setStats({total,parEleve,parDept,nbAlerte});
+    setStats({total,parEleve,parDept,nbAlerte,hebdo});
     setLoading(false);
   },[data]);
 
   const loadVieSco = async()=>{
     setVieLoading(true);
-    const rows = await sb.get("vie_scolaire","?select=*&order=date.desc,created_at.desc&limit=300");
-    setVieSco(rows||[]);
+    let q="?select=*&order=date.desc,created_at.desc&limit=300";
+    const rows = await sb.get("vie_scolaire", q);
+    const filtered = sgClasses
+      ? (rows||[]).filter(v=>sgClasses.includes(v.classe))
+      : (rows||[]);
+    setVieSco(filtered);
     setVieLoading(false);
   };
   useEffect(()=>{ loadVieSco(); },[]);
@@ -6756,36 +6798,37 @@ function DashboardSurveillance() {
   };
 
   const saveEntry = async()=>{
-    if(!form.eleve_id||!form.classe){setFormErr("Sélectionnez une classe et un élève.");return;}
+    if(!form.eleve_id||!form.classe){setFormErr("Selectionnez une classe et un eleve.");return;}
     setFormErr("");setSaving(true);
     const payload={
       type:typeMap[tab]||"retard",
       eleve_id:form.eleve_id, classe:form.classe,
       motif:form.motif||null, details:form.details||null,
       gravite:(tab==="retards")?"faible":form.gravite||"faible",
-      enregistre_par:user?.id||"surveillance",
+      enregistre_par:user?.id||"sg",
     };
     const ok = await sb.upsert("vie_scolaire",payload);
     if(ok){ await loadVieSco(); setShowForm(false); }
-    else { setFormErr("Erreur lors de l'enregistrement. Vérifiez la connexion."); }
+    else { setFormErr("Erreur lors de l'enregistrement."); }
     setSaving(false);
   };
 
   const filteredVie = vieSco.filter(v=>v.type===(typeMap[tab]||"retard"));
+  const classesSG = sgClasses || CLASSES_REELLES.map(c=>c.code);
 
   const TABS=[
-    {id:"absences",  label:"Absences",  emoji:"📋"},
-    {id:"retards",   label:"Retards",   emoji:"⏰"},
-    {id:"sanctions", label:"Sanctions", emoji:"⚠️"},
-    {id:"incidents", label:"Incidents", emoji:"🚨"},
+    {id:"absences",  label:"Absences",   emoji:"📋"},
+    {id:"hebdo",     label:"Par semaine", emoji:"📅"},
+    {id:"retards",   label:"Retards",    emoji:"⏰"},
+    {id:"sanctions", label:"Sanctions",  emoji:"⚠️"},
+    {id:"incidents", label:"Incidents",  emoji:"🚨"},
   ];
 
   const GraviteBadge=({g})=>{
-    const cfgG={faible:{bg:"#fefce8",fg:"#854d0e"},moyen:{bg:"#fff7ed",fg:"#c2410c"},grave:{bg:"#fef2f2",fg:"#b91c1c"}};
-    const gc=cfgG[g]||cfgG.faible;
-    return React.createElement("span",{style:{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,background:gc.bg,color:gc.fg}},g||"faible");
+    const cfg={faible:{bg:"#fefce8",fg:"#854d0e"},moyen:{bg:"#fff7ed",fg:"#c2410c"},grave:{bg:"#fef2f2",fg:"#b91c1c"}};
+    const c=cfg[g]||cfg.faible;
+    return React.createElement("span",{style:{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,background:c.bg,color:c.fg}},g||"faible");
   };
-
   const NomEleve=({eleveId,classe})=>{
     const nom=(ELEVES_DB[classe]||[]).find(x=>x.id===eleveId)?.nom||eleveId;
     return React.createElement("span",null,nom);
@@ -6793,12 +6836,16 @@ function DashboardSurveillance() {
 
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
         <div>
           <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance générale 🛡️</h2>
-          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Vue école entière</p>
+          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>
+            {new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+            {" · "}<strong style={{color:C.green}}>{niveauLabel}</strong>
+          </p>
         </div>
-        {tab!=="absences" && (
+        {tab!=="absences"&&tab!=="hebdo" && (
           <button onClick={openForm}
             style={{padding:"9px 18px",borderRadius:10,border:"none",background:showForm?C.border:C.green,color:showForm?C.txt:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
             {showForm?"✕ Annuler":"➕ Enregistrer"}
@@ -6806,13 +6853,15 @@ function DashboardSurveillance() {
         )}
       </div>
 
+      {/* KPI */}
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Absences" value={stats.total} sub="Toutes classes" iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
+        <KpiCard label="Absences" value={stats.total} sub={niveauLabel} iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
         <KpiCard label="Élèves en alerte" value={stats.nbAlerte} sub="≥ 3 absences" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
-        <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="Enregistrés" iconEmoji="⏰" bg={C.amberPale} subColor={C.amber} loading={vieLoading} delay={0.1}/>
-        <KpiCard label="Sanctions" value={vieSco.filter(v=>v.type==="sanction").length} sub="Enregistrées" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={vieLoading} delay={0.15}/>
+        <KpiCard label="Cette semaine" value={stats.hebdo[0]?.total||0} sub={"Sem. en cours"} iconEmoji="📅" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
+        <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="Enregistrés" iconEmoji="⏰" bg={C.greenPale} subColor={C.green} loading={vieLoading} delay={0.15}/>
       </div>
 
+      {/* Onglets */}
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>{setTab(t.id);setShowForm(false);}}
@@ -6824,7 +6873,8 @@ function DashboardSurveillance() {
         ))}
       </div>
 
-      {showForm && tab!=="absences" && (
+      {/* Formulaire saisie */}
+      {showForm && tab!=="absences" && tab!=="hebdo" && (
         <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:18,display:"flex",flexDirection:"column",gap:12}}>
           <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
             {tab==="retards"?"⏰ Enregistrer un retard":tab==="sanctions"?"⚠️ Enregistrer une sanction":"🚨 Déclarer un incident"}
@@ -6836,7 +6886,7 @@ function DashboardSurveillance() {
               <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
                 style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc"}}>
                 <option value="">— Sélectionner —</option>
-                {CLASSES_REELLES.map(c=><option key={c.code} value={c.code}>{c.code}</option>)}
+                {classesSG.map(c=><option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
@@ -6874,47 +6924,107 @@ function DashboardSurveillance() {
           </div>
           <button onClick={saveEntry} disabled={saving}
             style={{alignSelf:"flex-end",padding:"10px 24px",borderRadius:10,border:"none",background:saving?"#94a3b8":C.green,color:"#fff",fontWeight:700,fontSize:13,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8}}>
-            {saving?<><Spinner size={12} color="#fff"/> Enregistrement…</>:"✓ Enregistrer"}
+            {saving?<><Spinner size={12} color="#fff"/> Enregistrement...</>:"✓ Enregistrer"}
           </button>
         </div>
       )}
 
-      {tab==="absences" ? (
+      {/* Contenu par onglet */}
+      {tab==="absences" && (
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.4fr 1fr",gap:14}}>
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
             <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>🔍 Élèves les plus absents</h3>
-            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Cumul sur toute la période — top 25</p>
+            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Cumul toute la période — top 30</p>
             {loading?<Sk h={200} br={8}/>:stats.parEleve.length>0?(
-              <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:420,overflowY:"auto"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:440,overflowY:"auto"}}>
                 {stats.parEleve.map((e,i)=>(
                   <div key={e.id+e.classe} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 4px",borderBottom:i<stats.parEleve.length-1?"1px solid "+C.border:"none"}}>
-                    <span style={{fontSize:11,color:C.txtMuted,width:20}}>{i+1}</span>
+                    <span style={{fontSize:11,color:C.txtMuted,width:22,flexShrink:0}}>{i+1}</span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
-                      <div style={{fontSize:10,color:C.txtMuted}}>{e.classe} · dernière le {e.dernier}</div>
+                      <div style={{fontSize:10,color:C.txtMuted}}>{e.classe}</div>
                     </div>
-                    <span style={{fontSize:12,fontWeight:800,color:e.count>=3?C.red:C.amber,flexShrink:0}}>{e.count}</span>
+                    <span style={{fontSize:12,fontWeight:800,color:e.count>=3?C.red:C.amber,flexShrink:0}}>{e.count} abs.</span>
                   </div>
                 ))}
               </div>
-            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
+            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence</div>}
           </div>
-          <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>🏛️ Par département</h3>
-            {loading?<Sk h={150} br={8}/>:stats.parDept.some(d=>d.total>0)?(
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {stats.parDept.filter(d=>d.total>0).map(d=>(
-                  <div key={d.id} style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:14,flexShrink:0}}>{d.emoji}</span>
-                    <span style={{fontSize:11,color:C.txt,flex:1}}>{d.nom}</span>
-                    <span style={{fontSize:11,fontWeight:800,color:C.red}}>{d.total}</span>
+          {!sgClasses && (
+            <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+              <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>🏛️ Par département</h3>
+              {loading?<Sk h={150} br={8}/>:stats.parDept.some(d=>d.total>0)?(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {stats.parDept.filter(d=>d.total>0).map(d=>(
+                    <div key={d.id} style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:14,flexShrink:0}}>{d.emoji}</span>
+                      <span style={{fontSize:11,color:C.txt,flex:1}}>{d.nom}</span>
+                      <span style={{fontSize:11,fontWeight:800,color:C.red}}>{d.total}</span>
+                    </div>
+                  ))}
+                </div>
+              ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence</div>}
+            </div>
+          )}
+          {sgClasses && (
+            <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+              <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📚 Par classe</h3>
+              {loading?<Sk h={150} br={8}/>:(()=>{
+                const parCl={};
+                Object.entries(data?.absences||{}).forEach(([k,abs])=>{
+                  const [,cl]=k.split("||");
+                  if(!sgClasses.includes(cl))return;
+                  parCl[cl]=(parCl[cl]||0)+(abs?abs.length:0);
+                });
+                const rows=sgClasses.map(c=>({cl:c,n:parCl[c]||0})).sort((a,b)=>b.n-a.n);
+                return rows.some(r=>r.n>0)?(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {rows.map(r=>(
+                      <div key={r.cl} style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:11,color:C.txt,flex:1,fontWeight:r.n>0?600:400}}>{r.cl}</span>
+                        <span style={{fontSize:11,fontWeight:800,color:r.n>0?C.red:C.txtMuted}}>{r.n}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
-          </div>
+                ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence</div>;
+              })()}
+            </div>
+          )}
         </div>
-      ) : (
+      )}
+
+      {tab==="hebdo" && (
+        <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>📅 Absences par semaine</h3>
+          <p style={{margin:"0 0 16px",fontSize:10,color:C.txtMuted}}>8 dernières semaines · {niveauLabel}</p>
+          {loading?<Sk h={200} br={8}/>:stats.hebdo.length>0?(
+            <div style={{display:"flex",flexDirection:"column",gap:0}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:12,padding:"8px 12px",background:"#f8fafc",borderRadius:"8px 8px 0 0",borderBottom:"1px solid "+C.border}}>
+                <span style={{fontSize:10,fontWeight:700,color:C.txtMuted}}>SEMAINE</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.txtMuted,textAlign:"center"}}>ÉLÈVES</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.txtMuted,textAlign:"right"}}>ABSENCES</span>
+              </div>
+              {stats.hebdo.map((w,i)=>{
+                const pct=stats.hebdo[0]?.total>0?Math.round(w.total/stats.hebdo[0].total*100):0;
+                return (
+                  <div key={w.wk} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:12,padding:"11px 12px",borderBottom:i<stats.hebdo.length-1?"1px solid "+C.border:"none",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:12.5,fontWeight:600,color:C.txt}}>{weekLabel(w.wk)}</div>
+                      <div style={{height:4,borderRadius:2,background:"#e2e8f0",marginTop:5,width:"100%",maxWidth:160}}>
+                        <div style={{height:"100%",borderRadius:2,background:w.total>10?C.red:w.total>5?C.amber:C.green,width:pct+"%"}}/>
+                      </div>
+                    </div>
+                    <span style={{fontSize:12,fontWeight:700,color:C.blue,textAlign:"center"}}>{w.nbEleves}</span>
+                    <span style={{fontSize:13,fontWeight:800,color:w.total>10?C.red:w.total>5?C.amber:C.green,textAlign:"right"}}>{w.total}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune donnée</div>}
+        </div>
+      )}
+
+      {(tab==="retards"||tab==="sanctions"||tab==="incidents") && (
         <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,overflow:"hidden"}}>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,minWidth:480}}>
@@ -6929,7 +7039,7 @@ function DashboardSurveillance() {
               </thead>
               <tbody>
                 {vieLoading?(
-                  <tr><td colSpan={5} style={{padding:24,textAlign:"center",color:C.txtLight}}>Chargement…</td></tr>
+                  <tr><td colSpan={5} style={{padding:24,textAlign:"center",color:C.txtLight}}>Chargement...</td></tr>
                 ):filteredVie.length===0?(
                   <tr><td colSpan={5} style={{padding:32,textAlign:"center",color:C.txtLight}}>
                     <div style={{fontSize:24,marginBottom:6}}>📭</div>
