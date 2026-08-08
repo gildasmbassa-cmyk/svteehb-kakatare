@@ -8686,90 +8686,204 @@ function LoginPage({onLogin}){
   ════════════════════════════════════════════════ */
   if(portalStep===0) return (
     <div style={{
-      minHeight:"100vh", position:"relative", overflow:"hidden",
-      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-      background:`url(${LOGIN_BG_B64}) center/cover no-repeat`,
+      minHeight:"100vh", overflowY:"auto", position:"relative",
+      background:"#0B3D20",
+      fontFamily:"'Plus Jakarta Sans',sans-serif",
     }}>
       <style>{`
-        @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:none;}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
         @keyframes scaleIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
-        .lp-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
-        .lp-card-hover:hover{border-color:${clr.forest}!important;box-shadow:0 8px 24px rgba(11,77,44,.15)!important;transform:translateY(-2px);}
-        .lp-card-hover:focus{outline:2px solid ${clr.forest};outline-offset:3px;}
-        .lp-input:focus{outline:none;border-color:${clr.forest}!important;box-shadow:0 0 0 3px rgba(11,77,44,.12);}
+        .lp-btn-gold:hover{filter:brightness(1.07);transform:translateY(-2px);box-shadow:0 12px 32px rgba(212,175,55,.45)!important;}
+        .lp-btn-gold{transition:all .22s ease;}
+        .lp-feat:hover{background:rgba(255,255,255,.07)!important;}
       `}</style>
 
-      {/* Overlay vert foncé */}
-      <div style={{position:"absolute",inset:0,background:"linear-gradient(160deg,rgba(8,61,34,.88) 0%,rgba(11,77,44,.82) 50%,rgba(15,23,42,.88) 100%)"}}/>
+      {/* Photo fond (droite, fondue) */}
+      <div style={{
+        position:"fixed",top:0,right:0,width:"55%",height:"100%",
+        background:`url(${LOGIN_BG_B64}) center/cover no-repeat`,
+        WebkitMaskImage:"linear-gradient(to left, rgba(0,0,0,0.45) 0%, transparent 80%)",
+        maskImage:"linear-gradient(to left, rgba(0,0,0,0.45) 0%, transparent 80%)",
+        zIndex:0,pointerEvents:"none",
+      }}/>
 
-      {/* Motif points or (subtil) */}
-      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",opacity:.08,pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
-        <defs><pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
-          <circle cx="1.5" cy="1.5" r="1.5" fill="#D4AF37"/>
-        </pattern></defs>
-        <rect width="100%" height="100%" fill="url(#dots)"/>
+      {/* Overlay vert + motif losanges */}
+      <div style={{position:"fixed",inset:0,zIndex:1,pointerEvents:"none",
+        background:"linear-gradient(135deg, rgba(11,61,32,.97) 0%, rgba(11,61,32,.88) 55%, rgba(11,61,32,.72) 100%)",
+      }}/>
+      <svg style={{position:"fixed",inset:0,width:"100%",height:"100%",zIndex:1,opacity:.12,pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="diamonds" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+            <polygon points="20,2 38,20 20,38 2,20" fill="none" stroke="#D4AF37" strokeWidth="0.8"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#diamonds)"/>
       </svg>
 
-      {/* Contenu */}
-      <div style={{position:"relative",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",padding:isMobile?"24px 20px":"40px 32px",animation:"fadeUp .7s ease",maxWidth:520,width:"100%"}}>
-        {/* Logo */}
-        <div style={{width:isMobile?88:108,height:isMobile?88:108,borderRadius:"50%",overflow:"hidden",border:`4px solid ${clr.gold}`,boxShadow:"0 8px 32px rgba(0,0,0,.4)",marginBottom:24,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-          <img src={LOGO_LYCEE_B64} alt="Logo" style={{width:"90%",height:"90%",objectFit:"contain"}}/>
-        </div>
+      {/* Contenu scrollable */}
+      <div style={{position:"relative",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",padding:isMobile?"28px 20px 40px":"40px 24px 60px",textAlign:"center"}}>
 
-        {/* Drapeau + établissement */}
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-          <svg viewBox="0 0 45 30" width="36" height="24" style={{borderRadius:3,boxShadow:"0 2px 6px rgba(0,0,0,.3)",flexShrink:0}}>
+        {/* En-tête République */}
+        <div style={{animation:"fadeDown .6s ease",marginBottom:20}}>
+          <svg viewBox="0 0 45 30" width={isMobile?32:38} height={isMobile?21:25} style={{borderRadius:3,boxShadow:"0 2px 8px rgba(0,0,0,.35)",margin:"0 auto 10px",display:"block"}}>
             <rect width="15" height="30" fill="#007A5E"/>
             <rect x="15" width="15" height="30" fill="#CE1126"/>
             <rect x="30" width="15" height="30" fill="#FCD116"/>
             <polygon points="22.5,8 23.9,12.6 28.7,12.6 24.9,15.4 26.3,20 22.5,17.2 18.7,20 20.1,15.4 16.3,12.6 21.1,12.6" fill="#FCD116"/>
           </svg>
-          <span style={{fontSize:11,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:clr.gold,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>République du Cameroun</span>
+          <p style={{fontSize:isMobile?10:11,fontWeight:800,letterSpacing:".18em",textTransform:"uppercase",color:"rgba(255,255,255,.9)",margin:"0 0 3px"}}>
+            République du Cameroun
+          </p>
+          <p style={{fontSize:isMobile?10:11,fontWeight:500,color:"#D4AF37",margin:0,letterSpacing:".06em"}}>
+            Paix • Travail • Patrie
+          </p>
         </div>
 
-        <h1 style={{fontSize:isMobile?"clamp(22px,6vw,28px)":"clamp(28px,4vw,36px)",fontWeight:800,color:"#fff",textAlign:"center",margin:"0 0 6px",fontFamily:"'Playfair Display',serif",lineHeight:1.2}}>
-          Lycée de Kakatare – Maroua
-        </h1>
-        <p style={{fontSize:isMobile?13:14,color:"rgba(255,255,255,.75)",textAlign:"center",margin:"0 0 4px",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500}}>
-          Plateforme numérique de gestion scolaire
-        </p>
-        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(212,175,55,.18)",border:`1px solid ${clr.gold}60`,borderRadius:20,padding:"4px 14px",marginBottom:32}}>
-          <span style={{fontSize:12,fontWeight:700,color:clr.gold,fontFamily:"'Plus Jakarta Sans',sans-serif",letterSpacing:".05em"}}>Année scolaire 2025–2026</span>
+        {/* Logo */}
+        <div style={{
+          width:isMobile?110:130, height:isMobile?110:130, borderRadius:"50%",
+          border:"3px solid #D4AF37",
+          boxShadow:"0 0 0 6px rgba(212,175,55,.18), 0 12px 40px rgba(0,0,0,.5)",
+          overflow:"hidden", background:"#fff",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          marginBottom:24, flexShrink:0,
+          animation:"scaleIn .7s ease .1s both",
+        }}>
+          <img src={LOGO_LYCEE_B64} alt="Logo" style={{width:"90%",height:"90%",objectFit:"contain"}}/>
         </div>
 
-        {/* Métriques (chiffres réels animés) */}
-        <div style={{display:"flex",gap:32,marginBottom:36,justifyContent:"center"}}>
-          {[
-            {val:counter.eleves,label:"Élèves inscrits",color:"#4ade80"},
-            {val:counter.ens,   label:"Enseignants",    color:clr.gold},
-          ].map(({val,label,color})=>(
-            <div key={label} style={{textAlign:"center"}}>
-              <div style={{fontSize:isMobile?26:32,fontWeight:900,color,fontFamily:"'Playfair Display',serif",lineHeight:1}}>{val.toLocaleString("fr-FR")}</div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:2,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{label}</div>
+        {/* Titre */}
+        <div style={{animation:"fadeUp .7s ease .2s both",marginBottom:16}}>
+          <h1 style={{
+            fontSize:isMobile?"clamp(32px,8vw,42px)":"clamp(38px,5vw,54px)",
+            fontFamily:"'Playfair Display',serif",
+            fontWeight:800, color:"#fff",
+            lineHeight:1.1, margin:"0 0 12px",
+            textShadow:"0 2px 20px rgba(0,0,0,.4)",
+          }}>
+            Lycée de<br/>Kakatare – Maroua
+          </h1>
+          <p style={{fontSize:isMobile?14:16,color:"rgba(255,255,255,.8)",margin:"0 0 20px",lineHeight:1.5,maxWidth:480}}>
+            Plateforme numérique de gestion<br/>et de suivi scolaire
+          </p>
+
+          {/* Pill année */}
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,border:"1.5px solid #D4AF37",borderRadius:30,padding:"8px 20px",marginBottom:28}}>
+            <span style={{fontSize:14}}>📅</span>
+            <span style={{fontSize:isMobile?11:12,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",color:"#D4AF37"}}>
+              Année scolaire 2025 – 2026
+            </span>
+          </div>
+        </div>
+
+        {/* CTA principal */}
+        <div style={{animation:"fadeUp .6s ease .35s both",width:"100%",maxWidth:420,marginBottom:18}}>
+          <button
+            className="lp-btn-gold"
+            onClick={()=>setPortalStep(1)}
+            style={{
+              width:"100%", padding:isMobile?"18px 24px":"20px 32px",
+              background:"linear-gradient(135deg,#D4AF37,#b8860b)",
+              border:"none", borderRadius:14, cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"center", gap:12,
+              boxShadow:"0 8px 28px rgba(212,175,55,.35)",
+            }}>
+            <span style={{fontSize:20}}>🔒</span>
+            <span style={{fontSize:isMobile?15:17,fontWeight:800,letterSpacing:".06em",textTransform:"uppercase",color:"#0B3D20"}}>
+              Accéder au Portail
+            </span>
+            <span style={{fontSize:18,color:"#0B3D20",fontWeight:900}}>→</span>
+          </button>
+          <p style={{fontSize:12,color:"rgba(255,255,255,.5)",margin:"10px 0 0"}}>
+            Accès réservé au personnel autorisé
+          </p>
+        </div>
+
+        {/* 3 rôles */}
+        <div style={{display:"flex",gap:isMobile?16:28,marginBottom:36,animation:"fadeUp .6s ease .45s both",flexWrap:"wrap",justifyContent:"center"}}>
+          {[["🛡️","Administration"],["🎓","Enseignants"],["👥","Vie scolaire"]].map(([ico,lbl])=>(
+            <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,color:"rgba(255,255,255,.7)",fontSize:isMobile?12:13,fontWeight:600}}>
+              <span style={{fontSize:16}}>{ico}</span>{lbl}
             </div>
           ))}
         </div>
 
-        {/* CTA */}
-        <button
-          className="lp-btn"
-          onClick={()=>setPortalStep(1)}
-          style={{
-            background:`linear-gradient(135deg,${clr.gold},#b8860b)`,
-            color:clr.navy, fontWeight:800, fontSize:isMobile?14:15,
-            padding:isMobile?"14px 28px":"16px 40px",
-            borderRadius:14, border:"none", cursor:"pointer",
-            boxShadow:"0 8px 24px rgba(212,175,55,.4)",
-            fontFamily:"'Plus Jakarta Sans',sans-serif",
-            transition:"all .2s ease", letterSpacing:".02em",
-          }}>
-          Accéder au Portail Numérique →
-        </button>
+        {/* Carte stats */}
+        <div style={{
+          width:"100%", maxWidth:600,
+          background:"rgba(5,30,15,.75)",
+          backdropFilter:"blur(8px)",
+          border:"1px solid rgba(212,175,55,.22)",
+          borderRadius:16, padding:isMobile?"20px 16px":"28px 32px",
+          marginBottom:16,
+          animation:"fadeUp .7s ease .55s both",
+        }}>
+          <p style={{fontSize:isMobile?10:11,fontWeight:800,letterSpacing:".18em",textTransform:"uppercase",color:"#D4AF37",margin:"0 0 22px"}}>
+            Notre établissement en chiffres
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:isMobile?12:20}}>
+            {[
+              {ico:"👥", val:counter.eleves||getTotalEleves(), lbl:"Élèves inscrits",   color:"#4ade80"},
+              {ico:"🎓", val:counter.ens||0,                  lbl:"Enseignants",        color:"#D4AF37"},
+              {ico:"🏫", val:CLASSES_REELLES.length,          lbl:"Classes",            color:"#60a5fa"},
+              {ico:"🏛️", val:52,                              lbl:"Personnel
+administratif", color:"#f472b6"},
+            ].map(({ico,val,lbl,color})=>(
+              <div key={lbl} style={{textAlign:"center"}}>
+                <div style={{fontSize:isMobile?22:28,marginBottom:4}}>{ico}</div>
+                <div style={{fontSize:isMobile?20:26,fontWeight:900,color,lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{val}</div>
+                <div style={{fontSize:isMobile?9:10,color:"rgba(255,255,255,.55)",marginTop:4,whiteSpace:"pre-line",lineHeight:1.3}}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <p style={{marginTop:16,fontSize:11,color:"rgba(255,255,255,.4)",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"center",display:"flex",alignItems:"center",gap:6}}>
-          <span>🔒</span> Connexion sécurisée SSL • SVTEEHB Kakatare
-        </p>
+        {/* Carte fonctionnalités */}
+        <div style={{
+          width:"100%", maxWidth:600,
+          background:"rgba(5,30,15,.75)",
+          backdropFilter:"blur(8px)",
+          border:"1px solid rgba(212,175,55,.22)",
+          borderRadius:16, padding:isMobile?"20px 16px":"28px 32px",
+          marginBottom:28,
+          animation:"fadeUp .7s ease .65s both",
+        }}>
+          <p style={{fontSize:isMobile?10:11,fontWeight:800,letterSpacing:".18em",textTransform:"uppercase",color:"#D4AF37",margin:"0 0 20px"}}>
+            Une plateforme pour mieux gérer
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:isMobile?12:16}}>
+            {[
+              {ico:"📖","lbl":"Suivi
+pédagogique"},
+              {ico:"📝","lbl":"Notes &
+évaluations"},
+              {ico:"📅","lbl":"Emplois du
+temps"},
+              {ico:"⏰","lbl":"Absences &
+retards"},
+              {ico:"📚","lbl":"Cahier de texte
+numérique"},
+              {ico:"🔔","lbl":"Communications"},
+            ].map(({ico,lbl})=>(
+              <div key={lbl} className="lp-feat" style={{padding:"12px 8px",borderRadius:10,transition:"all .2s",cursor:"default",background:"rgba(255,255,255,.04)"}}>
+                <div style={{fontSize:isMobile?22:26,marginBottom:6}}>{ico}</div>
+                <div style={{fontSize:isMobile?10:11,color:"rgba(255,255,255,.7)",whiteSpace:"pre-line",lineHeight:1.35,fontWeight:500}}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{animation:"fadeUp .6s ease .75s both",textAlign:"center"}}>
+          <p style={{fontSize:12,color:"rgba(255,255,255,.4)",margin:"0 0 4px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            🔒 Accès sécurisé • Données protégées
+          </p>
+          <p style={{fontSize:11,color:"rgba(255,255,255,.25)",margin:0}}>
+            © Lycée de Kakatare – Maroua
+          </p>
+        </div>
+
       </div>
     </div>
   );
@@ -9197,6 +9311,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
+
 
 
 
