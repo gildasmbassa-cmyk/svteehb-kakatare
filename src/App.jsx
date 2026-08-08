@@ -490,9 +490,9 @@ const GLOBAL_CSS = `
 
   /* ── Palette claire (par défaut) ──────────────────────────────── */
   :root{
-    --c-sidebar:#0f1f14;--c-sidebarBorder:rgba(255,255,255,0.07);--c-sidebarActive:rgba(34,197,94,0.15);--c-sidebarActiveText:#4ade80;--c-sidebarText:rgba(255,255,255,0.55);--c-sidebarHover:rgba(255,255,255,0.05);
-    --c-green:#16a34a;--c-greenLight:#22c55e;--c-greenDark:#0c3d24;--c-greenPale:#f0fdf4;--c-greenBorder:#bbf7d0;
-    --c-gold:#c8a951;--c-goldPale:#fdf6e3;--c-goldBorder:rgba(200,169,81,.35);
+    --c-sidebar:#0B3D20;--c-sidebarBorder:rgba(212,175,55,0.15);--c-sidebarActive:rgba(212,175,55,0.14);--c-sidebarActiveText:#D4AF37;--c-sidebarText:rgba(255,255,255,0.60);--c-sidebarHover:rgba(255,255,255,0.06);
+    --c-green:#0B4D2C;--c-greenLight:#166534;--c-greenDark:#083D22;--c-greenPale:#f0f7f2;--c-greenBorder:#a7d4b5;
+    --c-gold:#D4AF37;--c-goldPale:#fdf8e8;--c-goldBorder:rgba(212,175,55,.4);
     --c-white:#ffffff;--c-bg:#f8fafc;--c-border:#e2e8f0;
     --c-txt:#0f172a;--c-txtMuted:#64748b;--c-txtLight:#94a3b8;
     --c-blue:#3b82f6;--c-bluePale:#eff6ff;
