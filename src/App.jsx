@@ -8768,6 +8768,17 @@ function LoginPage({onLogin}){
   /* ── Profil sélectionné ─────────────────────────────── */
   const [selProfile,setSelProfile] = useState("enseignant");
   const [mobileFormOpen,setMobileFormOpen] = useState(false);
+  const [selNiveau,setSelNiveau] = useState("");
+
+  const SG_NIVEAUX = [
+    {label:"6ème",        id:"sg_6eme"},
+    {label:"5ème",        id:"sg_5eme"},
+    {label:"4ème",        id:"sg_4eme"},
+    {label:"3ème",        id:"sg_3eme"},
+    {label:"2nde",        id:"sg_2nde"},
+    {label:"1ère et Tle", id:"sg_lycee"},
+    {label:"Toute école", id:"surveillance"},
+  ];
 
   const PROFILES = [
     {key:"direction",  label:"Direction",             sub:"Proviseur",             desc:"Gestion globale de l'établissement", emoji:"👨🏾‍💼", role:"proviseur",          needsDept:false},
@@ -9126,7 +9137,7 @@ function LoginPage({onLogin}){
         tabIndex={p.soon?-1:0}
         onClick={()=>{
           if(p.soon)return;
-          setSelProfile(p.key); setErr("");
+          setSelProfile(p.key); setErr(""); setSelNiveau("");
           if(isMobile)setMobileFormOpen(true);
         }}
         onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!p.soon){setSelProfile(p.key);setErr("");if(isMobile)setMobileFormOpen(true);}}}
