@@ -8827,8 +8827,7 @@ function LoginPage({onLogin}){
               {ico:"👥", val:counter.eleves||getTotalEleves(), lbl:"Élèves inscrits",   color:"#4ade80"},
               {ico:"🎓", val:counter.ens||0,                  lbl:"Enseignants",        color:"#D4AF37"},
               {ico:"🏫", val:CLASSES_REELLES.length,          lbl:"Classes",            color:"#60a5fa"},
-              {ico:"🏛️", val:52,                              lbl:"Personnel
-administratif", color:"#f472b6"},
+              {ico:"🏛️", val:52,                              lbl:"Personnel\nadministratif", color:"#f472b6"},
             ].map(({ico,val,lbl,color})=>(
               <div key={lbl} style={{textAlign:"center"}}>
                 <div style={{fontSize:isMobile?22:28,marginBottom:4}}>{ico}</div>
@@ -8854,16 +8853,11 @@ administratif", color:"#f472b6"},
           </p>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:isMobile?12:16}}>
             {[
-              {ico:"📖","lbl":"Suivi
-pédagogique"},
-              {ico:"📝","lbl":"Notes &
-évaluations"},
-              {ico:"📅","lbl":"Emplois du
-temps"},
-              {ico:"⏰","lbl":"Absences &
-retards"},
-              {ico:"📚","lbl":"Cahier de texte
-numérique"},
+              {ico:"📖","lbl":"Suivi\npédagogique"},
+              {ico:"📝","lbl":"Notes &\névaluations"},
+              {ico:"📅","lbl":"Emplois du\ntemps"},
+              {ico:"⏰","lbl":"Absences &\nretards"},
+              {ico:"📚","lbl":"Cahier de texte\nnumérique"},
               {ico:"🔔","lbl":"Communications"},
             ].map(({ico,lbl})=>(
               <div key={lbl} className="lp-feat" style={{padding:"12px 8px",borderRadius:10,transition:"all .2s",cursor:"default",background:"rgba(255,255,255,.04)"}}>
