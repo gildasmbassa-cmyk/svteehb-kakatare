@@ -199,7 +199,7 @@ function exportToExcel(filename, sheetName, dataRows) {
     return true;
   } catch { return false; }
 }
-function normLabel(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\b1ere\b|\b1re\b/g,"1e").replace(/\b2nde\b|\b2nd\b/g,"2nde").replace(/\b3eme\b/g,"3e").replace(/\b4eme\b/g,"4e").replace(/\b5eme\b/g,"5e").replace(/\b6eme\b/g,"6e").replace(/\bterminale\b/g,"tle").replace(/\s+/g," ").trim();}
+function normLabel(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\b1ere\b|\b1re\b/g,"1e").replace(/\b2nde\b|\b2nd\b/g,"2nde").replace(/\b3eme\b/g,"3e").replace(/\b4eme\b/g,"4e").replace(/\b5eme\b/g,"5e").replace(/\b6eme\b/g,"6e").replace(/\bterminale\b/g,"tle").replace(/\s+/g," ").trim();}
 const PROG_MAP_NORM=(()=>{const o={};for(const k in PROG_MAP)o[normLabel(k)]=PROG_MAP[k];return o;})();
 function resolveProgCode(cl){return PROG_MAP[cl]||PROG_MAP_NORM[normLabel(cl)]||null;}
 function getTrimRange(code,trim){if(!code)return null;const b=PROG_TRIM[code];if(!b)return null;if(trim==="T1")return[1,b[0]];if(trim==="T2")return[b[0]+1,b[1]];if(trim==="T3")return[b[1]+1,9999];return null;}
@@ -2064,7 +2064,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   };
 
   const toId = (nom) => nom.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .normalize("NFD").replace(/[̀-ͯ]/g,"")
     .replace(/[^a-z0-9]/g,"").slice(0,12);
 
   useEffect(()=>{
@@ -6774,10 +6774,10 @@ function DashboardSurveillance() {
   const filteredVie = vieSco.filter(v=>v.type===(typeMap[tab]||"retard"));
 
   const TABS=[
-    {id:"absences",  label:"Absences",  emoji:"\uD83D\uDCCB"},
-    {id:"retards",   label:"Retards",   emoji:"\u23F0"},
-    {id:"sanctions", label:"Sanctions", emoji:"\u26A0\uFE0F"},
-    {id:"incidents", label:"Incidents", emoji:"\uD83D\uDEA8"},
+    {id:"absences",  label:"Absences",  emoji:"📋"},
+    {id:"retards",   label:"Retards",   emoji:"⏰"},
+    {id:"sanctions", label:"Sanctions", emoji:"⚠️"},
+    {id:"incidents", label:"Incidents", emoji:"🚨"},
   ];
 
   const GraviteBadge=({g})=>{
@@ -6795,22 +6795,22 @@ function DashboardSurveillance() {
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
         <div>
-          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance g\u00e9n\u00e9rale \uD83D\uDEE1\uFE0F</h2>
-          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} \u00b7 Vue \u00e9cole enti\u00e8re</p>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance générale 🛡️</h2>
+          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Vue école entière</p>
         </div>
         {tab!=="absences" && (
           <button onClick={openForm}
             style={{padding:"9px 18px",borderRadius:10,border:"none",background:showForm?C.border:C.green,color:showForm?C.txt:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            {showForm?"\u2715 Annuler":"\u2795 Enregistrer"}
+            {showForm?"✕ Annuler":"➕ Enregistrer"}
           </button>
         )}
       </div>
 
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Absences" value={stats.total} sub="Toutes classes" iconEmoji="\uD83D\uDCCB" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
-        <KpiCard label="\u00c9l\u00e8ves en alerte" value={stats.nbAlerte} sub="\u2265 3 absences" iconEmoji="\u26A0\uFE0F" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
-        <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="Enregistr\u00e9s" iconEmoji="\u23F0" bg={C.amberPale} subColor={C.amber} loading={vieLoading} delay={0.1}/>
-        <KpiCard label="Sanctions" value={vieSco.filter(v=>v.type==="sanction").length} sub="Enregistr\u00e9es" iconEmoji="\u26A0\uFE0F" bg={C.redPale} subColor={C.red} loading={vieLoading} delay={0.15}/>
+        <KpiCard label="Absences" value={stats.total} sub="Toutes classes" iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
+        <KpiCard label="Élèves en alerte" value={stats.nbAlerte} sub="≥ 3 absences" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
+        <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="Enregistrés" iconEmoji="⏰" bg={C.amberPale} subColor={C.amber} loading={vieLoading} delay={0.1}/>
+        <KpiCard label="Sanctions" value={vieSco.filter(v=>v.type==="sanction").length} sub="Enregistrées" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={vieLoading} delay={0.15}/>
       </div>
 
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -6827,7 +6827,7 @@ function DashboardSurveillance() {
       {showForm && tab!=="absences" && (
         <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:18,display:"flex",flexDirection:"column",gap:12}}>
           <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
-            {tab==="retards"?"\u23F0 Enregistrer un retard":tab==="sanctions"?"\u26A0\uFE0F Enregistrer une sanction":"\uD83D\uDEA8 D\u00e9clarer un incident"}
+            {tab==="retards"?"⏰ Enregistrer un retard":tab==="sanctions"?"⚠️ Enregistrer une sanction":"🚨 Déclarer un incident"}
           </h3>
           {formErr && <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"8px 12px",fontSize:12.5,color:"#b91c1c"}}>{formErr}</div>}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
@@ -6835,16 +6835,16 @@ function DashboardSurveillance() {
               <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Classe *</label>
               <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
                 style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc"}}>
-                <option value="">\u2014 S\u00e9lectionner \u2014</option>
+                <option value="">— Sélectionner —</option>
                 {CLASSES_REELLES.map(c=><option key={c.code} value={c.code}>{c.code}</option>)}
               </select>
             </div>
             <div>
-              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>\u00c9l\u00e8ve *</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Élève *</label>
               <select value={form.eleve_id} onChange={e=>setForm(f=>({...f,eleve_id:e.target.value}))}
                 disabled={!selClasse}
                 style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:selClasse?"#f8fafc":"#f1f5f9",opacity:selClasse?1:.6}}>
-                <option value="">\u2014 S\u00e9lectionner \u2014</option>
+                <option value="">— Sélectionner —</option>
                 {elevesSel.map(e=><option key={e.id} value={e.id}>{e.nom}</option>)}
               </select>
             </div>
@@ -6856,7 +6856,7 @@ function DashboardSurveillance() {
             </div>
             {tab!=="retards" && (
               <div>
-                <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Gravit\u00e9</label>
+                <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Gravité</label>
                 <select value={form.gravite} onChange={e=>setForm(f=>({...f,gravite:e.target.value}))}
                   style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc"}}>
                   <option value="faible">Faible</option>
@@ -6866,15 +6866,15 @@ function DashboardSurveillance() {
               </div>
             )}
             <div style={{gridColumn:"1 / -1"}}>
-              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>D\u00e9tails</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Détails</label>
               <textarea value={form.details} onChange={e=>setForm(f=>({...f,details:e.target.value}))}
-                placeholder="D\u00e9tails compl\u00e9mentaires..."
+                placeholder="Détails complémentaires..."
                 style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc",resize:"vertical",minHeight:64,boxSizing:"border-box"}}/>
             </div>
           </div>
           <button onClick={saveEntry} disabled={saving}
             style={{alignSelf:"flex-end",padding:"10px 24px",borderRadius:10,border:"none",background:saving?"#94a3b8":C.green,color:"#fff",fontWeight:700,fontSize:13,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8}}>
-            {saving?<><Spinner size={12} color="#fff"/> Enregistrement\u2026</>:"\u2713 Enregistrer"}
+            {saving?<><Spinner size={12} color="#fff"/> Enregistrement…</>:"✓ Enregistrer"}
           </button>
         </div>
       )}
@@ -6882,8 +6882,8 @@ function DashboardSurveillance() {
       {tab==="absences" ? (
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.4fr 1fr",gap:14}}>
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>\uD83D\uDD0D \u00c9l\u00e8ves les plus absents</h3>
-            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Cumul sur toute la p\u00e9riode \u2014 top 25</p>
+            <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>🔍 Élèves les plus absents</h3>
+            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Cumul sur toute la période — top 25</p>
             {loading?<Sk h={200} br={8}/>:stats.parEleve.length>0?(
               <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:420,overflowY:"auto"}}>
                 {stats.parEleve.map((e,i)=>(
@@ -6891,16 +6891,16 @@ function DashboardSurveillance() {
                     <span style={{fontSize:11,color:C.txtMuted,width:20}}>{i+1}</span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
-                      <div style={{fontSize:10,color:C.txtMuted}}>{e.classe} \u00b7 derni\u00e8re le {e.dernier}</div>
+                      <div style={{fontSize:10,color:C.txtMuted}}>{e.classe} · dernière le {e.dernier}</div>
                     </div>
                     <span style={{fontSize:12,fontWeight:800,color:e.count>=3?C.red:C.amber,flexShrink:0}}>{e.count}</span>
                   </div>
                 ))}
               </div>
-            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistr\u00e9e</div>}
+            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
           </div>
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>\uD83C\uDFDB\uFE0F Par d\u00e9partement</h3>
+            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>🏛️ Par département</h3>
             {loading?<Sk h={150} br={8}/>:stats.parDept.some(d=>d.total>0)?(
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {stats.parDept.filter(d=>d.total>0).map(d=>(
@@ -6911,7 +6911,7 @@ function DashboardSurveillance() {
                   </div>
                 ))}
               </div>
-            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistr\u00e9e</div>}
+            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence enregistrée</div>}
           </div>
         </div>
       ) : (
@@ -6921,18 +6921,18 @@ function DashboardSurveillance() {
               <thead>
                 <tr style={{background:"#f8fafc",borderBottom:"1px solid "+C.border}}>
                   <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Date</th>
-                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>\u00c9l\u00e8ve</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Élève</th>
                   <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Classe</th>
                   <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Motif</th>
-                  {tab!=="retards" && <th style={{padding:"10px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>Gravit\u00e9</th>}
+                  {tab!=="retards" && <th style={{padding:"10px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>Gravité</th>}
                 </tr>
               </thead>
               <tbody>
                 {vieLoading?(
-                  <tr><td colSpan={5} style={{padding:24,textAlign:"center",color:C.txtLight}}>Chargement\u2026</td></tr>
+                  <tr><td colSpan={5} style={{padding:24,textAlign:"center",color:C.txtLight}}>Chargement…</td></tr>
                 ):filteredVie.length===0?(
                   <tr><td colSpan={5} style={{padding:32,textAlign:"center",color:C.txtLight}}>
-                    <div style={{fontSize:24,marginBottom:6}}>\uD83D\uDCED</div>
+                    <div style={{fontSize:24,marginBottom:6}}>📭</div>
                     Aucun enregistrement
                   </td></tr>
                 ):filteredVie.map((v,i)=>(
@@ -6942,7 +6942,7 @@ function DashboardSurveillance() {
                     </td>
                     <td style={{padding:"10px 12px",fontWeight:600,color:C.txt}}><NomEleve eleveId={v.eleve_id} classe={v.classe}/></td>
                     <td style={{padding:"10px 12px",color:C.txtMuted}}>{v.classe}</td>
-                    <td style={{padding:"10px 12px",color:C.txt,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.motif||"\u2014"}</td>
+                    <td style={{padding:"10px 12px",color:C.txt,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.motif||"—"}</td>
                     {tab!=="retards" && <td style={{padding:"10px 12px",textAlign:"center"}}><GraviteBadge g={v.gravite}/></td>}
                   </tr>
                 ))}
