@@ -8598,7 +8598,7 @@ function LoginPage({onLogin}){
       alignItems:"center", justifyContent:"flex-start",
       padding:"0 16px 48px",
       position:"relative", overflow:"hidden",
-      fontFamily:"'DM Sans',system-ui,sans-serif",
+      fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif",
     }}>
       <style>{`
         @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
@@ -8658,16 +8658,17 @@ function LoginPage({onLogin}){
         {/* Titre principal */}
         <h1 style={{
           fontSize:"clamp(14px,4vw,17px)",
-          fontWeight:800, color:"#1a5c2a",
+          fontWeight:800, color:"#0B4D2C",
           textAlign:"center", margin:"0 0 2px",
           textTransform:"uppercase", letterSpacing:".1em",
         }}>Conseil d'Enseignement</h1>
 
         <h2 style={{
           fontSize:"clamp(32px,9vw,46px)",
-          fontWeight:900, color:"#166534",
+          fontFamily:"'Playfair Display',serif",
+          fontWeight:800, color:"#0B4D2C",
           textAlign:"center", margin:"0 0 10px",
-          letterSpacing:".04em", lineHeight:1,
+          letterSpacing:".01em", lineHeight:1,
         }}>Lykama</h2>
 
         {/* Séparateur ─── 🌿 ─── */}
@@ -8677,11 +8678,11 @@ function LoginPage({onLogin}){
           justifyContent:"center",
         }}>
           <div style={{flex:1, maxWidth:60, height:2,
-            background:"linear-gradient(to right,transparent,rgba(22,163,74,.4))",
+            background:"linear-gradient(to right,transparent,rgba(212,175,55,.55))",
             borderRadius:2}}/>
           <span style={{fontSize:18}}>🌿</span>
           <div style={{flex:1, maxWidth:60, height:2,
-            background:"linear-gradient(to left,transparent,rgba(22,163,74,.4))",
+            background:"linear-gradient(to left,transparent,rgba(212,175,55,.55))",
             borderRadius:2}}/>
         </div>
 
@@ -8699,12 +8700,17 @@ function LoginPage({onLogin}){
             ═══════════════════════════════ */}
         <div style={{
           width:"100%",
-          background:"rgba(255,255,255,.97)",
+          background:"rgba(255,255,255,.92)",
+          backdropFilter:"blur(12px)",
+          WebkitBackdropFilter:"blur(12px)",
           borderRadius:26,
-          boxShadow:"0 24px 64px rgba(0,0,0,.1),0 4px 20px rgba(22,163,74,.12)",
+          boxShadow:"0 24px 64px rgba(0,0,0,.14),0 4px 20px rgba(11,77,44,.14)",
           padding:"28px 22px 22px",
-          border:"1px solid rgba(34,197,94,.15)",
+          border:"1px solid rgba(212,175,55,.25)",
+          position:"relative", overflow:"hidden",
         }}>
+          <div style={{position:"absolute", top:0, left:0, right:0, height:4,
+            background:"linear-gradient(90deg,#0B4D2C,#D4AF37,#0F172A)"}}/>
 
           {/* Icône cadenas+feuille */}
           <div style={{textAlign:"center", marginBottom:16}}>
