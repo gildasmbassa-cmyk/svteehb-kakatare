@@ -7166,6 +7166,195 @@ function DashboardSurveillance() {
   );
 }
 
+function DashboardCenseur() {
+  const {rawData:data, setPage} = useApp();
+  const {isMobile} = useDevice();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    nbEns:0, tauxMoyen:0, nbAlerteProg:0, nbAbsTotal:0,
+    tauxParEns:[], absParClasse:[], edtCoverage:{oui:0,non:0},
+    classesAlertes:[]
+  });
+
+  useEffect(()=>{
+    if(!data) return;
+    const ens = Object.values(data.users||{}).filter(u=>u.role!=="proviseur"&&u.role!=="surveillant_general"&&u.role!=="censeur");
+
+    // Couverture programme par enseignant
+    const tauxParEns = ens.map(e=>{
+      let tf=0,tr=0;
+      (e.classes||[]).forEach(cl=>{
+        const k=e.id+"||"+cl;
+        const f=((data.prog||{})[k]||[]).length;
+        const code=resolveProgCode(cl);
+        const meta=code?PROG_META[code]:null;
+        if(meta){tf+=f;tr+=meta.lpRef;}
+      });
+      return{id:e.id,nom:e.nom,col:getColor(e.id),ini:getIni(e.nom),
+        classes:(e.classes||[]).length,taux:tr>0?Math.min(100,Math.round(tf/tr*100)):0,tf,tr};
+    }).sort((a,b)=>a.taux-b.taux);
+    const tauxMoyen = tauxParEns.length ? Math.round(tauxParEns.reduce((s,e)=>s+e.taux,0)/tauxParEns.length) : 0;
+    const nbAlerteProg = tauxParEns.filter(e=>e.taux<50).length;
+
+    // Absences par classe
+    const absMap={};
+    Object.entries(data.absences||{}).forEach(([k,abs])=>{
+      const [,cl]=k.split("||");
+      absMap[cl]=(absMap[cl]||0)+(abs?abs.length:0);
+    });
+    const nbAbsTotal = Object.values(absMap).reduce((s,n)=>s+n,0);
+    const absParClasse = Object.entries(absMap)
+      .map(([cl,n])=>({cl,n}))
+      .sort((a,b)=>b.n-a.n).slice(0,12);
+
+    // Couverture EDT (classes avec au moins 1 créneau)
+    const classesAvecEdt = new Set();
+    Object.values(data.edtBase||{}).forEach(slots=>{
+      Object.keys(slots||{}).forEach(cl=>classesAvecEdt.add(cl));
+    });
+    const totalClasses = CLASSES_REELLES.length;
+    const edtOui = Math.min(classesAvecEdt.size, totalClasses);
+    const edtCoverage = {oui:edtOui, non:totalClasses-edtOui, total:totalClasses};
+
+    // Classes avec aucun programme saisi
+    const classesAlertes = CLASSES_REELLES.filter(c=>{
+      return !Object.keys(data.prog||{}).some(k=>k.endsWith("||"+c.code));
+    }).map(c=>c.code).slice(0,10);
+
+    setStats({nbEns:ens.length,tauxMoyen,nbAlerteProg,nbAbsTotal,tauxParEns,absParClasse,edtCoverage,classesAlertes});
+    setLoading(false);
+  },[data]);
+
+  const tauCol = t => t>=75?C.green:t>=50?C.amber:C.red;
+
+  return(
+    <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
+      {/* En-tête */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+        <div>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Tableau de bord Censeur 📐</h2>
+          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Vue pédagogique globale</p>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          {[
+            {label:"Programmes",page:"programme",emoji:"📖"},
+            {label:"EDT",page:"edt",emoji:"📅"},
+            {label:"Élèves",page:"eleves",emoji:"👥"},
+          ].map(({label,page,emoji})=>(
+            <button key={page} onClick={()=>setPage(page)}
+              style={{padding:"8px 12px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
+              {emoji} {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* KPI */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <KpiCard label="Couverture programme" value={stats.tauxMoyen+"%"} sub={stats.tauxMoyen>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="📊" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Enseignants en retard" value={stats.nbAlerteProg} sub="< 50% couverture" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
+        <KpiCard label="EDT configuré" value={stats.edtCoverage.oui+"/"+stats.edtCoverage.total} sub="classes avec créneaux" iconEmoji="📅" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.1}/>
+        <KpiCard label="Absences totales" value={stats.nbAbsTotal} sub="Toutes classes" iconEmoji="📋" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.15}/>
+      </div>
+
+      {/* Alerte programme */}
+      {!loading && stats.nbAlerteProg > 0 && (
+        <div style={{display:"flex",alignItems:"center",gap:14,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12,padding:"14px 18px"}}>
+          <span style={{fontSize:26,flexShrink:0}}>⚠️</span>
+          <div>
+            <div style={{fontWeight:700,color:"#b91c1c",fontSize:13}}>Programme en retard critique</div>
+            <div style={{fontSize:12,color:"#7f1d1d",marginTop:2}}>
+              {stats.nbAlerteProg} enseignant{stats.nbAlerteProg>1?"s":""} sous 50% de couverture — action requise.
+            </div>
+          </div>
+          <button onClick={()=>setPage("programme")} style={{marginLeft:"auto",padding:"8px 14px",borderRadius:8,border:"1px solid #fecaca",background:"#fff",color:"#b91c1c",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+            Voir programmes →
+          </button>
+        </div>
+      )}
+
+      {/* Grille principale */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.4fr 1fr",gap:14}}>
+
+        {/* Couverture par enseignant */}
+        <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>📊 Couverture programme — enseignants</h3>
+          <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Triés du plus urgent au plus avancé</p>
+          {loading?<Sk h={200} br={8}/>:stats.tauxParEns.length>0?(
+            <div style={{display:"flex",flexDirection:"column",gap:10,maxHeight:380,overflowY:"auto"}}>
+              {stats.tauxParEns.map(e=>(
+                <div key={e.id} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:32,height:32,borderRadius:"50%",background:e.col,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>{e.ini}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12.5,fontWeight:600,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+                    <div style={{height:5,borderRadius:3,background:"#e2e8f0",marginTop:4}}>
+                      <div style={{height:"100%",borderRadius:3,background:tauCol(e.taux),width:e.taux+"%",transition:"width .4s ease"}}/>
+                    </div>
+                  </div>
+                  <span style={{fontSize:12,fontWeight:800,color:tauCol(e.taux),flexShrink:0,width:36,textAlign:"right"}}>{e.taux}%</span>
+                </div>
+              ))}
+            </div>
+          ):<div style={{textAlign:"center",padding:"30px 0",color:C.txtLight,fontSize:11}}>Aucune donnée</div>}
+        </div>
+
+        {/* Colonne droite */}
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+          {/* Absences par classe */}
+          <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📋 Absences par classe</h3>
+            {loading?<Sk h={120} br={8}/>:stats.absParClasse.length>0?(
+              <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                {stats.absParClasse.map(({cl,n})=>(
+                  <div key={cl} style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:11,color:C.txt,flex:1,fontWeight:n>5?700:400}}>{cl}</span>
+                    <div style={{width:60,height:4,borderRadius:2,background:"#e2e8f0"}}>
+                      <div style={{height:"100%",borderRadius:2,background:n>10?C.red:n>5?C.amber:C.green,width:Math.min(100,n*6)+"%"}}/>
+                    </div>
+                    <span style={{fontSize:11,fontWeight:800,color:n>10?C.red:n>5?C.amber:C.green,width:20,textAlign:"right"}}>{n}</span>
+                  </div>
+                ))}
+              </div>
+            ):<div style={{textAlign:"center",padding:"20px 0",color:C.txtLight,fontSize:11}}>Aucune absence enregistrée</div>}
+          </div>
+
+          {/* Classes sans programme */}
+          {!loading && stats.classesAlertes.length>0 && (
+            <div style={{background:"#fffbeb",borderRadius:12,border:"1px solid #fde68a",padding:14}}>
+              <h3 style={{margin:"0 0 8px",fontSize:12,fontWeight:700,color:"#92400e"}}>📭 Classes sans programme saisi</h3>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {stats.classesAlertes.map(cl=>(
+                  <span key={cl} style={{fontSize:11,padding:"3px 10px",borderRadius:12,background:"#fef3c7",color:"#78350f",fontWeight:600}}>{cl}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* EDT coverage */}
+          <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
+            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📅 Couverture EDT</h3>
+            {loading?<Sk h={60} br={8}/>:(
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  <span style={{fontSize:12,color:C.txt}}>{stats.edtCoverage.oui} classe{stats.edtCoverage.oui>1?"s":""} configurée{stats.edtCoverage.oui>1?"s":""}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:stats.edtCoverage.non>0?C.red:C.green}}>
+                    {stats.edtCoverage.non>0?stats.edtCoverage.non+" sans EDT":"✓ Complet"}
+                  </span>
+                </div>
+                <div style={{height:8,borderRadius:4,background:"#e2e8f0"}}>
+                  <div style={{height:"100%",borderRadius:4,background:stats.edtCoverage.non>0?C.amber:C.green,width:(stats.edtCoverage.oui/Math.max(stats.edtCoverage.total,1)*100)+"%",transition:"width .5s ease"}}/>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardTeacher() {
   const {user,data} = useApp();
   const [loading,setLoading] = useState(true);
