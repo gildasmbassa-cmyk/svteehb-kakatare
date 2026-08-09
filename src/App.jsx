@@ -6689,6 +6689,56 @@ function DashboardProviseur() {
   );
 }
 
+function genererBilanTrimestriel(stats, vieSco, sgClasses, niveauLabel, data) {
+  const trimestre = prompt("Numéro du trimestre (1, 2 ou 3) :", "1");
+  if (!trimestre) return;
+  const annee = "2025-2026";
+
+  const eleveMap = {};
+  stats.parEleve.forEach(e => {
+    eleveMap[e.id] = {...e, retards:0, sanctions:0, incidents:0};
+  });
+  vieSco.forEach(v => {
+    if (!eleveMap[v.eleve_id]) eleveMap[v.eleve_id] = {id:v.eleve_id,classe:v.classe,nom:(ELEVES_DB[v.classe]||[]).find(x=>x.id===v.eleve_id)?.nom||v.eleve_id,count:0,heures:0,retards:0,sanctions:0,incidents:0};
+    if(v.type==="retard") eleveMap[v.eleve_id].retards++;
+    if(v.type==="sanction") eleveMap[v.eleve_id].sanctions++;
+    if(v.type==="incident") eleveMap[v.eleve_id].incidents++;
+  });
+
+  const classes = sgClasses || CLASSES_REELLES.map(c=>c.code);
+  let rows = "";
+  classes.forEach(cl => {
+    const eleves = Object.values(eleveMap).filter(e=>e.classe===cl).sort((a,b)=>a.nom.localeCompare(b.nom));
+    if (eleves.length === 0) return;
+    rows += '<tr style="background:#0B4D2C;color:#fff"><td colspan="6" style="padding:8px 12px;font-weight:700;font-size:14px;">'+cl+'</td></tr>';
+    eleves.forEach((e,i) => {
+      rows += '<tr style="background:'+(i%2===0?"#fff":"#f8fafc")+'">'
+        + '<td style="padding:7px 12px;border-bottom:1px solid #e2e8f0">'+(i+1)+'</td>'
+        + '<td style="padding:7px 12px;border-bottom:1px solid #e2e8f0;font-weight:600">'+e.nom+'</td>'
+        + '<td style="padding:7px 12px;border-bottom:1px solid #e2e8f0;text-align:center;color:'+(e.count>=3?"#b91c1c":"#374151")+'">'+e.count+' séances</td>'
+        + '<td style="padding:7px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:'+(e.heures>=6?"#b91c1c":e.heures>=3?"#d97706":"#374151")+'">'+( e.heures||e.count)+'h</td>'
+        + '<td style="padding:7px 12px;border-bottom:1px solid #e2e8f0;text-align:center">'+(e.retards>0?'⏰ '+e.retards:'—')+'</td>'
+        + '<td style="padding:7px 12px;border-bottom:1px solid #e2e8f0;text-align:center">'+(e.sanctions>0?'⚠️ '+e.sanctions:e.incidents>0?'🚨 '+e.incidents:'—')+'</td>'
+        + '</tr>';
+    });
+  });
+
+  const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+    + '<title>Bilan Trimestriel T'+trimestre+' — '+niveauLabel+'</title>'
+    + '<style>body{font-family:sans-serif;padding:24px;color:#1f2937}h1{color:#0B4D2C}table{width:100%;border-collapse:collapse}th{background:#0B4D2C;color:#fff;padding:10px 12px;text-align:left;font-size:12px;letter-spacing:.05em}@media print{.no-print{display:none}}</style>'
+    + '</head><body>'
+    + '<div class="no-print" style="margin-bottom:16px"><button onclick="window.print()" style="padding:10px 20px;background:#0B4D2C;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700">🖨️ Imprimer / Exporter PDF</button></div>'
+    + '<h1>Bilan Trimestriel — Trimestre '+trimestre+'</h1>'
+    + '<p style="color:#6b7280">Année scolaire '+annee+' · Niveau : '+niveauLabel+' · Généré le '+new Date().toLocaleDateString("fr-FR")+'</p>'
+    + '<table><thead><tr><th>#</th><th>Élève</th><th>Séances abs.</th><th>Heures abs.</th><th>Retards</th><th>Sanctions/Incidents</th></tr></thead>'
+    + '<tbody>'+rows+'</tbody></table>'
+    + '</body></html>';
+
+  const w = window.open("","_blank");
+  w.document.write(html);
+  w.document.close();
+}
+
 function DashboardSurveillance() {
   const {rawData:data, user} = useApp();
   const {isMobile} = useDevice();
@@ -6878,6 +6928,10 @@ function DashboardSurveillance() {
             {" · "}<strong style={{color:C.green}}>{niveauLabel}</strong>
           </p>
         </div>
+        <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
+          style={{padding:"9px 16px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+          📄 Bilan trimestriel
+        </button>
         {(tab==="retards"||tab==="sanctions"||tab==="incidents") && (
           <button onClick={()=>{setFormErr("");setForm({eleve_id:"",classe:"",motif:"",details:"",gravite:"faible"});setSelClasse("");setShowForm(!showForm);}}
             style={{padding:"9px 18px",borderRadius:10,border:"none",background:showForm?C.border:C.green,color:showForm?C.txt:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
@@ -6888,7 +6942,7 @@ function DashboardSurveillance() {
 
       {/* KPI */}
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Absences" value={stats.total} sub={niveauLabel} iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
+        <KpiCard label="Heures d'absence" value={(stats.totalHeures||stats.total)+"h"} sub={niveauLabel+" · "+stats.total+" séances"} iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
         <KpiCard label="Élèves en alerte" value={stats.nbAlerte} sub="3+ absences" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
         <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="Enregistrés" iconEmoji="⏰" bg={C.amberPale} subColor={C.amber} loading={vieLoading} delay={0.1}/>
         <KpiCard label="Sanctions" value={vieSco.filter(v=>v.type==="sanction").length} sub="Enregistrées" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={vieLoading} delay={0.15}/>
