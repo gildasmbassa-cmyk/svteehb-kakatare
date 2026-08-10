@@ -6749,7 +6749,7 @@ function DashboardSurveillance() {
     : "Toute l'école";
 
   const [loading,setLoading]     = useState(true);
-  const [tab,setTab]             = useState("vue");
+  const [tab,setTab]             = useState(()=>{ const t=window.__sgTab; window.__sgTab=null; return t||"vue"; });
   const [vieSco,setVieSco]       = useState([]);
   const [vieLoading,setVieLoading] = useState(true);
   const [ficheEleve,setFicheEleve] = useState(null);
@@ -6928,6 +6928,10 @@ function DashboardSurveillance() {
             {" · "}<strong style={{color:C.green}}>{niveauLabel}</strong>
           </p>
         </div>
+        <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
+          style={{padding:"9px 16px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+          📄 Bilan trimestriel
+        </button>
         <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
           style={{padding:"9px 16px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
           📄 Bilan trimestriel
@@ -7476,6 +7480,216 @@ const PlaceholderPage = ({title,emoji}) => (
 );
 
 // ── Sidebar ─────────────────────────────────────────────────────────
+const SidebarSG = ({collapsed, setCollapsed}) => {
+  const {user, page, setPage, data} = useApp();
+  const {isMobile, mobileLandscape} = useDevice();
+  const effectiveCollapsed = mobileLandscape ? true : collapsed;
+
+  const sgClasses = user?.classes?.length > 0 ? user.classes : null;
+  const niveauLabel = !sgClasses ? "Toute l'école"
+    : sgClasses[0]?.startsWith('6') ? '6ème'
+    : sgClasses[0]?.startsWith('5') ? '5ème'
+    : sgClasses[0]?.startsWith('4') ? '4ème'
+    : sgClasses[0]?.startsWith('3') ? '3ème'
+    : sgClasses[0]?.startsWith('2') ? '2nde' : '1ère & Tle';
+
+  const niveauColor = sgClasses
+    ? (sgClasses[0]?.startsWith('6')?"#3b82f6":sgClasses[0]?.startsWith('5')?"#8b5cf6":sgClasses[0]?.startsWith('4')?"#f59e0b":sgClasses[0]?.startsWith('3')?"#10b981":sgClasses[0]?.startsWith('2')?"#ec4899":"#f97316")
+    : "#D4AF37";
+
+  const [classesOpen, setClassesOpen] = useState(false);
+
+  // Badges — calcul depuis data disponible
+  const today = new Date().toISOString().slice(0,10);
+  let absToday = 0;
+  Object.entries(data?.absences||{}).forEach(([k,abs])=>{
+    const [,cl,date]=k.split("||");
+    if(sgClasses&&!sgClasses.includes(cl))return;
+    if(date===today) absToday+=(abs?.length||0);
+  });
+
+  const go = (tabId) => {
+    window.__sgTab = tabId;
+    setPage("dashboard");
+  };
+
+  const NAV = [
+    {id:"dashboard",   emoji:"🏠", label:"Tableau de bord",      tab:null},
+    {id:"absences-sg", emoji:"📋", label:"Appels & Absences",     tab:"absences", badge:absToday>0?absToday:null},
+    {id:"retards-sg",  emoji:"⏱️", label:"Billets de retard",     tab:"retards"},
+    {id:"sanctions-sg",emoji:"⚠️", label:"Discipline & Sanctions",tab:"sanctions"},
+    {id:"rapports-sg", emoji:"📊", label:"Rapports & Synthèses",  tab:"vue"},
+  ];
+
+  const activePage = page;
+  const isNavActive = (item) => {
+    if(item.id==="dashboard") return activePage==="dashboard" && !window.__sgTab;
+    return activePage==="dashboard" && window.__sgTab===item.tab;
+  };
+
+  const G = "#D4AF37"; // gold accent
+
+  return(
+    <aside style={{
+      width: effectiveCollapsed ? 56 : 240,
+      minWidth: effectiveCollapsed ? 56 : 240,
+      background:"#0B3D20",
+      display:"flex", flexDirection:"column",
+      transition:"width .25s, min-width .25s",
+      overflow:"hidden", flexShrink:0,
+      borderRight:"1px solid rgba(212,175,55,.12)",
+    }}>
+      {/* ── HEADER ── */}
+      <div style={{padding: effectiveCollapsed?"14px 0":"16px 14px 12px", borderBottom:"1px solid rgba(212,175,55,.15)", flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <img src={LOGO_LYCEE_B64} alt="" width={30} height={30} style={{flexShrink:0,objectFit:"contain",borderRadius:"50%",border:"1.5px solid "+G}}/>
+          {!effectiveCollapsed&&(
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:12.5,fontWeight:800,color:"#fff",lineHeight:1.2}}>Lykama</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Lycée de Kakatare · Maroua</div>
+            </div>
+          )}
+        </div>
+        {!effectiveCollapsed&&(
+          <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+            <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em"}}>Année scolaire</div>
+            <div style={{fontSize:10,fontWeight:700,color:G,background:"rgba(212,175,55,.12)",borderRadius:6,padding:"3px 8px",border:"1px solid rgba(212,175,55,.25)"}}>2025–2026</div>
+          </div>
+        )}
+      </div>
+
+      {/* ── BADGE NIVEAU ── */}
+      {!effectiveCollapsed&&(
+        <div style={{padding:"10px 14px",borderBottom:"1px solid rgba(212,175,55,.15)",flexShrink:0,background:"rgba(0,0,0,.15)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:niveauColor,flexShrink:0,boxShadow:"0 0 6px "+niveauColor}}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>Niveau supervisé</div>
+              <div style={{fontSize:14,fontWeight:900,color:"#fff",marginTop:1}}>{niveauLabel}</div>
+            </div>
+            <div style={{fontSize:9,fontWeight:800,color:niveauColor,background:"rgba(212,175,55,.12)",border:"1px solid rgba(212,175,55,.3)",borderRadius:12,padding:"2px 8px",whiteSpace:"nowrap"}}>{sgClasses?.length||0} classes</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── NAVIGATION ── */}
+      <nav style={{flex:1,overflowY:"auto",scrollbarWidth:"none",padding:"8px 0"}}>
+
+        {/* Tableau de bord */}
+        <NavItemSG active={activePage==="dashboard"&&!window.__sgTab} collapsed={effectiveCollapsed}
+          onClick={()=>{window.__sgTab=null;setPage("dashboard");}}
+          emoji="🏠" label="Tableau de bord" gold={G}/>
+
+        {/* Classes (expandable) */}
+        {!effectiveCollapsed&&sgClasses&&(
+          <div>
+            <div onClick={()=>setClassesOpen(o=>!o)}
+              style={{display:"flex",alignItems:"center",gap:10,padding:"9px 16px",cursor:"pointer",color:"rgba(255,255,255,.6)",fontSize:13,transition:"all .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.06)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <span style={{fontSize:16,flexShrink:0}}>📁</span>
+              <span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Mes classes</span>
+              <span style={{fontSize:10,transition:"transform .2s",transform:classesOpen?"rotate(90deg)":"rotate(0deg)"}}>›</span>
+            </div>
+            {classesOpen&&(
+              <div style={{paddingLeft:42,paddingBottom:4}}>
+                {sgClasses.map(cl=>(
+                  <div key={cl} onClick={()=>setPage("eleves")}
+                    style={{padding:"6px 16px 6px 0",fontSize:12,color:"rgba(255,255,255,.55)",cursor:"pointer",borderLeft:"2px solid rgba(212,175,55,.25)",marginLeft:6,paddingLeft:10,marginBottom:2,borderRadius:"0 6px 6px 0",transition:"all .12s"}}
+                    onMouseEnter={e=>{e.currentTarget.style.color="#fff";e.currentTarget.style.borderLeftColor=G;}}
+                    onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,.55)";e.currentTarget.style.borderLeftColor="rgba(212,175,55,.25)";}}>
+                    {cl}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {effectiveCollapsed&&(
+          <div title="Mes classes" onClick={()=>setPage("eleves")} style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"10px 0",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.06)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            <span style={{fontSize:16}}>📁</span>
+          </div>
+        )}
+
+        {/* Séparateur */}
+        {!effectiveCollapsed&&<div style={{margin:"6px 14px",height:1,background:"rgba(255,255,255,.08)"}}/>}
+
+        {/* Autres items */}
+        {NAV.filter(n=>n.id!=="dashboard").map(item=>(
+          <NavItemSG key={item.id}
+            active={activePage==="dashboard"&&window.__sgTab===item.tab}
+            collapsed={effectiveCollapsed}
+            onClick={()=>go(item.tab)}
+            emoji={item.emoji} label={item.label} badge={item.badge} gold={G}/>
+        ))}
+      </nav>
+
+      {/* ── PROFIL / PIED ── */}
+      <div style={{borderTop:"1px solid rgba(212,175,55,.15)",flexShrink:0}}>
+        {!effectiveCollapsed&&(
+          <div style={{padding:"12px 14px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <Avatar ens={user} size={34} fontSize={12}/>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{user?.nom}</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1}}>Surveillance Générale · {niveauLabel}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setPage("settings")}
+                style={{flex:1,padding:"7px 0",borderRadius:8,border:"1px solid rgba(255,255,255,.12)",background:"rgba(255,255,255,.06)",color:"rgba(255,255,255,.6)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                ⚙️ Paramètres
+              </button>
+              <button onClick={()=>{localStorage.removeItem("svt_user");window.location.reload();}}
+                style={{flex:1,padding:"7px 0",borderRadius:8,border:"1px solid rgba(180,71,46,.4)",background:"rgba(180,71,46,.12)",color:"#f87171",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                🚪 Déconnexion
+              </button>
+            </div>
+          </div>
+        )}
+        {effectiveCollapsed&&(
+          <div style={{padding:"10px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+            <div onClick={()=>setPage("settings")} style={{cursor:"pointer",padding:6,borderRadius:8}} title="Paramètres" onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.08)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <span style={{fontSize:16}}>⚙️</span>
+            </div>
+            <Avatar ens={user} size={28} fontSize={10}/>
+          </div>
+        )}
+      </div>
+
+      {/* Toggle collapse */}
+      <button onClick={()=>setCollapsed(c=>!c)}
+        style={{position:"absolute",top:18,right:effectiveCollapsed?-12:-12,width:22,height:22,borderRadius:"50%",background:"#0B3D20",border:"1.5px solid rgba(212,175,55,.4)",color:G,cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
+        {effectiveCollapsed?"›":"‹"}
+      </button>
+    </aside>
+  );
+};
+
+const NavItemSG = ({active, collapsed, onClick, emoji, label, badge, gold="#D4AF37"}) => (
+  <div onClick={onClick} title={collapsed?label:""}
+    style={{
+      display:"flex", alignItems:"center", gap:10,
+      padding: collapsed?"10px 0":"9px 16px",
+      justifyContent: collapsed?"center":"flex-start",
+      cursor:"pointer",
+      background: active?"rgba(212,175,55,.14)":"transparent",
+      borderLeft: active?"3px solid "+gold:"3px solid transparent",
+      color: active?gold:"rgba(255,255,255,.58)",
+      fontSize:13, fontWeight: active?700:400,
+      transition:"all .15s",
+    }}
+    onMouseEnter={e=>{if(!active){e.currentTarget.style.background="rgba(255,255,255,.06)";e.currentTarget.style.color="#fff";}}}
+    onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.color="rgba(255,255,255,.58)";}}}
+  >
+    <span style={{fontSize:16,flexShrink:0}}>{emoji}</span>
+    {!collapsed&&<span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</span>}
+    {!collapsed&&badge>0&&(
+      <span style={{marginLeft:"auto",fontSize:9,fontWeight:800,background:"#dc2626",color:"#fff",borderRadius:20,padding:"2px 7px",flexShrink:0,minWidth:18,textAlign:"center"}}>{badge}</span>
+    )}
+  </div>
+);
+
 const Sidebar = ({collapsed, setCollapsed}) => {
   const {user, page, setPage, data, t} = useApp();
   const {isMobile, mobileLandscape, isTablet} = useDevice();
@@ -7490,6 +7704,8 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
     : (data?.epreuves||[]).filter(e=>e.ens_id===user?.id&&e.statut==="attente").length;
+
+  if (user?.role === "surveillant_general") return <SidebarSG collapsed={collapsed} setCollapsed={setCollapsed}/>;
 
   return (
     <aside style={{
