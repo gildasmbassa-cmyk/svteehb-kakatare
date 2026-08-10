@@ -835,7 +835,7 @@ function MesClassesPage() {
 
       {/* Onglets Liste / Notes */}
       <div style={{display:"flex", gap:8, flexShrink:0}}>
-        {[{id:"liste",label:"👥 Liste & présences"},{id:"notes",label:"📝 Notes"}].map(t=>(
+        {[{id:"liste",label:"👥 Liste & présences"},...(user?.role==="surveillant_general"?[]:[{id:"notes",label:"📝 Notes"}])].map(t=>(
           <button key={t.id} onClick={()=>setOnglet(t.id)}
             style={{flex: isMobile?1:"none", padding: isMobile?"10px":"8px 16px", borderRadius:9, fontSize:12.5, fontWeight:700, fontFamily:"inherit", cursor:"pointer",
               border:`1.5px solid ${onglet===t.id?C.green:C.border}`,
@@ -6863,6 +6863,7 @@ function DashboardSurveillance() {
     {id:"vue",       label:"Vue d'ensemble",emoji:"🎯"},
     {id:"absences",  label:"Absences",      emoji:"📋"},
     {id:"hebdo",     label:"Par semaine",   emoji:"📅"},
+    {id:"bilan_trim", label:"Bilan trimestriel", emoji:"📊"},
     {id:"retards",   label:"Retards",       emoji:"⏰"},
     {id:"sanctions", label:"Sanctions",     emoji:"⚠️"},
     {id:"incidents", label:"Incidents",     emoji:"🚨"},
@@ -7194,6 +7195,94 @@ function DashboardSurveillance() {
         </div>
       )}
 
+      {/* ══ Bilan Trimestriel ══════════════════════════════════════ */}
+      {tab==="bilan_trim" && (()=>{
+        const [selTrim,setSelTrim] = useState(1);
+        // Agrégation absences → élève × semaine trimestre
+        const eleveMap = {};
+        Object.entries(data?.absences||{}).forEach(([k,absents])=>{
+          const [,classe,dateStr]=k.split("||");
+          if(sgClasses&&!sgClasses.includes(classe))return;
+          (absents||[]).forEach(id=>{
+            if(!eleveMap[id]) eleveMap[id]={id,classe,nom:(ELEVES_DB[classe]||[]).find(x=>x.id===id)?.nom||id,sems:{}};
+            const pos=getSemaineTrimestre(dateStr);
+            if(!pos)return;
+            const k2=pos.trim+"_"+pos.sem;
+            eleveMap[id].sems[k2]=(eleveMap[id].sems[k2]||0)+getDureeSVT(classe);
+          });
+        });
+        const rows=Object.values(eleveMap).map(e=>{
+          const totalTrim=[1,2,3].map(t=>[1,2,3,4,5,6].reduce((a,s)=>a+(e.sems[t+"_"+s]||0),0));
+          return {...e,totalTrim};
+        }).filter(e=>e.totalTrim.some(t=>t>0)).sort((a,b)=>b.totalTrim[selTrim-1]-a.totalTrim[selTrim-1]);
+        const aC=(h)=>h>=15?"#b91c1c":h>=6?"#d97706":"#15803d";
+        const aB=(h)=>h>=15?"#fef2f2":h>=6?"#fffbeb":"#f0fdf4";
+        const aL=(h)=>h>=15?"🔴 Blâme":h>=6?"🟠 Avertissement":"🟢 Assidu";
+        return(
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+              {[1,2,3].map(t=>(
+                <button key={t} onClick={()=>setSelTrim(t)}
+                  style={{padding:"7px 16px",borderRadius:20,border:"1.5px solid "+(selTrim===t?C.green:C.border),
+                    background:selTrim===t?C.greenPale:C.white,color:selTrim===t?C.green:C.txtMuted,
+                    fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                  Trimestre {t}
+                </button>
+              ))}
+              <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
+                style={{marginLeft:"auto",padding:"7px 14px",borderRadius:10,border:"none",
+                  background:"#D4AF37",color:"#0B3D20",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                📄 PDF
+              </button>
+            </div>
+            <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+              {[{h:0,l:"< 6h · Assidu"},{h:6,l:"6–14h · Avertissement"},{h:15,l:"≥ 15h · Blâme"}].map((s,i)=>(
+                <span key={i} style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:8,background:aB(s.h),color:aC(s.h)}}>{s.l}</span>
+              ))}
+            </div>
+            <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,overflow:"hidden"}}>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:600}}>
+                  <thead>
+                    <tr style={{background:"#f8fafc",borderBottom:"1px solid "+C.border}}>
+                      <th style={{padding:"8px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>ÉLÈVE</th>
+                      <th style={{padding:"8px 8px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>CLASSE</th>
+                      {[1,2,3,4,5,6].map(s=><th key={s} style={{padding:"8px 6px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>S{s}</th>)}
+                      <th style={{padding:"8px 10px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>TOTAL</th>
+                      <th style={{padding:"8px 10px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>STATUT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.length===0?<tr><td colSpan={10} style={{padding:"32px 0",textAlign:"center",color:C.txtLight,fontSize:11}}>Aucune absence pour T{selTrim}</td></tr>
+                    :rows.map((e,i)=>{
+                      const total=e.totalTrim[selTrim-1];
+                      return(
+                        <tr key={e.id} onClick={()=>setFicheEleve(e)}
+                          style={{borderBottom:"1px solid "+C.border,background:i%2===0?C.white:"#fafafa",cursor:"pointer"}}>
+                          <td style={{padding:"9px 12px",fontWeight:700,color:C.txt}}>{e.nom}</td>
+                          <td style={{padding:"9px 8px",textAlign:"center",fontSize:10,color:C.txtMuted}}>{e.classe}</td>
+                          {[1,2,3,4,5,6].map(s=>{
+                            const h=e.sems[selTrim+"_"+s]||0;
+                            return <td key={s} style={{padding:"9px 6px",textAlign:"center",fontWeight:h>0?700:400,
+                              fontSize:12,color:h>=4?"#b91c1c":h>=2?"#d97706":h>0?"#374151":C.txtLight}}>
+                              {h>0?h+"h":"—"}
+                            </td>;
+                          })}
+                          <td style={{padding:"9px 10px",textAlign:"center",fontWeight:800,fontSize:13,color:aC(total)}}>{total}h</td>
+                          <td style={{padding:"9px 10px",textAlign:"center"}}>
+                            <span style={{fontSize:9,fontWeight:700,padding:"3px 7px",borderRadius:8,background:aB(total),color:aC(total)}}>{aL(total)}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Retards / Sanctions / Incidents */}
       {(tab==="retards"||tab==="sanctions"||tab==="incidents") && (
         <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,overflow:"hidden"}}>
@@ -7232,6 +7321,20 @@ function DashboardSurveillance() {
   );
 }
 
+
+// ── Calendrier scolaire 2025-2026 : date → {trim, sem} ──────────
+function getSemaineTrimestre(dateStr) {
+  const STARTS = [new Date("2025-10-06"),new Date("2026-01-05"),new Date("2026-04-06")];
+  const dt = new Date(dateStr);
+  if (isNaN(dt)) return null;
+  for (let t = 0; t < 3; t++) {
+    const ms = dt - STARTS[t];
+    if (ms < 0) continue;
+    const sem = Math.floor(ms / (7 * 86400000)) + 1;
+    if (sem >= 1 && sem <= 6) return { trim: t + 1, sem };
+  }
+  return null;
+}
 function DashboardCenseur() {
   const {rawData:data, setPage} = useApp();
   const {isMobile} = useDevice();
