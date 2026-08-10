@@ -6768,6 +6768,7 @@ function DashboardSurveillance() {
   const [selClasse,setSelClasse] = useState("");
   const [elevesSel,setElevesSel] = useState([]);
   const [formErr,setFormErr]     = useState("");
+  const [selTrim,setSelTrim]     = useState(1); // bilan trimestriel
 
   const getWeekKey = (d) => {
     const dt = new Date(d); if(isNaN(dt)) return d;
@@ -6937,10 +6938,6 @@ function DashboardSurveillance() {
             {" · "}<strong style={{color:C.green}}>{niveauLabel}</strong>
           </p>
         </div>
-        <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
-          style={{padding:"9px 16px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-          📄 Bilan trimestriel
-        </button>
         <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
           style={{padding:"9px 16px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
           📄 Bilan trimestriel
@@ -7197,7 +7194,6 @@ function DashboardSurveillance() {
 
       {/* ══ Bilan Trimestriel ══════════════════════════════════════ */}
       {tab==="bilan_trim" && (()=>{
-        const [selTrim,setSelTrim] = useState(1);
         // Agrégation absences → élève × semaine trimestre
         const eleveMap = {};
         Object.entries(data?.absences||{}).forEach(([k,absents])=>{
