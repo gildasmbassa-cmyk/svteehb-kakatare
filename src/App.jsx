@@ -695,95 +695,6 @@ function imprimerListeClasse(code, eleves) {
 // ═══════════════════════════════════════════════════════════════
 // MES CLASSES (enseignant) — liste élèves + présences + notes
 // ═══════════════════════════════════════════════════════════════
-
-function genererConvocation(eleve, classe, absH, retards, sanctions) {
-  const date = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
-  const motif = absH>=15?"Blame d'assiduite ("+absH+"h)":absH>=6?"Avertissement ("+absH+"h)":retards>=3?"Retards repetes ("+retards+")":"Comportement";
-  const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Convocation</title>'
-    + '<style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;color:#1f2937;font-size:13px;line-height:1.7}'
-    + 'h1{font-size:16px;text-align:center;border-bottom:2px solid #0B4D2C;padding-bottom:8px;color:#0B4D2C}'
-    + '.bloc{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;margin:16px 0}'
-    + '.sign{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:40px;font-size:12px}'
-    + '.sign div{border-top:1px solid #d1d5db;padding-top:8px;text-align:center}'
-    + '@media print{.np{display:none}}</style></head><body>'
-    + '<div style="text-align:right;font-size:11px;color:#6b7280">Lycee de Kakatare-Maroua | 2025-2026 | Le '+date+'</div>'
-    + '<h1>CONVOCATION DES PARENTS / TUTEURS</h1>'
-    + '<div class="bloc"><b>Nom :</b> '+eleve.nom+'<br><b>Classe :</b> '+classe+'<br><b>Motif :</b> '+motif+'<br>'
-    + '<b>Detail :</b> '+absH+'h absence'+(retards>0?', '+retards+' retard(s)':'')+(sanctions>0?', '+sanctions+' sanction(s)':'')+'</div>'
-    + '<p>de se presenter au bureau de la <b>Surveillance Generale</b> muni(e) du present document.</p>'
-    + '<div class="sign"><div>Le Parent/Tuteur<br><br><br>Signature :</div><div>Le Surveillant General<br><br><br>Signature & Cachet :</div></div>'
-    + '<div class="np" style="margin-top:24px;text-align:center"><button onclick="window.print()" style="padding:10px 24px;background:#0B4D2C;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700">Imprimer</button></div>'
-    + '</body></html>';
-  const w=window.open("","_blank"); w.document.write(html); w.document.close();
-}
-
-function FicheEleveSG({eleve, data, onClose}) {
-  const {isMobile} = useDevice();
-  const [vieSco, setVieSco] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(()=>{
-    sb.get("vie_scolaire","?select=*&eleve_id=eq."+eleve.id+"&order=date.desc").then(rows=>{
-      setVieSco(rows||[]); setLoading(false);
-    });
-  },[eleve.id]);
-  let totalSeances=0, totalHeures=0;
-  Object.entries(data?.absences||{}).forEach(([k,absents])=>{
-    const [,cl]=k.split("||");
-    if(cl!==eleve.classe)return;
-    if((absents||[]).includes(eleve.id)){totalSeances++; totalHeures+=getDureeSVT(cl);}
-  });
-  const retards=vieSco.filter(v=>v.type==="retard").length;
-  const sanctions=vieSco.filter(v=>v.type==="sanction").length;
-  const aC=totalHeures>=15?"#b91c1c":totalHeures>=6?"#d97706":"#15803d";
-  const aB=totalHeures>=15?"#fef2f2":totalHeures>=6?"#fffbeb":"#f0fdf4";
-  const aL=totalHeures>=15?"Blame — Convocation obligatoire":totalHeures>=6?"Avertissement — Convocation recommandee":"Assidu";
-  const needsConvoc=totalHeures>=6||retards>=3||sanctions>=1;
-  return(
-    <div style={{position:"fixed",top:0,right:0,bottom:0,width:isMobile?"100vw":380,
-      background:"#fff",boxShadow:"-4px 0 32px rgba(0,0,0,.18)",zIndex:1000,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{background:"#0B3D20",padding:"16px 18px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-        <div style={{width:40,height:40,borderRadius:"50%",background:"rgba(212,175,55,.2)",border:"2px solid #D4AF37",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{eleve.g==="F"?"👧":"👦"}</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13,fontWeight:800,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{eleve.nom}</div>
-          <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:2}}>{eleve.classe}</div>
-        </div>
-        <button onClick={onClose} style={{background:"rgba(255,255,255,.1)",border:"none",color:"#fff",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:16}}>✕</button>
-      </div>
-      <div style={{padding:"10px 18px",background:aB,borderBottom:"1px solid #e5e7eb",flexShrink:0}}>
-        <span style={{fontSize:11,fontWeight:700,color:aC}}>{aL}</span>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,padding:"14px 18px",flexShrink:0}}>
-        {[{label:"Seances abs.",value:totalSeances,color:"#3b82f6"},{label:"Heures abs.",value:totalHeures+"h",color:aC},{label:"Retards",value:retards,color:"#d97706"},{label:"Sanctions",value:sanctions,color:"#b91c1c"}].map((k,i)=>(
-          <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"10px 14px",border:"1px solid #e5e7eb"}}>
-            <div style={{fontSize:10,color:"#6b7280",fontWeight:600}}>{k.label}</div>
-            <div style={{fontSize:20,fontWeight:800,color:k.color,marginTop:2}}>{k.value}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{flex:1,overflowY:"auto",padding:"0 18px 18px"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#6b7280",marginBottom:8,textTransform:"uppercase"}}>Historique vie scolaire</div>
-        {loading?<div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:20}}>Chargement...</div>
-        :vieSco.length===0?<div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:20}}>Aucun evenement</div>
-        :vieSco.map((v,i)=>(
-          <div key={v.id||i} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:"1px solid #f1f5f9",alignItems:"flex-start"}}>
-            <span style={{fontSize:14,flexShrink:0}}>{v.type==="retard"?"⏰":v.type==="sanction"?"⚠️":"🚨"}</span>
-            <div><div style={{fontSize:11,fontWeight:700,color:"#374151",textTransform:"capitalize"}}>{v.type}</div>
-            <div style={{fontSize:10,color:"#6b7280"}}>{v.date}{v.motif?" · "+v.motif:""}</div></div>
-          </div>
-        ))}
-      </div>
-      {needsConvoc&&(
-        <div style={{padding:"14px 18px",borderTop:"1px solid #e5e7eb",flexShrink:0}}>
-          <button onClick={()=>genererConvocation(eleve,eleve.classe,totalHeures,retards,sanctions)}
-            style={{width:"100%",padding:"12px 0",background:"#D4AF37",color:"#0B3D20",border:"none",borderRadius:10,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            📨 Generer la convocation parent
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function MesClassesPage() {
   const {user, data, setData, showToast} = useApp();
   const {isMobile} = useDevice();
@@ -805,7 +716,6 @@ function MesClassesPage() {
   const [selEval,   setSelEval]   = useState("E1");
   const [savingNote, setSavingNote] = useState({}); // {eleveId: 'pending'|'saved'|'error'}
   const syncTimer = useRef({});
-  const [ficheEleveSG, setFicheEleveSG] = useState(null);
 
   useEffect(()=>{
     if (!selClasse && mesClasses.length>0) setSelClasse(mesClasses[0]);
@@ -980,9 +890,7 @@ function MesClassesPage() {
                   borderBottom: i<elevesFiltres.length-1?`1px solid #f1f5f9`:"none"}}>
                   <span style={{fontSize:11, color:C.txtLight, width:20, flexShrink:0}}>{i+1}</span>
                   <span style={{fontSize:14, flexShrink:0}}>{e.g==="F"?"👧":"👦"}</span>
-                  <span onClick={()=>user?.role==="surveillant_general"?setFicheEleveSG({...e,classe:selClasse}):null}
-                    style={{flex:1,fontSize:isMobile?12.5:13,fontWeight:600,color:C.txt,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                      cursor:user?.role==="surveillant_general"?"pointer":"default"}}>{e.nom}</span>
+                  <span style={{flex:1, fontSize: isMobile?12.5:13, fontWeight:600, color:C.txt, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{e.nom}</span>
                   <button onClick={()=>toggleAbsence(e.id)}
                     style={{padding: isMobile?"7px 12px":"5px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", flexShrink:0,
                       background:absent?"#fef2f2":"#f0fdf4", color:absent?"#b91c1c":"#166534"}}>
@@ -1305,9 +1213,6 @@ function CahierDeTextePage() {
       </div>
     </div>
     </div>
-      {ficheEleveSG&&user?.role==="surveillant_general"&&(
-        <FicheEleveSG eleve={ficheEleveSG} data={data} onClose={()=>setFicheEleveSG(null)}/>
-      )}
   );
 }
 
