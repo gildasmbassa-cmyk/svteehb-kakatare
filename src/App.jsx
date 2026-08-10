@@ -144,6 +144,14 @@ const SPLASH_BG_B64 = "data:image/webp;base64,UklGRkYcAQBXRUJQVlA4IDocAQAwQQadAS
 const ENS_COLORS = {mbassam:"#1a6b3c",boubam:"#c0392b",douniaroud:"#2980b9",hayatouh:"#16a085",aissatous:"#8e44ad",essambas:"#d35400",koffa:"#27ae60",mawiyak:"#e67e22",sadjot:"#2c3e50",sylvie:"#c8a951"};
 const CLASS_COLORS = ["#1a6b3c","#2980b9","#8e44ad","#d35400","#16a085","#c0392b","#27ae60","#e67e22","#2c3e50","#0891b2","#7c3aed","#b45309"];
 const getColor = id => ENS_COLORS[id]||"#1a6b3c";
+const getDureeSVT = (classe) => {
+  if (!classe) return 2;
+  const c = classe.toLowerCase();
+  const is1A4 = c.startsWith("1") && (c.includes("a4") || c.includes("ita") || c.includes("chn"));
+  const isTleA4 = c.startsWith("tle") && (c.includes("a4") || c.includes("ita") || c.includes("chn") || c.includes("esp") || c.includes("arb") || c.includes("all"));
+  if (is1A4 || isTleA4) return 1;
+  return 2;
+};
 const getIni   = nom => (nom||"").replace("Mme ","").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
 const getNomCourt = nom => {
   const sansTitre = (nom||"").replace(/^(Mme|M\.)\s+/,"");
