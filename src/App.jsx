@@ -6758,6 +6758,11 @@ function DashboardSurveillance() {
 
   const [loading,setLoading]     = useState(true);
   const [tab,setTab]             = useState(()=>{ const t=window.__sgTab; window.__sgTab=null; return t||"vue"; });
+  useEffect(()=>{
+    const handler = (e) => { setTab(e.detail); window.__sgTab = null; };
+    window.addEventListener("sg:tab", handler);
+    return () => window.removeEventListener("sg:tab", handler);
+  }, []);
   const [vieSco,setVieSco]       = useState([]);
   const [vieLoading,setVieLoading] = useState(true);
   const [ficheEleve,setFicheEleve] = useState(null);
@@ -7616,7 +7621,9 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
   });
 
   const go = (tabId) => {
+    if (tabId === null) { window.__sgTab = null; setPage("dashboard"); return; }
     window.__sgTab = tabId;
+    window.dispatchEvent(new CustomEvent("sg:tab", { detail: tabId }));
     setPage("dashboard");
   };
 
@@ -7629,9 +7636,15 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
   ];
 
   const activePage = page;
+  const [activeTab, setActiveTab_sg] = useState(window.__sgTab||null);
+  useEffect(()=>{
+    const h = (e) => setActiveTab_sg(e.detail);
+    window.addEventListener("sg:tab", h);
+    return () => window.removeEventListener("sg:tab", h);
+  },[]);
   const isNavActive = (item) => {
-    if(item.id==="dashboard") return activePage==="dashboard" && !window.__sgTab;
-    return activePage==="dashboard" && window.__sgTab===item.tab;
+    if(item.id==="dashboard") return activePage==="dashboard" && !activeTab;
+    return activePage==="dashboard" && activeTab===item.tab;
   };
 
   const G = "#D4AF37"; // gold accent
@@ -7684,7 +7697,7 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
 
         {/* Tableau de bord */}
         <NavItemSG active={activePage==="dashboard"&&!window.__sgTab} collapsed={effectiveCollapsed}
-          onClick={()=>{window.__sgTab=null;setPage("dashboard");}}
+          onClick={()=>{window.__sgTab=null;setActiveTab_sg(null);setPage("dashboard");}}
           emoji="🏠" label="Tableau de bord" gold={G}/>
 
         {/* Classes (expandable) */}
