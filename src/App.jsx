@@ -8032,7 +8032,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
           {open&&!effectiveCollapsed&&item.sub&&(
             <div style={{paddingBottom:4}}>
               {item.sub.map((s,i)=>(
-                <div key={i} onClick={()=>{window.__deptFilter=s.label;setPage(item.id);}}
+                <div key={i} onClick={()=>setPage(item.id)}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px 6px 36px",
                     fontSize:12.5,cursor:"pointer",color:"rgba(255,255,255,.5)",transition:"all .12s",
                     borderLeft:"2px solid transparent"}}
@@ -9514,21 +9514,10 @@ function DepartementsPage() {
   const {isMobile} = useDevice();
   const [matieres, setMatieres] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [openDept, setOpenDept] = useState(()=>{
-    // Lire le filtre dept depuis la sidebar (ex: clic sur "SVT")
-    const dept = window.__deptFilter||null;
-    window.__deptFilter = null;
-    return dept;
-  });
+  const [openDept, setOpenDept] = useState(null);
   const [newMatiere, setNewMatiere] = useState("");
   const [editingNom, setEditingNom] = useState(null);
   const [savingId, setSavingId] = useState(null);
-
-  // Résoudre nom dept → id après chargement
-  const [pendingDeptNom, setPendingDeptNom] = useState(()=>{
-    const d = typeof openDept==="string"&&isNaN(Number(openDept))?openDept:null;
-    return d;
-  });
 
   const loadMatieres = async () => {
     setLoading(true);
@@ -9537,14 +9526,6 @@ function DepartementsPage() {
     setLoading(false);
   };
   useEffect(() => { loadMatieres(); }, []);
-
-  // Quand matieres chargées, résoudre le nom dept en id
-  useEffect(()=>{
-    if (!pendingDeptNom || !matieres) return;
-    const depts = data?.departements||[];
-    const found = depts.find(d=>(d.nom||"").toLowerCase().includes(pendingDeptNom.toLowerCase()));
-    if (found) { setOpenDept(found.id); setPendingDeptNom(null); }
-  },[matieres, pendingDeptNom]);
 
   const nbEnsParDept = {};
   Object.values(data?.users||{}).filter(u=>u.role!=="proviseur").forEach(u=>{
