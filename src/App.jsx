@@ -6454,46 +6454,6 @@ const NAV_TEACHER = [
   {id:"edt-teacher",  emoji:"📅", label:"Mon emploi du temps"},
 ];
 
-const NAV_PROVISEUR_GROUPS = [
-  {
-    section: "VUE D'ENSEMBLE",
-    items: [
-      {id:"dashboard", emoji:"🏠", label:"Tableau de bord"},
-    ]
-  },
-  {
-    section: "ACTEURS & PÉDAGOGIE",
-    items: [
-      {id:"enseignants",  emoji:"👥", label:"Enseignants"},
-      {id:"eleves",       emoji:"🎓", label:"Élèves"},
-      {id:"departements", emoji:"🏛️", label:"Départements & Matières", expandable:true,
-        sub:[
-          {id:"dept-svt",   emoji:"🌿", label:"SVT"},
-          {id:"dept-maths", emoji:"📐", label:"Mathématiques"},
-          {id:"dept-phys",  emoji:"⚗️", label:"Sciences Physiques"},
-          {id:"dept-lett",  emoji:"📚", label:"Lettres"},
-          {id:"dept-sh",    emoji:"🌍", label:"Sciences Humaines"},
-          {id:"dept-lv",    emoji:"🗣️", label:"Langues Vivantes"},
-        ]
-      },
-      {id:"documents",    emoji:"📄", label:"Documents"},
-    ]
-  },
-  {
-    section: "SUIVI & PLANNINGS",
-    items: [
-      {id:"edt",       emoji:"📅", label:"Emploi du temps"},
-      {id:"epreuves",  emoji:"📋", label:"Épreuves & Évaluations"},
-      {id:"programme", emoji:"📊", label:"Suivi programme"},
-    ]
-  },
-  {
-    section: "CYCLE ANNUEL",
-    items: [
-      {id:"gestion-annuelle", emoji:"🔄", label:"Gestion annuelle"},
-    ]
-  },
-];
 const NAV_PROVISEUR = [...NAV_ADMIN, {id:"departements", emoji:"🏛️", label:"Départements", sub:"Matières · Animateurs"}];
 const NAV_CENSEUR = NAV_ADMIN.filter(n=>n.id!=="enseignants" && n.id!=="gestion-annuelle");
 
@@ -8032,7 +7992,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
           {open&&!effectiveCollapsed&&item.sub&&(
             <div style={{paddingBottom:4}}>
               {item.sub.map((s,i)=>(
-                <div key={i} onClick={()=>setPage(item.id)}
+                <div key={i} onClick={()=>{window.__deptFilter=s.label;setPage(item.id);}}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px 6px 36px",
                     fontSize:12.5,cursor:"pointer",color:"rgba(255,255,255,.5)",transition:"all .12s",
                     borderLeft:"2px solid transparent"}}
@@ -9514,10 +9474,21 @@ function DepartementsPage() {
   const {isMobile} = useDevice();
   const [matieres, setMatieres] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [openDept, setOpenDept] = useState(null);
+  const [openDept, setOpenDept] = useState(()=>{
+    // Lire le filtre dept depuis la sidebar (ex: clic sur "SVT")
+    const dept = window.__deptFilter||null;
+    window.__deptFilter = null;
+    return dept;
+  });
   const [newMatiere, setNewMatiere] = useState("");
   const [editingNom, setEditingNom] = useState(null);
   const [savingId, setSavingId] = useState(null);
+
+  // Résoudre nom dept → id après chargement
+  const [pendingDeptNom, setPendingDeptNom] = useState(()=>{
+    const d = typeof openDept==="string"&&isNaN(Number(openDept))?openDept:null;
+    return d;
+  });
 
   const loadMatieres = async () => {
     setLoading(true);
@@ -9526,6 +9497,14 @@ function DepartementsPage() {
     setLoading(false);
   };
   useEffect(() => { loadMatieres(); }, []);
+
+  // Quand matieres chargées, résoudre le nom dept en id
+  useEffect(()=>{
+    if (!pendingDeptNom || !matieres) return;
+    const depts = data?.departements||[];
+    const found = depts.find(d=>(d.nom||"").toLowerCase().includes(pendingDeptNom.toLowerCase()));
+    if (found) { setOpenDept(found.id); setPendingDeptNom(null); }
+  },[matieres, pendingDeptNom]);
 
   const nbEnsParDept = {};
   Object.values(data?.users||{}).filter(u=>u.role!=="proviseur").forEach(u=>{
