@@ -9932,7 +9932,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="edt")               return <W>{(isAdmin||user?.role==="censeur")?<EdtPage/>:<MonEdtPage/>}</W>
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
-    if(page==="departements")      return <W>{user?.role==="proviseur"?<DepartementsPage/>:null}</W>
+    if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
     if(page==="settings")          return <W><ChangePasswordPage/></W>
     return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="🚧"/></W>
   };
