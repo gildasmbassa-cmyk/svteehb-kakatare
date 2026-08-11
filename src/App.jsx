@@ -8808,7 +8808,7 @@ const EvolutionChartLarge = ({ series, height=140 }) => {
 };
 
 function SuiviProgrammePage() {
-  const {data, showToast} = useApp();
+  const {data, showToast, user} = useApp();
   const {isMobile} = useDevice();
   const [trim, setTrim] = useState(0); // 0=Annuel,1=T1,2=T2,3=T3
   const [filtre, setFiltre] = useState("tous"); // tous|alerte|objectif
@@ -9548,51 +9548,124 @@ function DepartementsPage() {
         <p style={{color:C.txtMuted, margin:"3px 0 0", fontSize:12}}>8 départements pédagogiques · Lycée de Kakatare</p>
       </div>
 
-      <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"repeat(auto-fill, minmax(280px, 1fr))", gap:12}}>
-        {DEPARTEMENTS_LIST.map(d => {
+      {/* Bouton retour si filtré depuis sidebar */}
+      {openDept && (
+        <button onClick={()=>setOpenDept(null)}
+          style={{alignSelf:"flex-start",padding:"6px 14px",borderRadius:8,border:`1px solid ${C.border}`,background:C.white,
+            color:C.txtMuted,fontSize:11.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+          ← Tous les départements
+        </button>
+      )}
+      <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"repeat(auto-fill, minmax(320px, 1fr))", gap:12}}>
+        {DEPARTEMENTS_LIST.filter(d=>!openDept||openDept===d.id).map(d => {
           const deptMatieres = (matieres||[]).filter(m=>m.departement_id===d.id);
-          const isOpen = openDept===d.id;
+          const isOpen = openDept===d.id || (!openDept && false);
+          // Enrichissement
+          const enseignantsDept = Object.values(data?.users||{}).filter(u=>u.departement_id===d.id&&u.role==="enseignant");
+          const animateur = Object.values(data?.users||{}).find(u=>u.departement_id===d.id&&(u.role==="animateur"||u.role==="animatrice"));
+          const epDept = (data?.epreuves||[]).filter(e=>enseignantsDept.some(u=>u.id===e.ens_id));
+          const epSoumises = epDept.filter(e=>e.statut!=="brouillon").length;
+          // Taux couverture programme (moyenne enseignants du dept)
+          const tauxProg = enseignantsDept.length===0?null:(()=>{
+            let total=0,count=0;
+            enseignantsDept.forEach(u=>{
+              (u.classes||[]).forEach(cl=>{
+                const prog=data?.prog?.[u.id]?.[cl];
+                if(prog){total+=(prog.faites||0);count+=(prog.total||1);}
+              });
+            });
+            return count>0?Math.round(total/count*100):0;
+          })();
           return (
-            <div key={d.id} style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:16}}>
+            <div key={d.id} style={{background:C.white, borderRadius:12, border:`1.5px solid ${openDept===d.id?C.green:C.border}`, padding:16,
+              boxShadow:openDept===d.id?"0 4px 20px rgba(11,77,44,.10)":"none"}}>
               <div onClick={()=>setOpenDept(isOpen?null:d.id)} style={{display:"flex", alignItems:"center", gap:10, cursor:"pointer"}}>
-                <span style={{fontSize:20}}>{d.emoji}</span>
+                <span style={{fontSize:22}}>{d.emoji}</span>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:13, fontWeight:700, color:C.txt}}>{d.nom}</div>
-                  <div style={{fontSize:10.5, color:C.txtMuted}}>{nbEnsParDept[d.id]||0} enseignant{(nbEnsParDept[d.id]||0)>1?"s":""} · {deptMatieres.length} matière{deptMatieres.length>1?"s":""}</div>
+                  <div style={{fontSize:14, fontWeight:800, color:C.txt}}>{d.nom}</div>
+                  <div style={{fontSize:10.5, color:C.txtMuted}}>{enseignantsDept.length} enseignant{enseignantsDept.length>1?"s":""} · {deptMatieres.length} matière{deptMatieres.length>1?"s":""}</div>
                 </div>
-                <span style={{fontSize:12, color:C.txtMuted}}>{isOpen?"▲":"▼"}</span>
+                {tauxProg!==null&&<span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:10,
+                  background:tauxProg>=75?"#f0fdf4":tauxProg>=50?"#fefce8":"#fef2f2",
+                  color:tauxProg>=75?"#15803d":tauxProg>=50?"#92400e":"#b91c1c"}}>{tauxProg}%</span>}
+                <span style={{fontSize:12, color:C.txtMuted}}>{openDept===d.id?"▲":"▼"}</span>
               </div>
 
-              {isOpen && (
-                <div style={{marginTop:12, paddingTop:12, borderTop:`1px solid ${C.border}`, display:"flex", flexDirection:"column", gap:6}}>
-                  {loading ? <Sk h={16} w="60%"/> : deptMatieres.length===0 ? (
-                    <div style={{fontSize:11, color:C.txtLight, fontStyle:"italic"}}>Aucune matière</div>
-                  ) : deptMatieres.map(m => (
-                    <div key={m.id} style={{display:"flex", alignItems:"center", gap:8, padding:"6px 8px", background:"#f8fafc", borderRadius:7}}>
-                      {editingNom===m.id ? (
-                        <input autoFocus defaultValue={m.nom}
-                          onBlur={e=>renommerMatiere(m, e.target.value)}
-                          onKeyDown={e=>{ if(e.key==="Enter") e.target.blur(); if(e.key==="Escape") setEditingNom(null); }}
-                          style={{flex:1, border:`1px solid ${C.green}`, borderRadius:5, padding:"3px 6px", fontSize:11.5, fontFamily:"inherit"}}/>
-                      ) : (
-                        <span onClick={()=>setEditingNom(m.id)} style={{flex:1, fontSize:11.5, color:C.txt, cursor:"pointer"}}>{m.nom}</span>
-                      )}
-                      <button onClick={()=>supprimerMatiere(m)} disabled={savingId===m.id}
-                        style={{border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:13, padding:2}}>
-                        {savingId===m.id ? <Spinner size={11} color={C.red}/> : "🗑️"}
+              {openDept===d.id && (
+                <div style={{marginTop:14, paddingTop:14, borderTop:`1px solid ${C.border}`, display:"flex", flexDirection:"column", gap:14}}>
+
+                  {/* Animateur */}
+                  <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#f8fafc",borderRadius:10}}>
+                    <Avatar ens={animateur||{nom:""}} size={32} fontSize={11}/>
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em"}}>Animateur pédagogique</div>
+                      <div style={{fontSize:12,fontWeight:700,color:C.txt}}>{animateur?.nom||"Non assigné"}</div>
+                    </div>
+                  </div>
+
+                  {/* KPIs */}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                    {[
+                      {label:"Enseignants",value:enseignantsDept.length,color:"#3b82f6"},
+                      {label:"Épreuves soumises",value:epSoumises,color:C.green},
+                      {label:"Couverture prog.",value:tauxProg!==null?tauxProg+"%":"—",color:tauxProg>=75?"#15803d":tauxProg>=50?"#d97706":"#b91c1c"},
+                    ].map((k,i)=>(
+                      <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:`1px solid ${C.border}`,textAlign:"center"}}>
+                        <div style={{fontSize:18,fontWeight:800,color:k.color}}>{k.value}</div>
+                        <div style={{fontSize:9,color:C.txtMuted,fontWeight:600,marginTop:2}}>{k.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Enseignants du département */}
+                  {enseignantsDept.length>0&&(
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}}>Enseignants</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                        {enseignantsDept.map(u=>(
+                          <div key={u.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#f8fafc",borderRadius:8}}>
+                            <Avatar ens={u} size={26} fontSize={9}/>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:11.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{u.nom}</div>
+                              <div style={{fontSize:10,color:C.txtMuted}}>{(u.classes||[]).join(", ")||"Aucune classe"}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Matières + gestion */}
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}}>Matières</div>
+                    {loading ? <Sk h={16} w="60%"/> : deptMatieres.length===0 ? (
+                      <div style={{fontSize:11, color:C.txtLight, fontStyle:"italic"}}>Aucune matière</div>
+                    ) : deptMatieres.map(m => (
+                      <div key={m.id} style={{display:"flex", alignItems:"center", gap:8, padding:"6px 8px", background:"#f8fafc", borderRadius:7, marginBottom:4}}>
+                        {editingNom===m.id ? (
+                          <input autoFocus defaultValue={m.nom}
+                            onBlur={e=>renommerMatiere(m, e.target.value)}
+                            onKeyDown={e=>{ if(e.key==="Enter") e.target.blur(); if(e.key==="Escape") setEditingNom(null); }}
+                            style={{flex:1, border:`1px solid ${C.green}`, borderRadius:5, padding:"3px 6px", fontSize:11.5, fontFamily:"inherit"}}/>
+                        ) : (
+                          <span onClick={()=>setEditingNom(m.id)} style={{flex:1, fontSize:11.5, color:C.txt, cursor:"pointer"}}>{m.nom}</span>
+                        )}
+                        <button onClick={()=>supprimerMatiere(m)} disabled={savingId===m.id}
+                          style={{border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:13, padding:2}}>
+                          {savingId===m.id ? <Spinner size={11} color={C.red}/> : "🗑️"}
+                        </button>
+                      </div>
+                    ))}
+                    <div style={{display:"flex", gap:6, marginTop:6}}>
+                      <input value={openDept===d.id?newMatiere:""} onChange={e=>setNewMatiere(e.target.value)}
+                        onKeyDown={e=>{ if(e.key==="Enter") ajouterMatiere(d.id); }}
+                        placeholder="Nouvelle matière…"
+                        style={{flex:1, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 8px", fontSize:11.5, fontFamily:"inherit"}}/>
+                      <button onClick={()=>ajouterMatiere(d.id)} disabled={savingId===`new-${d.id}`}
+                        style={{padding:"6px 12px", borderRadius:6, border:"none", background:C.green, color:"#fff", fontSize:11.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
+                        {savingId===`new-${d.id}` ? <Spinner size={11}/> : "+ Ajouter"}
                       </button>
                     </div>
-                  ))}
-
-                  <div style={{display:"flex", gap:6, marginTop:4}}>
-                    <input value={openDept===d.id?newMatiere:""} onChange={e=>setNewMatiere(e.target.value)}
-                      onKeyDown={e=>{ if(e.key==="Enter") ajouterMatiere(d.id); }}
-                      placeholder="Nouvelle matière…"
-                      style={{flex:1, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 8px", fontSize:11.5, fontFamily:"inherit"}}/>
-                    <button onClick={()=>ajouterMatiere(d.id)} disabled={savingId===`new-${d.id}`}
-                      style={{padding:"6px 12px", borderRadius:6, border:"none", background:C.green, color:"#fff", fontSize:11.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
-                      {savingId===`new-${d.id}` ? <Spinner size={11}/> : "+ Ajouter"}
-                    </button>
                   </div>
                 </div>
               )}
