@@ -9474,21 +9474,21 @@ function DepartementsPage() {
   const {isMobile} = useDevice();
   const [matieres, setMatieres] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [openDept, setOpenDept] = useState(()=>{
-    // Lire le filtre dept depuis la sidebar (ex: clic sur "SVT")
-    const dept = window.__deptFilter||null;
-    window.__deptFilter = null;
-    return dept;
-  });
+  const [openDept, setOpenDept] = useState(null);
+
+  // Appliquer __deptFilter à chaque navigation vers cette page
+  const {page} = useApp();
+  useEffect(()=>{
+    if (window.__deptFilter) {
+      const nom = window.__deptFilter;
+      window.__deptFilter = null;
+      // Résoudre nom → id dept après chargement matieres
+      setOpenDept("__pending__"+nom);
+    }
+  },[page]);
   const [newMatiere, setNewMatiere] = useState("");
   const [editingNom, setEditingNom] = useState(null);
   const [savingId, setSavingId] = useState(null);
-
-  // Résoudre nom dept → id après chargement
-  const [pendingDeptNom, setPendingDeptNom] = useState(()=>{
-    const d = typeof openDept==="string"&&isNaN(Number(openDept))?openDept:null;
-    return d;
-  });
 
   const loadMatieres = async () => {
     setLoading(true);
@@ -9498,13 +9498,14 @@ function DepartementsPage() {
   };
   useEffect(() => { loadMatieres(); }, []);
 
-  // Quand matieres chargées, résoudre le nom dept en id
+  // Quand matieres chargées, résoudre __pending__NOM → id dept
   useEffect(()=>{
-    if (!pendingDeptNom || !matieres) return;
+    if (!matieres || !openDept?.toString().startsWith("__pending__")) return;
+    const nom = openDept.replace("__pending__","");
     const depts = data?.departements||[];
-    const found = depts.find(d=>(d.nom||"").toLowerCase().includes(pendingDeptNom.toLowerCase()));
-    if (found) { setOpenDept(found.id); setPendingDeptNom(null); }
-  },[matieres, pendingDeptNom]);
+    const found = depts.find(d=>(d.nom||"").toLowerCase().includes(nom.toLowerCase()));
+    if (found) setOpenDept(found.id);
+  },[matieres, openDept]);
 
   const nbEnsParDept = {};
   Object.values(data?.users||{}).filter(u=>u.role!=="proviseur").forEach(u=>{
