@@ -7992,7 +7992,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
           {open&&!effectiveCollapsed&&item.sub&&(
             <div style={{paddingBottom:4}}>
               {item.sub.map((s,i)=>(
-                <div key={i} onClick={()=>{window.__deptFilter=s.label;setPage(item.id);}}
+                <div key={i} onClick={()=>{window.__deptFilter=s.label;window.dispatchEvent(new CustomEvent("dept:open",{detail:s.label}));setPage(item.id);}}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px 6px 36px",
                     fontSize:12.5,cursor:"pointer",color:"rgba(255,255,255,.5)",transition:"all .12s",
                     borderLeft:"2px solid transparent"}}
@@ -9476,16 +9476,24 @@ function DepartementsPage() {
   const [loading, setLoading] = useState(true);
   const [openDept, setOpenDept] = useState(null);
 
-  // Appliquer __deptFilter à chaque navigation vers cette page
-  const {page} = useApp();
+  // Écouter l'event dept:open dispatché depuis la sidebar
   useEffect(()=>{
+    const handler = (e) => {
+      const nom = e.detail;
+      window.__deptFilter = null;
+      const dept = DEPARTEMENTS_LIST.find(d=>(d.nom||"").toLowerCase().includes(nom.toLowerCase()));
+      if (dept) setOpenDept(dept.id);
+    };
+    window.addEventListener("dept:open", handler);
+    // Appliquer aussi si __deptFilter déjà défini (navigation initiale)
     if (window.__deptFilter) {
       const nom = window.__deptFilter;
       window.__deptFilter = null;
-      // Résoudre nom → id dept après chargement matieres
-      setOpenDept("__pending__"+nom);
+      const dept = DEPARTEMENTS_LIST.find(d=>(d.nom||"").toLowerCase().includes(nom.toLowerCase()));
+      if (dept) setOpenDept(dept.id);
     }
-  },[page]);
+    return () => window.removeEventListener("dept:open", handler);
+  },[]);
   const [newMatiere, setNewMatiere] = useState("");
   const [editingNom, setEditingNom] = useState(null);
   const [savingId, setSavingId] = useState(null);
@@ -9498,14 +9506,7 @@ function DepartementsPage() {
   };
   useEffect(() => { loadMatieres(); }, []);
 
-  // Résoudre __pending__NOM → id dept via DEPARTEMENTS_LIST (statique)
-  useEffect(()=>{
-    if (!openDept?.toString().startsWith("__pending__")) return;
-    const nom = openDept.replace("__pending__","");
-    const dept = DEPARTEMENTS_LIST.find(d=>(d.nom||"").toLowerCase().includes(nom.toLowerCase()));
-    if (dept) setOpenDept(dept.id);
-    else setOpenDept(null);
-  },[openDept]);
+
 
   const nbEnsParDept = {};
   Object.values(data?.users||{}).filter(u=>u.role!=="proviseur").forEach(u=>{
