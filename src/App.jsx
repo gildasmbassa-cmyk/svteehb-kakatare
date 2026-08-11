@@ -7719,6 +7719,234 @@ function DashboardCenseur() {
   );
 }
 
+function genRapportDept(stats, user, trim) {
+  const deptNom=DEPARTEMENTS_LIST.find(d=>d.id===user.departement_id)?.nom||"SVTEEHB";
+  const periode={ANN:"Année 2025-2026",T1:"Trimestre 1",T2:"Trimestre 2",T3:"Trimestre 3"}[trim]||trim;
+  const date=new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+  const rows=stats.enseignants.map(e=>{
+    const c=e.taux>=75?"#15803d":e.taux>=50?"#92400e":"#b91c1c";
+    const bg=e.taux>=75?"#f0fdf4":e.taux>=50?"#fffbeb":"#fef2f2";
+    const lbl=e.taux>=75?"✓ Objectif":e.taux>=50?"En cours":"⚠ Retard";
+    return `<tr><td style='padding:8px 12px;font-weight:600'>${e.nom}</td>
+      <td style='padding:8px 12px;text-align:center'>${(e.classes||[]).join(", ")||"—"}</td>
+      <td style='padding:8px 12px;text-align:center'>${e.fait}</td>
+      <td style='padding:8px 12px;text-align:center'>${e.ref}</td>
+      <td style='padding:8px 12px;text-align:center;font-weight:800;color:${c}'>${e.taux}%</td>
+      <td style='padding:8px 12px;text-align:center'><span style='background:${bg};color:${c};padding:3px 8px;border-radius:8px;font-size:11px;font-weight:700'>${lbl}</span></td>
+    </tr>`;
+  }).join("");
+  const html=`<!DOCTYPE html><html lang='fr'><head><meta charset='UTF-8'><title>Rapport ${deptNom}</title>
+  <style>body{font-family:Georgia,serif;max-width:800px;margin:32px auto;color:#1f2937;font-size:13px}
+  h1{font-size:18px;font-weight:800;color:#0B4D2C;border-bottom:3px solid #0B4D2C;padding-bottom:8px}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th{background:#0B4D2C;color:#fff;padding:9px 12px;text-align:left;font-size:11px}
+  tr:nth-child(even){background:#f8fafc}
+  .kpi{display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 20px;margin:0 8px 8px 0;text-align:center}
+  .kv{font-size:22px;font-weight:800;color:#0B4D2C}.kl{font-size:10px;color:#6b7280;margin-top:2px}
+  @media print{body{margin:16px}}</style></head><body>
+  <h1>Rapport pédagogique — Département ${deptNom}</h1>
+  <div style='color:#6b7280;font-size:11px;margin-bottom:20px'>Lycée de Kakatare-Maroua · ${periode} · ${date}<br>Animateur : ${user.nom}</div>
+  <div>
+    <div class='kpi'><div class='kv'>${stats.enseignants.length}</div><div class='kl'>Enseignants</div></div>
+    <div class='kpi'><div class='kv'>${stats.tauxMoyen}%</div><div class='kl'>Couverture moy.</div></div>
+    <div class='kpi'><div class='kv'>${stats.totalFait}/${stats.totalRef}</div><div class='kl'>Leçons faites</div></div>
+    <div class='kpi'><div class='kv'>${stats.enseignants.filter(e=>e.taux<50).length}</div><div class='kl'>En retard</div></div>
+  </div>
+  <table><thead><tr><th>Enseignant</th><th style='text-align:center'>Classes</th><th style='text-align:center'>Faites</th><th style='text-align:center'>Prévues</th><th style='text-align:center'>Taux</th><th style='text-align:center'>Statut</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <div style='margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:40px'>
+    <div style='border-top:1px solid #d1d5db;padding-top:8px;text-align:center;font-size:12px'>Le Proviseur<br><br><br>Signature &amp; Cachet :</div>
+    <div style='border-top:1px solid #d1d5db;padding-top:8px;text-align:center;font-size:12px'>L\'Animateur Pédagogique<br><br><br>Signature :</div>
+  </div></body></html>`;
+  imprimerHTML(html);
+}
+
+function DashboardAnimateur() {
+  const {user,data} = useApp();
+  const [stats, setStats] = useState({enseignants:[],tauxMoyen:0,epAttente:0,absWeek:0,totalFait:0,totalRef:0});
+  const [selTrimAnim, setSelTrimAnim] = useState("ANN");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    if(!data||!user) return;
+    const deptId = user.departement_id;
+    const deptNom = DEPARTEMENTS_LIST.find(d=>d.id===deptId)?.nom||"";
+
+    // Enseignants du département
+    const enseignants = Object.values(data.users||{}).filter(u=>
+      u.departement_id===deptId && u.role==="enseignant"
+    );
+
+    // Taux couverture par enseignant
+    const ensAvecStats = enseignants.map(u=>{
+      const classes = (u.classes||[]).filter(Boolean);
+      let fait=0, ref=0;
+      classes.forEach(cl=>{
+        const key=u.id+"||"+cl;
+        const done=(data.prog?.[key]||[]).length;
+        const code=resolveProgCode(cl);
+        const meta=code?PROG_META[code]:null;
+        fait+=done; ref+=meta?.lpRef||0;
+      });
+      const taux=ref>0?Math.min(100,Math.round(fait/ref*100)):0;
+      return {...u,fait,ref,taux,nbClasses:classes.length};
+    }).sort((a,b)=>a.taux-b.taux);
+
+    const tauxMoyen = ensAvecStats.length>0
+      ? Math.round(ensAvecStats.reduce((s,e)=>s+e.taux,0)/ensAvecStats.length)
+      : 0;
+    const totalFait = ensAvecStats.reduce((s,e)=>s+e.fait,0);
+    const totalRef  = ensAvecStats.reduce((s,e)=>s+e.ref,0);
+
+    // Épreuves en attente de validation du département
+    const epAttente = (data.epreuves||[]).filter(e=>
+      enseignants.some(u=>u.id===e.ens_id) && e.statut==="attente"
+    ).length;
+
+    // Absences cette semaine dans les classes du département
+    const today = new Date();
+    const lun = new Date(today); lun.setDate(today.getDate()-(today.getDay()||7)+1);
+    const lunStr = lun.toISOString().slice(0,10);
+    let absWeek=0;
+    Object.entries(data.absences||{}).forEach(([k,abs])=>{
+      const [,cl,date]=k.split("||");
+      if(date>=lunStr && enseignants.some(u=>(u.classes||[]).includes(cl)))
+        absWeek+=(abs||[]).length;
+    });
+
+    setStats({enseignants:ensAvecStats,tauxMoyen,epAttente,absWeek,totalFait,totalRef,deptNom});
+    setLoading(false);
+  },[data,user]);
+
+  const tauCol=t=>t>=75?C.green:t>=50?C.amber:C.red;
+  const tauBg=t=>t>=75?C.greenPale:t>=50?"#fffbeb":"#fef2f2";
+
+  return(
+    <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
+
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+        <div>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>
+            Bonjour, {getNomCourt(user?.nom)} 👋
+          </h2>
+          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>
+            Animateur pédagogique · Département {stats.deptNom||""}
+          </p>
+        </div>
+        <div style={{display:"inline-flex",alignItems:"center",gap:5,background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:600,color:C.green}}>
+          <span style={{width:5,height:5,borderRadius:"50%",background:C.green}}/>Synchronisé
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <KpiCard label="Enseignants" value={stats.enseignants.length} sub="dans mon département" iconEmoji="👥" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Couverture moyenne" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="📊" bg={tauBg(stats.tauxMoyen)} loading={loading} delay={0.05}/>
+        <KpiCard label="Leçons faites" value={stats.totalFait} sub={`sur ${stats.totalRef} prévues`} iconEmoji="✅" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.1}/>
+        <KpiCard label="Épreuves en attente" value={stats.epAttente} sub="à valider" iconEmoji="📋" bg={stats.epAttente>0?"#fff7ed":C.greenPale} subColor={stats.epAttente>0?C.amber:C.green} loading={loading} delay={0.15}/>
+        <KpiCard label="Absences cette semaine" value={stats.absWeek} sub="dans le département" iconEmoji="⚠️" bg={stats.absWeek>5?"#fef2f2":C.greenPale} subColor={stats.absWeek>5?C.red:C.green} loading={loading} delay={0.2}/>
+      </div>
+
+      {/* Tableau enseignants */}
+      <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
+        <h3 style={{margin:"0 0 14px",fontSize:13,fontWeight:700,color:C.txt}}>
+          📚 Enseignants du département — suivi programme
+        </h3>
+        {loading?[1,2,3].map(i=><Sk key={i} h={72} br={9} style={{marginBottom:8}}/>)
+        :stats.enseignants.length===0?(
+          <div style={{textAlign:"center",padding:"32px 0",color:C.txtLight}}>
+            <div style={{fontSize:32,marginBottom:8}}>📭</div>
+            Aucun enseignant dans ce département
+          </div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {stats.enseignants.map((e,i)=>(
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+                background:i%2===0?"#f8fafc":C.white,borderRadius:10,border:`1px solid ${C.border}`}}>
+                <Avatar ens={e} size={36} fontSize={12}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                    <div>
+                      <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+                      <div style={{fontSize:10,color:C.txtMuted}}>{e.nbClasses} classe{e.nbClasses>1?"s":""} · {e.fait}/{e.ref} leçons</div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontSize:16,fontWeight:800,color:tauCol(e.taux)}}>{e.taux}%</div>
+                      <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8,
+                        background:tauBg(e.taux),color:tauCol(e.taux)}}>
+                        {e.taux>=75?"✓ Objectif":e.taux>=50?"En cours":"⚠ Retard"}
+                      </span>
+                    </div>
+                  </div>
+                  <ProgBar value={e.taux}/>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Documents */}
+      <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+          <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
+            📄 Documents à produire
+          </h3>
+          <div style={{display:"flex",gap:6}}>
+            {["ANN","T1","T2","T3"].map(t=>(
+              <button key={t} onClick={()=>setSelTrimAnim(t)}
+                style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${selTrimAnim===t?C.green:C.border}`,
+                  background:selTrimAnim===t?C.greenPale:C.white,color:selTrimAnim===t?C.green:C.txtMuted,
+                  fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                {t==="ANN"?"Année":t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {stats.enseignants.map(e=>{
+            const deptNom=DEPARTEMENTS_LIST.find(d=>d.id===user.departement_id)?.nom||"SVTEEHB";
+            return(
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+                background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`}}>
+                <Avatar ens={e} size={32} fontSize={11}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+                  <div style={{fontSize:10,color:C.txtMuted}}>{e.nbClasses} classe{e.nbClasses>1?"s":""} · {e.taux}% couverture</div>
+                </div>
+                <button onClick={()=>{
+                  const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
+                  imprimerHTML(html);
+                }}
+                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:C.green,color:"#fff",
+                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                  📄 Fiche suivi
+                </button>
+              </div>
+            );
+          })}
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+            background:"#f0fdf4",borderRadius:10,border:`1px solid ${C.greenBorder}`,marginTop:4}}>
+            <span style={{fontSize:22,flexShrink:0}}>📊</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>Rapport trimestriel département</div>
+              <div style={{fontSize:10,color:C.txtMuted}}>
+                {stats.enseignants.length} enseignants · {stats.tauxMoyen}% moy. · {selTrimAnim==="ANN"?"Année":selTrimAnim}
+              </div>
+            </div>
+            <button onClick={()=>genRapportDept(stats,user,selTrimAnim)}
+              style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#D4AF37",color:"#0B3D20",
+                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+              📥 Exporter PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardTeacher() {
   const {user,data} = useApp();
   const [loading,setLoading] = useState(true);
@@ -9925,7 +10153,7 @@ const AppLayout = ({onLogout}) => {
         {children}
       </div>
     );
-    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:user?.role==="surveillant_general"?<DashboardSurveillance/>:user?.role==="censeur"?<DashboardCenseur/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
+    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:user?.role==="surveillant_general"?<DashboardSurveillance/>:user?.role==="censeur"?<DashboardCenseur/>:(user?.role==="animateur"||user?.role==="animatrice")?<DashboardAnimateur/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
     if(page==="programme")         return <W>{(isAdmin||user?.role==="censeur")?<SuiviProgrammePage/>:<MonProgrammePage/>}</W>
     if(page==="epreuves")          return <W><EpreuvesPage/></W>
     if(page==="edt-teacher")       return <W><MonEdtPage/></W>
