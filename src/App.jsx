@@ -6454,6 +6454,46 @@ const NAV_TEACHER = [
   {id:"edt-teacher",  emoji:"📅", label:"Mon emploi du temps"},
 ];
 
+const NAV_PROVISEUR_GROUPS = [
+  {
+    section: "VUE D'ENSEMBLE",
+    items: [
+      {id:"dashboard", emoji:"🏠", label:"Tableau de bord"},
+    ]
+  },
+  {
+    section: "ACTEURS & PÉDAGOGIE",
+    items: [
+      {id:"enseignants",  emoji:"👥", label:"Enseignants"},
+      {id:"eleves",       emoji:"🎓", label:"Élèves"},
+      {id:"departements", emoji:"🏛️", label:"Départements & Matières", expandable:true,
+        sub:[
+          {id:"dept-svt",   emoji:"🌿", label:"SVT"},
+          {id:"dept-maths", emoji:"📐", label:"Mathématiques"},
+          {id:"dept-phys",  emoji:"⚗️", label:"Sciences Physiques"},
+          {id:"dept-lett",  emoji:"📚", label:"Lettres"},
+          {id:"dept-sh",    emoji:"🌍", label:"Sciences Humaines"},
+          {id:"dept-lv",    emoji:"🗣️", label:"Langues Vivantes"},
+        ]
+      },
+      {id:"documents",    emoji:"📄", label:"Documents"},
+    ]
+  },
+  {
+    section: "SUIVI & PLANNINGS",
+    items: [
+      {id:"edt",       emoji:"📅", label:"Emploi du temps"},
+      {id:"epreuves",  emoji:"📋", label:"Épreuves & Évaluations"},
+      {id:"programme", emoji:"📊", label:"Suivi programme"},
+    ]
+  },
+  {
+    section: "CYCLE ANNUEL",
+    items: [
+      {id:"gestion-annuelle", emoji:"🔄", label:"Gestion annuelle"},
+    ]
+  },
+];
 const NAV_PROVISEUR = [...NAV_ADMIN, {id:"departements", emoji:"🏛️", label:"Départements", sub:"Matières · Animateurs"}];
 const NAV_CENSEUR = NAV_ADMIN.filter(n=>n.id!=="enseignants" && n.id!=="gestion-annuelle");
 
@@ -8100,6 +8140,149 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
   );
 };
 
+const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAttente}) => {
+  const {user, page, setPage} = useApp();
+  const [deptOpen, setDeptOpen] = useState(false);
+  const G = C.green;
+  const isActive = (id) => page === id;
+
+  const NavItemProv = ({item}) => {
+    const active = isActive(item.id);
+    if (item.expandable) {
+      return (
+        <div>
+          <div onClick={()=>setDeptOpen(o=>!o)}
+            style={{display:"flex",alignItems:"center",gap:10,
+              padding:effectiveCollapsed?"10px 0":"9px 16px",
+              justifyContent:effectiveCollapsed?"center":"flex-start",
+              cursor:"pointer",fontSize:13,
+              color:deptOpen||page.startsWith("dept-")?"#4ade80":"rgba(255,255,255,.55)",
+              fontWeight:deptOpen||page.startsWith("dept-")?700:400,
+              background:deptOpen||page.startsWith("dept-")?"rgba(34,197,94,.15)":"transparent",
+              borderLeft:deptOpen||page.startsWith("dept-")?("3px solid "+G):"3px solid transparent",
+              transition:"all .15s"}}
+            onMouseEnter={e=>{if(!deptOpen)e.currentTarget.style.background="rgba(255,255,255,.06)";}}
+            onMouseLeave={e=>{if(!deptOpen)e.currentTarget.style.background=page.startsWith("dept-")?"rgba(34,197,94,.15)":"transparent";}}>
+            <span style={{fontSize:16,flexShrink:0}}>{item.emoji}</span>
+            {!effectiveCollapsed&&<>
+              <span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>
+              <span style={{fontSize:10,transition:"transform .2s",transform:deptOpen?"rotate(90deg)":"rotate(0deg)",opacity:.6,flexShrink:0}}>›</span>
+            </>}
+          </div>
+          {deptOpen&&!effectiveCollapsed&&(
+            <div style={{paddingBottom:4}}>
+              {item.sub.map(s=>(
+                <div key={s.id} onClick={()=>setPage("departements")}
+                  style={{display:"flex",alignItems:"center",gap:8,
+                    padding:"6px 16px 6px 36px",fontSize:12.5,cursor:"pointer",
+                    color:isActive(s.id)?"#4ade80":"rgba(255,255,255,.5)",
+                    fontWeight:isActive(s.id)?700:400,
+                    borderLeft:isActive(s.id)?("2px solid "+G):"2px solid transparent",
+                    transition:"all .12s"}}
+                  onMouseEnter={e=>e.currentTarget.style.color="#fff"}
+                  onMouseLeave={e=>e.currentTarget.style.color=isActive(s.id)?"#4ade80":"rgba(255,255,255,.5)"}>
+                  <span style={{fontSize:13}}>{s.emoji}</span>
+                  <span>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div onClick={()=>setPage(item.id)}
+        title={effectiveCollapsed?item.label:""}
+        style={{display:"flex",alignItems:"center",gap:10,
+          padding:effectiveCollapsed?"10px 0":"9px 16px",
+          justifyContent:effectiveCollapsed?"center":"flex-start",
+          cursor:"pointer",fontSize:13,
+          color:active?"#4ade80":"rgba(255,255,255,.55)",
+          fontWeight:active?700:400,
+          background:active?"rgba(34,197,94,.15)":"transparent",
+          borderLeft:active?("3px solid "+G):"3px solid transparent",
+          transition:"all .15s"}}
+        onMouseEnter={e=>{if(!active)e.currentTarget.style.background="rgba(255,255,255,.06)";}}
+        onMouseLeave={e=>{if(!active)e.currentTarget.style.background="transparent";}}>
+        <span style={{fontSize:16,flexShrink:0}}>{item.emoji}</span>
+        {!effectiveCollapsed&&<span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>}
+        {!effectiveCollapsed&&item.id==="epreuves"&&nbEpAttente>0&&(
+          <span style={{marginLeft:"auto",fontSize:9,fontWeight:800,background:C.red,color:"#fff",borderRadius:20,padding:"1px 6px",flexShrink:0}}>{nbEpAttente}</span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <aside style={{
+      width:effectiveCollapsed?56:220,minWidth:effectiveCollapsed?56:220,
+      background:C.sidebar,display:"flex",flexDirection:"column",
+      transition:"width .25s, min-width .25s",overflow:"hidden",flexShrink:0,
+      borderRight:"1px solid rgba(255,255,255,.08)",position:"relative"
+    }}>
+      {/* Logo */}
+      <div style={{padding:effectiveCollapsed?"14px 0":"14px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
+        <img src={LOGO_LYCEE_B64} alt="" width={30} height={30} style={{flexShrink:0,objectFit:"contain",borderRadius:"50%"}}/>
+        {!effectiveCollapsed&&(
+          <div>
+            <div style={{fontSize:12,fontWeight:800,color:"#fff",lineHeight:1}}>Lykama</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,.4)",marginTop:2}}>Lycée de Kakatare · Maroua</div>
+          </div>
+        )}
+      </div>
+
+      {/* Année scolaire */}
+      {!effectiveCollapsed&&(
+        <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
+          <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:3}}>VUE D'ENSEMBLE</div>
+          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2025 – 2026 ▾</div>
+        </div>
+      )}
+
+      {/* Navigation groupée */}
+      <nav style={{flex:1,overflowY:"auto",scrollbarWidth:"none",padding:"6px 0"}}>
+        {NAV_PROVISEUR_GROUPS.map((group,gi)=>(
+          <div key={gi}>
+            {!effectiveCollapsed&&gi>0&&(
+              <div style={{padding:"10px 16px 4px",fontSize:8.5,fontWeight:800,
+                color:"rgba(255,255,255,.25)",letterSpacing:".12em",textTransform:"uppercase"}}>
+                {group.section}
+              </div>
+            )}
+            {gi>0&&!effectiveCollapsed&&<div style={{margin:"2px 14px 4px",height:1,background:"rgba(255,255,255,.07)"}}/>}
+            {group.items.map(item=><NavItemProv key={item.id} item={item}/>)}
+          </div>
+        ))}
+      </nav>
+
+      {/* Profil */}
+      <div onClick={()=>setPage("settings")}
+        style={{borderTop:"1px solid rgba(255,255,255,.08)",padding:effectiveCollapsed?"10px 0":"12px 14px",
+          display:"flex",alignItems:"center",gap:9,flexShrink:0,
+          justifyContent:effectiveCollapsed?"center":"flex-start",cursor:"pointer",transition:"background .15s"}}
+        onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.05)"}
+        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+        <Avatar ens={user} size={32} fontSize={11}/>
+        {!effectiveCollapsed&&(
+          <div style={{overflow:"hidden"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{user?.nom}</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.4)"}}>Proviseur · ⚙️ Paramètres</div>
+          </div>
+        )}
+      </div>
+
+      {/* Toggle */}
+      <button onClick={()=>setCollapsed(c=>!c)}
+        style={{position:"absolute",top:18,right:-12,width:22,height:22,borderRadius:"50%",
+          background:C.sidebar,border:"1.5px solid rgba(255,255,255,.2)",color:"rgba(255,255,255,.6)",
+          cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",
+          boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
+        {effectiveCollapsed?"›":"‹"}
+      </button>
+    </aside>
+  );
+};
+
 const Sidebar = ({collapsed, setCollapsed}) => {
   const {user, page, setPage, data, t} = useApp();
   const {isMobile, mobileLandscape, isTablet} = useDevice();
@@ -8118,6 +8301,13 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   if (user?.role === "proviseur") return <SidebarGrouped groups={NAV_PROVISEUR_GROUPS} role="proviseur" roleLabel="Proviseur" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
   if (user?.role === "censeur")   return <SidebarGrouped groups={NAV_CENSEUR_GROUPS}   role="censeur"   roleLabel="Censeur"   collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
   if (user?.role === "animateur"||user?.role === "animatrice") return <SidebarGrouped groups={NAV_ANIMATEUR_GROUPS} role={user?.role} roleLabel="Animateur Pédagogique" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
+  if (user?.role === "proviseur") {
+    return (
+      <SidebarProviseur collapsed={collapsed} setCollapsed={setCollapsed}
+        effectiveCollapsed={effectiveCollapsed}
+        nbEpAttente={nbEpAttente}/>
+    );
+  }
   if (user?.role === "surveillant_general") return <SidebarSG collapsed={collapsed} setCollapsed={setCollapsed}/>;
 
   return (
