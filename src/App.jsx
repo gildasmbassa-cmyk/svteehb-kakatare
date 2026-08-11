@@ -1955,8 +1955,53 @@ function ConflitsClassesPanel({ enseignants, data }) {
     await refreshData?.();
   };
 
+  // Calcul stats pour la fiche
+  const totalFait = (ens.classes||[]).reduce((s,cl)=>{
+    const fait = ((data?.prog||{})[ens.id+"||"+cl]||[]).length;
+    return s+fait;
+  },0);
+  const totalRef = (ens.classes||[]).reduce((s,cl)=>{
+    const code = resolveProgCode(cl);
+    return s+(code?PROG_META[code]?.lpRef||0:0);
+  },0);
+  const tauxCouv = totalRef>0?Math.min(100,Math.round(totalFait/totalRef*100)):0;
+  const nbAbsences = Object.entries(data?.absences||{}).filter(([k])=>k.startsWith(ens.id+"||")).length;
+  const nbEpreuves = (data?.epreuves||[]).filter(e=>e.ens_id===ens.id).length;
+  const nbEpAttente = (data?.epreuves||[]).filter(e=>e.ens_id===ens.id&&e.statut==="attente").length;
+  const deptNom = DEPARTEMENTS_LIST.find(d=>d.id===ens.departement_id)?.nom||"—";
   return (
     <div style={{display:"flex", flexDirection:"column", gap:12}}>
+
+      {/* ── Fiche profil ─────────────────────────────────────────── */}
+      <div style={{background:"#0B3D20",borderRadius:16,padding:"20px 24px",display:"flex",gap:18,alignItems:"flex-start",flexWrap:"wrap"}}>
+        {/* Photo */}
+        <div style={{flexShrink:0}}>
+          <Avatar ens={ens} size={72} fontSize={22}/>
+        </div>
+        {/* Infos */}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:2}}>{ens.nom}</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:10}}>
+            {deptNom} · {(ens.classes||[]).join(", ")||"Aucune classe"}
+          </div>
+          {/* KPIs */}
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            {[
+              {label:"Couverture prog.",value:tauxCouv+"%",color:tauxCouv>=75?"#4ade80":tauxCouv>=50?"#fbbf24":"#f87171"},
+              {label:"Leçons faites",value:totalFait+"/"+totalRef,color:"rgba(255,255,255,.8)"},
+              {label:"Séances saisies",value:nbAbsences,color:"rgba(255,255,255,.8)"},
+              {label:"Épreuves",value:nbEpreuves+(nbEpAttente>0?" ("+nbEpAttente+" en attente)":""),color:nbEpAttente>0?"#fbbf24":"rgba(255,255,255,.8)"},
+              {label:"Classes",value:(ens.classes||[]).length,color:"rgba(255,255,255,.8)"},
+            ].map((k,i)=>(
+              <div key={i} style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:"8px 14px",minWidth:90,textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:800,color:k.color}}>{k.value}</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.4)",marginTop:2,fontWeight:600}}>{k.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {conflits.length > 0 && (
         <div style={{background:C.redPale, border:`1px solid ${C.redBorder}`, borderRadius:12, padding:"16px 18px", display:"flex", flexDirection:"column", gap:14}}>
           <div>
