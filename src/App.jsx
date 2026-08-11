@@ -9498,14 +9498,14 @@ function DepartementsPage() {
   };
   useEffect(() => { loadMatieres(); }, []);
 
-  // Quand matieres chargées, résoudre __pending__NOM → id dept
+  // Résoudre __pending__NOM → id dept via DEPARTEMENTS_LIST (statique)
   useEffect(()=>{
-    if (!matieres || !openDept?.toString().startsWith("__pending__")) return;
+    if (!openDept?.toString().startsWith("__pending__")) return;
     const nom = openDept.replace("__pending__","");
-    const depts = data?.departements||[];
-    const found = depts.find(d=>(d.nom||"").toLowerCase().includes(nom.toLowerCase()));
-    if (found) setOpenDept(found.id);
-  },[matieres, openDept]);
+    const dept = DEPARTEMENTS_LIST.find(d=>(d.nom||"").toLowerCase().includes(nom.toLowerCase()));
+    if (dept) setOpenDept(dept.id);
+    else setOpenDept(null);
+  },[openDept]);
 
   const nbEnsParDept = {};
   Object.values(data?.users||{}).filter(u=>u.role!=="proviseur").forEach(u=>{
