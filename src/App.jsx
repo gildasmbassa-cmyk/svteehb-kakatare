@@ -10028,6 +10028,7 @@ function LoginPage({onLogin}){
     {key:"direction",  label:"Direction",             sub:"Proviseur",             desc:"Gestion globale de l'établissement", emoji:"👨🏾‍💼", role:"proviseur",          needsDept:false},
     {key:"censeur",    label:"Censeur",               sub:"Organisation pédagogique", desc:"Classes, notes, suivi discipline",  emoji:"📚",  role:"censeur",            needsDept:false},
     {key:"sg",         label:"Surveillance Générale", sub:"Vie scolaire & discipline", desc:"Absences, retards, incidents",    emoji:"🛡️", role:"surveillant_general", needsDept:false},
+    {key:"animateur",  label:"Animateur Pédagogique", sub:"Suivi pédagogique",     desc:"Supervision du département & programmes", emoji:"📋", role:"animateur", needsDept:false},
     {key:"enseignant", label:"Enseignant",            sub:"Corps professoral",      desc:"Cours, cahier de textes, évaluations", emoji:"👨🏾‍🏫", role:"enseignant",   needsDept:true},
     {key:"eleve",      label:"Élève",                 sub:"Espace apprenant",       desc:"Résultats, emploi du temps",         emoji:"🎓",  role:null, soon:true},
     {key:"parent",     label:"Parent",                sub:"Suivi scolaire",         desc:"Suivi scolaire de l'élève",          emoji:"👪",  role:null, soon:true},
@@ -10048,6 +10049,7 @@ function LoginPage({onLogin}){
     if(!authUser){setErr("Identifiant ou mot de passe incorrect.");setLoading(false);return;}
     if(profile.role==="proviseur"          && authUser.role!=="proviseur")          {setErr("Ce compte n'est pas un compte Direction.");setLoading(false);return;}
     if(profile.role==="censeur"            && authUser.role!=="censeur")            {setErr("Ce compte n'est pas un compte Censeur.");setLoading(false);return;}
+    if(profile.role==="animateur" && authUser.role!=="animateur" && authUser.role!=="animatrice"){setErr("Ce compte n'est pas un compte Animateur Pédagogique.");setLoading(false);return;}
     if(profile.role==="surveillant_general"&& authUser.role!=="surveillant_general"){setErr("Ce compte n'est pas un compte Surveillance Générale.");setLoading(false);return;}
     if(profile.role==="enseignant" && (authUser.role==="proviseur"||authUser.role==="censeur"||authUser.role==="surveillant_general")){setErr("Utilisez l'accès correspondant à ce compte.");setLoading(false);return;}
     if(profile.needsDept && authUser.departement_id && String(authUser.departement_id)!==String(selDept)){setErr("Ce compte n'appartient pas à ce département.");setLoading(false);return;}
