@@ -5565,7 +5565,7 @@ function DocumentsPage() {
 
   // ── Aperçu dans iframe ────────────────────────────────────────────
   function afficherApercu(html, label) {
-    setPreviewHtml(html);
+    setPreviewHtml(stripAutoPrint(html));
     setPreviewLabel(label);
     // Injecter dans l'iframe après le render
     setTimeout(() => {
@@ -7886,6 +7886,11 @@ function PVReunionModal({stats, user, onClose, onGenerate}) {
   );
 }
 
+// Retire le script d'auto-impression avant affichage en apercu (evite le print automatique)
+function stripAutoPrint(html) {
+  return (html||"").replace(/<script>window\.onload=\(\)=>\{?window\.print\(\);\}?<\/script>/g, "");
+}
+
 function DocumentsAnimateurPage() {
   const {user, data} = useApp();
   const [stats, setStats] = useState({enseignants:[],tauxMoyen:0,totalFait:0,totalRef:0});
@@ -7989,7 +7994,7 @@ function DocumentsAnimateurPage() {
                 fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
               📥 Exporter PDF
             </button>
-            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); setPreviewHtml(html); setPreviewLabel("Rapport trimestriel département"); }}
+            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Rapport trimestriel département"); }}
               style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
                 fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
               👁️
@@ -8015,7 +8020,7 @@ function DocumentsAnimateurPage() {
 
             {showPV && (
         <PVReunionModal stats={stats} user={user} onClose={()=>setShowPV(false)}
-          onGenerate={(html)=>{ setPreviewHtml(html); setPreviewLabel("PV de réunion de département"); }}/>
+          onGenerate={(html)=>{ setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("PV de réunion de département"); }}/>
       )}
       {previewHtml && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
