@@ -7893,6 +7893,7 @@ function stripAutoPrint(html) {
 
 function DocumentsAnimateurPage() {
   const {user, data} = useApp();
+  const {isMobile} = useDevice();
   const [stats, setStats] = useState({enseignants:[],tauxMoyen:0,totalFait:0,totalRef:0});
   const [loading, setLoading] = useState(true);
   const [selTrimAnim, setSelTrimAnim] = useState("ANN");
@@ -8046,6 +8047,19 @@ function DocumentsAnimateurPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Composant partage : avatar + nom + sous-titre, mobile-safe (troncature garantie)
+function EnsAvatarInfo({e, subtitle, size}) {
+  return (
+    <React.Fragment>
+      <Avatar ens={e} size={size||32} fontSize={11}/>
+      <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
+        <div style={{fontSize:12,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+        <div style={{fontSize:9.5,color:C.txtMuted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{subtitle}</div>
+      </div>
+    </React.Fragment>
   );
 }
 
