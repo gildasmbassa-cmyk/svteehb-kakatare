@@ -7888,7 +7888,12 @@ function PVReunionModal({stats, user, onClose, onGenerate}) {
 
 // Retire le script d'auto-impression avant affichage en apercu (evite le print automatique)
 function stripAutoPrint(html) {
-  return (html||"").replace(/<script>window\.onload=\(\)=>\{?window\.print\(\);\}?<\/script>/g, "");
+  let h = (html||"").replace(/<script>window\.onload=\(\)=>\{?window\.print\(\);\}?<\/script>/g, "");
+  // Injecte un script de mise a l'echelle automatique pour lisibilite sur mobile
+  const fitScript = "<script>(function(){function fit(){var b=document.body;if(!b)return;b.style.transform=\"\";b.style.width=\"\";var w=b.scrollWidth;var vw=window.innerWidth;if(w>vw){var s=vw/w;b.style.transformOrigin=\"top left\";b.style.transform=\"scale(\"+s+\")\";b.style.width=(100/s)+\"%\";}}window.addEventListener(\"load\",fit);window.addEventListener(\"resize\",fit);setTimeout(fit,50);})();</script>";
+  if (h.includes("</body>")) { h = h.replace("</body>", fitScript + "</body>"); }
+  else { h += fitScript; }
+  return h;
 }
 
 function DocumentsAnimateurPage() {
