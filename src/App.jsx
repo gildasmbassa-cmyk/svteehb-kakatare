@@ -7971,7 +7971,7 @@ function DocumentsAnimateurPage() {
                 </button>
                 <button onClick={()=>{
                   const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
-                  setPreviewHtml(html); setPreviewLabel("Fiche suivi — "+e.nom);
+                  setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Fiche suivi — "+e.nom);
                 }}
                   style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
                     fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
