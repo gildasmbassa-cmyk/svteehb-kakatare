@@ -10329,7 +10329,6 @@ const AppLayout = ({onLogout}) => {
     if(page==="mes-classes") return <MesClassesPage/>
     if(page==="cahier")      return <CahierDeTextePage/>
     if(page==="documents")   return isAdmin?<DocumentsPage/>:null
-    if(page==="documents-ap") return (user?.role==="animateur"||user?.role==="animatrice")?<DocumentsAnimateurPage/>:null
     if(page==="eleves")      return (isAdmin||user?.role==="censeur")?<ElevesPage/>:<MesClassesPage/>
     // ── Pages SIMPLES — enveloppées dans un scroller ───────────────────
     const W = ({children}) => (
@@ -10345,6 +10344,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
+    if(page==="documents-ap")       return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<DocumentsAnimateurPage/>:null}</W>
     if(page==="settings")          return <W><ChangePasswordPage/></W>
     return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="🚧"/></W>
   };
