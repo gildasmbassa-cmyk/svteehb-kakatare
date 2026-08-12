@@ -6546,6 +6546,7 @@ const NAV_ANIMATEUR_GROUPS = [
     {id:"mes-classes",emoji:"👨‍🏫",label:"Mes classes"},
     {id:"cahier",     emoji:"📖",label:"Cahier de texte"},
     {id:"programme",  emoji:"📊",label:"Mon programme"},
+    {id:"documents-ap",emoji:"📄",label:"Documents"},
   ]},
   { section:"PLANNINGS", items:[
     {id:"edt-teacher",emoji:"📅",label:"Mon emploi du temps"},
@@ -7876,6 +7877,125 @@ function PVReunionModal({stats, user, onClose}) {
   );
 }
 
+function DocumentsAnimateurPage() {
+  const {user, data} = useApp();
+  const [stats, setStats] = useState({enseignants:[],tauxMoyen:0,totalFait:0,totalRef:0});
+  const [loading, setLoading] = useState(true);
+  const [selTrimAnim, setSelTrimAnim] = useState("ANN");
+  const [showPV, setShowPV] = useState(false);
+
+  useEffect(()=>{
+    if(!data||!user) return;
+    const deptId = user.departement_id;
+    const enseignants = Object.values(data.users||{}).filter(u=>
+      u.departement_id===deptId && u.role==="enseignant"
+    );
+    const ensAvecStats = enseignants.map(u=>{
+      const classes = (u.classes||[]).filter(Boolean);
+      let fait=0, ref=0;
+      classes.forEach(cl=>{
+        const key=u.id+"||"+cl;
+        const done=(data.prog?.[key]||[]).length;
+        const code=resolveProgCode(cl);
+        const meta=code?PROG_META[code]:null;
+        fait+=done; ref+=meta?.lpRef||0;
+      });
+      const taux=ref>0?Math.min(100,Math.round(fait/ref*100)):0;
+      return {...u,fait,ref,taux,nbClasses:classes.length};
+    }).sort((a,b)=>a.taux-b.taux);
+    const tauxMoyen = ensAvecStats.length>0
+      ? Math.round(ensAvecStats.reduce((s,e)=>s+e.taux,0)/ensAvecStats.length)
+      : 0;
+    const totalFait = ensAvecStats.reduce((s,e)=>s+e.fait,0);
+    const totalRef  = ensAvecStats.reduce((s,e)=>s+e.ref,0);
+    setStats({enseignants:ensAvecStats,tauxMoyen,totalFait,totalRef});
+    setLoading(false);
+  },[data,user]);
+
+  return(
+    <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
+      <div>
+        <h2 style={{fontSize:18,fontWeight:800,color:C.txt,margin:0}}>Documents à produire</h2>
+        <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>Fiches, rapports et PV de réunion du département</p>
+      </div>
+      <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+          <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
+            📄 Documents à produire
+          </h3>
+          <div style={{display:"flex",gap:6}}>
+            {["ANN","T1","T2","T3"].map(t=>(
+              <button key={t} onClick={()=>setSelTrimAnim(t)}
+                style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${selTrimAnim===t?C.green:C.border}`,
+                  background:selTrimAnim===t?C.greenPale:C.white,color:selTrimAnim===t?C.green:C.txtMuted,
+                  fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                {t==="ANN"?"Année":t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {stats.enseignants.map(e=>{
+            const deptNom=DEPARTEMENTS_LIST.find(d=>d.id===user.departement_id)?.nom||"SVTEEHB";
+            return(
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+                background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`}}>
+                <Avatar ens={e} size={32} fontSize={11}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+                  <div style={{fontSize:10,color:C.txtMuted}}>{e.nbClasses} classe{e.nbClasses>1?"s":""} · {e.taux}% couverture</div>
+                </div>
+                <button onClick={()=>{
+                  const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
+                  imprimerHTML(html);
+                }}
+                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:C.green,color:"#fff",
+                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                  📄 Fiche suivi
+                </button>
+              </div>
+            );
+          })}
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+            background:"#f0fdf4",borderRadius:10,border:`1px solid ${C.greenBorder}`,marginTop:4}}>
+            <span style={{fontSize:22,flexShrink:0}}>📊</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>Rapport trimestriel département</div>
+              <div style={{fontSize:10,color:C.txtMuted}}>
+                {stats.enseignants.length} enseignants · {stats.tauxMoyen}% moy. · {selTrimAnim==="ANN"?"Année":selTrimAnim}
+              </div>
+            </div>
+            <button onClick={()=>genRapportDept(stats,user,selTrimAnim)}
+              style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#D4AF37",color:"#0B3D20",
+                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+              📥 Exporter PDF
+            </button>
+          </div>
+
+          {/* PV de reunion */}
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+            background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe",marginTop:8}}>
+            <span style={{fontSize:22,flexShrink:0}}>📝</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>PV de reunion de departement</div>
+              <div style={{fontSize:10,color:C.txtMuted}}>Reunion mensuelle - ordre du jour, presents, progression, decisions</div>
+            </div>
+            <button onClick={()=>setShowPV(true)}
+              style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#3b82f6",color:"#fff",
+                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+              Rediger
+            </button>
+          </div>
+        </div>
+      </div>
+
+            {showPV && (
+        <PVReunionModal stats={stats} user={user} onClose={()=>setShowPV(false)}/>
+      )}
+    </div>
+  );
+}
+
 function DashboardAnimateur() {
   const {user,data} = useApp();
   const [stats, setStats] = useState({enseignants:[],tauxMoyen:0,epAttente:0,absWeek:0,totalFait:0,totalRef:0});
@@ -8001,78 +8121,6 @@ function DashboardAnimateur() {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Documents */}
-      <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
-          <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
-            📄 Documents à produire
-          </h3>
-          <div style={{display:"flex",gap:6}}>
-            {["ANN","T1","T2","T3"].map(t=>(
-              <button key={t} onClick={()=>setSelTrimAnim(t)}
-                style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${selTrimAnim===t?C.green:C.border}`,
-                  background:selTrimAnim===t?C.greenPale:C.white,color:selTrimAnim===t?C.green:C.txtMuted,
-                  fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                {t==="ANN"?"Année":t}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {stats.enseignants.map(e=>{
-            const deptNom=DEPARTEMENTS_LIST.find(d=>d.id===user.departement_id)?.nom||"SVTEEHB";
-            return(
-              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
-                background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`}}>
-                <Avatar ens={e} size={32} fontSize={11}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
-                  <div style={{fontSize:10,color:C.txtMuted}}>{e.nbClasses} classe{e.nbClasses>1?"s":""} · {e.taux}% couverture</div>
-                </div>
-                <button onClick={()=>{
-                  const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
-                  imprimerHTML(html);
-                }}
-                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:C.green,color:"#fff",
-                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-                  📄 Fiche suivi
-                </button>
-              </div>
-            );
-          })}
-          <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
-            background:"#f0fdf4",borderRadius:10,border:`1px solid ${C.greenBorder}`,marginTop:4}}>
-            <span style={{fontSize:22,flexShrink:0}}>📊</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>Rapport trimestriel département</div>
-              <div style={{fontSize:10,color:C.txtMuted}}>
-                {stats.enseignants.length} enseignants · {stats.tauxMoyen}% moy. · {selTrimAnim==="ANN"?"Année":selTrimAnim}
-              </div>
-            </div>
-            <button onClick={()=>genRapportDept(stats,user,selTrimAnim)}
-              style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#D4AF37",color:"#0B3D20",
-                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-              📥 Exporter PDF
-            </button>
-          </div>
-
-          {/* PV de reunion */}
-          <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
-            background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe",marginTop:8}}>
-            <span style={{fontSize:22,flexShrink:0}}>📝</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>PV de reunion de departement</div>
-              <div style={{fontSize:10,color:C.txtMuted}}>Reunion mensuelle - ordre du jour, presents, progression, decisions</div>
-            </div>
-            <button onClick={()=>setShowPV(true)}
-              style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#3b82f6",color:"#fff",
-                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-              Rediger
-            </button>
-          </div>
-        </div>
       </div>
 
       {showPV && (
@@ -10281,6 +10329,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="mes-classes") return <MesClassesPage/>
     if(page==="cahier")      return <CahierDeTextePage/>
     if(page==="documents")   return isAdmin?<DocumentsPage/>:null
+    if(page==="documents-ap") return (user?.role==="animateur"||user?.role==="animatrice")?<DocumentsAnimateurPage/>:null
     if(page==="eleves")      return (isAdmin||user?.role==="censeur")?<ElevesPage/>:<MesClassesPage/>
     // ── Pages SIMPLES — enveloppées dans un scroller ───────────────────
     const W = ({children}) => (
