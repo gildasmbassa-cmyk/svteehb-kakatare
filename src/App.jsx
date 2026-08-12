@@ -7955,29 +7955,29 @@ function DocumentsAnimateurPage() {
           {stats.enseignants.map(e=>{
             const deptNom=DEPARTEMENTS_LIST.find(d=>d.id===user.departement_id)?.nom||"SVTEEHB";
             return(
-              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
-                background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`}}>
-                <Avatar ens={e} size={32} fontSize={11}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
-                  <div style={{fontSize:10,color:C.txtMuted}}>{e.nbClasses} classe{e.nbClasses>1?"s":""} · {e.taux}% couverture</div>
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+                background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`,flexWrap:"wrap"}}>
+                <EnsAvatarInfo e={e} subtitle={`${e.nbClasses} classe${e.nbClasses>1?"s":""} · ${e.taux}% couverture`}/>
+                <div style={{display:"flex",gap:6,flexShrink:0,
+                  width:isMobile?"100%":"auto",justifyContent:isMobile?"flex-end":"flex-start",
+                  marginTop:isMobile?6:0}}>
+                  <button onClick={()=>{
+                    const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
+                    imprimerHTML(html);
+                  }}
+                    style={{padding:"7px 12px",borderRadius:8,border:"none",background:C.green,color:"#fff",
+                      fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,whiteSpace:"nowrap"}}>
+                    📄 Fiche suivi
+                  </button>
+                  <button onClick={()=>{
+                    const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
+                    setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Fiche suivi — "+e.nom);
+                  }}
+                    style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
+                      fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                    👁️
+                  </button>
                 </div>
-                <button onClick={()=>{
-                  const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
-                  imprimerHTML(html);
-                }}
-                  style={{padding:"7px 12px",borderRadius:8,border:"none",background:C.green,color:"#fff",
-                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-                  📄 Fiche suivi
-                </button>
-                <button onClick={()=>{
-                  const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
-                  setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Fiche suivi — "+e.nom);
-                }}
-                  style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
-                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-                  👁️
-                </button>
               </div>
             );
           })}
