@@ -7866,10 +7866,10 @@ function DashboardAnimateur() {
                 background:i%2===0?"#f8fafc":C.white,borderRadius:10,border:`1px solid ${C.border}`}}>
                 <Avatar ens={e} size={36} fontSize={12}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                    <div>
-                      <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
-                      <div style={{fontSize:10,color:C.txtMuted}}>{e.nbClasses} classe{e.nbClasses>1?"s":""} · {e.fait}/{e.ref} leçons</div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:5}}>
+                    <div style={{minWidth:0,overflow:"hidden",flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
+                      <div style={{fontSize:9.5,color:C.txtMuted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nbClasses} cl. · {e.fait}/{e.ref} leç.</div>
                     </div>
                     <div style={{textAlign:"right",flexShrink:0}}>
                       <div style={{fontSize:16,fontWeight:800,color:tauCol(e.taux)}}>{e.taux}%</div>
