@@ -7761,10 +7761,126 @@ function genRapportDept(stats, user, trim) {
   imprimerHTML(html);
 }
 
+function genPVReunion(dept, user, ordreJour, presents, absents, decisions, stats) {
+  const date = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+  const presentsHtml = presents.length>0
+    ? presents.map(function(n){return "<li>"+n+"</li>";}).join("")
+    : "<li style=\"color:#9ca3af\">Aucun</li>";
+  const absentsHtml = absents.length>0
+    ? absents.map(function(n){return "<li>"+n+"</li>";}).join("")
+    : "<li style=\"color:#9ca3af\">Aucun</li>";
+  const ordreJourHtml = ordreJour.split(String.fromCharCode(10)).filter(function(l){return l.trim();})
+    .map(function(l){return "<li>"+l+"</li>";}).join("");
+  const decisionsHtml = decisions.split(String.fromCharCode(10)).filter(function(l){return l.trim();})
+    .map(function(l){return "<li>"+l+"</li>";}).join("");
+  const enRetard = stats.enseignants.filter(function(e){return e.taux<50;});
+  const enRetardHtml = enRetard.length>0
+    ? enRetard.map(function(e){return "<li>"+e.nom+" - "+e.taux+"% ("+e.fait+"/"+e.ref+" lecons)</li>";}).join("")
+    : "<li style=\"color:#15803d\">Aucun enseignant en retard</li>";
+  const html = "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"><title>PV Reunion</title>"
+    + "<style>body{font-family:Georgia,serif;max-width:800px;margin:32px auto;color:#1f2937;font-size:13px;line-height:1.6}"
+    + "h1{font-size:17px;font-weight:800;color:#0B4D2C;border-bottom:3px solid #0B4D2C;padding-bottom:8px;text-align:center}"
+    + "h2{font-size:13px;color:#0B4D2C;margin:22px 0 8px;border-left:4px solid #D4AF37;padding-left:8px}"
+    + ".meta{text-align:center;color:#6b7280;font-size:11px;margin-bottom:20px}"
+    + "ul{margin:4px 0;padding-left:20px}"
+    + ".cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}"
+    + ".sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:44px;font-size:12px}"
+    + ".sign div{border-top:1px solid #d1d5db;padding-top:8px;text-align:center}"
+    + "@media print{body{margin:16px}}</style></head><body>"
+    + "<h1>PROCES-VERBAL DE REUNION DE DEPARTEMENT</h1>"
+    + "<div class=\"meta\">Lycee de Kakatare-Maroua | Departement " + dept + " | Le " + date + "</div>"
+    + "<h2>1. Ordre du jour</h2><ul>" + (ordreJourHtml||"<li style=\"color:#9ca3af\">Non precise</li>") + "</ul>"
+    + "<h2>2. Presences</h2><div class=\"cols\">"
+    + "<div><b>Presents</b><ul>" + presentsHtml + "</ul></div>"
+    + "<div><b>Absents</b><ul>" + absentsHtml + "</ul></div></div>"
+    + "<h2>3. Point sur la progression pedagogique</h2>"
+    + "<p>Couverture moyenne du departement : <b>" + stats.tauxMoyen + "%</b> (" + stats.totalFait + "/" + stats.totalRef + " lecons faites).</p>"
+    + "<p><b>Enseignants en retard (couverture &lt; 50%) :</b></p><ul>" + enRetardHtml + "</ul>"
+    + "<h2>4. Decisions et recommandations</h2><ul>" + (decisionsHtml||"<li style=\"color:#9ca3af\">Aucune</li>") + "</ul>"
+    + "<div class=\"sign\"><div>L'Animateur Pedagogique<br><br><br>Signature :</div>"
+    + "<div>Secretaire de seance<br><br><br>Signature :</div></div>"
+    + "</body></html>";
+  const w = window.open("", "_blank");
+  w.document.write(html);
+  w.document.close();
+}
+
+function PVReunionModal({stats, user, onClose}) {
+  const deptNom = DEPARTEMENTS_LIST.find(function(d){return d.id===user.departement_id;}).nom;
+  const [ordreJour, setOrdreJour] = useState("Point sur la progression pedagogique" + String.fromCharCode(10) + "Difficultes rencontrees" + String.fromCharCode(10) + "Preparation des evaluations");
+  const [presentsMap, setPresentsMap] = useState(function(){
+    const m = {};
+    stats.enseignants.forEach(function(e){ m[e.id] = true; });
+    return m;
+  });
+  const [decisions, setDecisions] = useState("");
+  const togglePresent = function(id){ setPresentsMap(function(s){ const n={...s}; n[id]=!n[id]; return n; }); };
+  const generer = function(){
+    const presents = stats.enseignants.filter(function(e){return presentsMap[e.id];}).map(function(e){return e.nom;});
+    const absents = stats.enseignants.filter(function(e){return !presentsMap[e.id];}).map(function(e){return e.nom;});
+    genPVReunion(deptNom, user, ordreJour, presents, absents, decisions, stats);
+  };
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#fff",borderRadius:16,maxWidth:560,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+          <div>
+            <div style={{fontSize:14,fontWeight:800,color:"#0B4D2C"}}>PV de reunion - {deptNom}</div>
+            <div style={{fontSize:10,color:"#6b7280"}}>Reunion mensuelle du departement</div>
+          </div>
+          <button onClick={onClose} style={{background:"#f3f4f6",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:14}}>X</button>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"18px 20px",display:"flex",flexDirection:"column",gap:16}}>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6}}>Ordre du jour (un point par ligne)</div>
+            <textarea value={ordreJour} onChange={function(e){setOrdreJour(e.target.value);}}
+              rows={4} style={{width:"100%",border:"1px solid #d1d5db",borderRadius:8,padding:"8px 10px",fontSize:12,fontFamily:"inherit",resize:"vertical"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6}}>
+              Presences ({Object.values(presentsMap).filter(Boolean).length}/{stats.enseignants.length} presents)
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:180,overflowY:"auto",border:"1px solid #e5e7eb",borderRadius:8,padding:8}}>
+              {stats.enseignants.map(function(e){
+                return(
+                  <label key={e.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 6px",cursor:"pointer",fontSize:12,borderRadius:6,background:presentsMap[e.id]?"#f0fdf4":"transparent"}}>
+                    <input type="checkbox" checked={!!presentsMap[e.id]} onChange={function(){togglePresent(e.id);}}/>
+                    <span style={{color:presentsMap[e.id]?"#166534":"#6b7280"}}>{e.nom}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:"1px solid #e5e7eb"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>PROGRESSION (auto-rempli)</div>
+            <div style={{fontSize:12,color:"#374151"}}>
+              Couverture moyenne : <b style={{color:stats.tauxMoyen>=75?"#15803d":stats.tauxMoyen>=50?"#d97706":"#b91c1c"}}>{stats.tauxMoyen}%</b>
+              {" - "}{stats.enseignants.filter(function(e){return e.taux<50;}).length} enseignant(s) en retard
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6}}>Decisions et recommandations</div>
+            <textarea value={decisions} onChange={function(e){setDecisions(e.target.value);}}
+              rows={4} placeholder="Un point par ligne..."
+              style={{width:"100%",border:"1px solid #d1d5db",borderRadius:8,padding:"8px 10px",fontSize:12,fontFamily:"inherit",resize:"vertical"}}/>
+          </div>
+        </div>
+        <div style={{padding:"14px 20px",borderTop:"1px solid #e5e7eb",flexShrink:0}}>
+          <button onClick={generer}
+            style={{width:"100%",padding:"11px 0",background:"#0B4D2C",color:"#fff",border:"none",borderRadius:10,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+            Generer le PV
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardAnimateur() {
   const {user,data} = useApp();
   const [stats, setStats] = useState({enseignants:[],tauxMoyen:0,epAttente:0,absWeek:0,totalFait:0,totalRef:0});
   const [selTrimAnim, setSelTrimAnim] = useState("ANN");
+  const [showPV, setShowPV] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(()=>{
@@ -7941,8 +8057,27 @@ function DashboardAnimateur() {
               📥 Exporter PDF
             </button>
           </div>
+
+          {/* PV de reunion */}
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+            background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe",marginTop:8}}>
+            <span style={{fontSize:22,flexShrink:0}}>📝</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>PV de reunion de departement</div>
+              <div style={{fontSize:10,color:C.txtMuted}}>Reunion mensuelle - ordre du jour, presents, progression, decisions</div>
+            </div>
+            <button onClick={()=>setShowPV(true)}
+              style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#3b82f6",color:"#fff",
+                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+              Rediger
+            </button>
+          </div>
         </div>
       </div>
+
+      {showPV && (
+        <PVReunionModal stats={stats} user={user} onClose={()=>setShowPV(false)}/>
+      )}
     </div>
   );
 }
