@@ -7871,6 +7871,15 @@ function PVReunionModal({stats, user, onClose, onGenerate}) {
             style={{width:"100%",padding:"11px 0",background:"#0B4D2C",color:"#fff",border:"none",borderRadius:10,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
             Generer le PV
           </button>
+          <button onClick={()=>{
+            const presents = stats.enseignants.filter(function(e){return presentsMap[e.id];}).map(function(e){return e.nom;});
+            const absents = stats.enseignants.filter(function(e){return !presentsMap[e.id];}).map(function(e){return e.nom;});
+            const html = genPVReunion(deptNom, user, ordreJour, presents, absents, decisions, stats);
+            onGenerate(html);
+          }}
+            style={{width:"100%",padding:"9px 0",marginTop:8,background:"#f9fafb",color:"#374151",border:"1px solid #e5e7eb",borderRadius:10,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+            👁️ Aperçu avant impression
+          </button>
         </div>
       </div>
     </div>
@@ -7949,11 +7958,19 @@ function DocumentsAnimateurPage() {
                 </div>
                 <button onClick={()=>{
                   const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
-                  setPreviewHtml(html); setPreviewLabel("Fiche suivi — "+e.nom);
+                  imprimerHTML(html);
                 }}
-                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:C.green,color:"#fff",
+                  style={{padding:"7px 12px",borderRadius:8,border:"none",background:C.green,color:"#fff",
                     fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
                   📄 Fiche suivi
+                </button>
+                <button onClick={()=>{
+                  const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
+                  setPreviewHtml(html); setPreviewLabel("Fiche suivi — "+e.nom);
+                }}
+                  style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
+                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                  👁️
                 </button>
               </div>
             );
@@ -7967,10 +7984,15 @@ function DocumentsAnimateurPage() {
                 {stats.enseignants.length} enseignants · {stats.tauxMoyen}% moy. · {selTrimAnim==="ANN"?"Année":selTrimAnim}
               </div>
             </div>
-            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); setPreviewHtml(html); setPreviewLabel("Rapport trimestriel département"); }}
-              style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#D4AF37",color:"#0B3D20",
+            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); imprimerHTML(html); }}
+              style={{padding:"7px 12px",borderRadius:8,border:"none",background:"#D4AF37",color:"#0B3D20",
                 fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
               📥 Exporter PDF
+            </button>
+            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); setPreviewHtml(html); setPreviewLabel("Rapport trimestriel département"); }}
+              style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
+                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+              👁️
             </button>
           </div>
 
