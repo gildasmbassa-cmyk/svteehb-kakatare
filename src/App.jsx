@@ -7759,7 +7759,7 @@ function genRapportDept(stats, user, trim) {
     <div style='border-top:1px solid #d1d5db;padding-top:8px;text-align:center;font-size:12px'>Le Proviseur<br><br><br>Signature &amp; Cachet :</div>
     <div style='border-top:1px solid #d1d5db;padding-top:8px;text-align:center;font-size:12px'>L\'Animateur Pédagogique<br><br><br>Signature :</div>
   </div></body></html>`;
-  imprimerHTML(html);
+  return html;
 }
 
 function genPVReunion(dept, user, ordreJour, presents, absents, decisions, stats) {
@@ -7801,12 +7801,10 @@ function genPVReunion(dept, user, ordreJour, presents, absents, decisions, stats
     + "<div class=\"sign\"><div>L'Animateur Pedagogique<br><br><br>Signature :</div>"
     + "<div>Secretaire de seance<br><br><br>Signature :</div></div>"
     + "</body></html>";
-  const w = window.open("", "_blank");
-  w.document.write(html);
-  w.document.close();
+  return html;
 }
 
-function PVReunionModal({stats, user, onClose}) {
+function PVReunionModal({stats, user, onClose, onGenerate}) {
   const deptNom = DEPARTEMENTS_LIST.find(function(d){return d.id===user.departement_id;}).nom;
   const [ordreJour, setOrdreJour] = useState("Point sur la progression pedagogique" + String.fromCharCode(10) + "Difficultes rencontrees" + String.fromCharCode(10) + "Preparation des evaluations");
   const [presentsMap, setPresentsMap] = useState(function(){
@@ -7819,7 +7817,9 @@ function PVReunionModal({stats, user, onClose}) {
   const generer = function(){
     const presents = stats.enseignants.filter(function(e){return presentsMap[e.id];}).map(function(e){return e.nom;});
     const absents = stats.enseignants.filter(function(e){return !presentsMap[e.id];}).map(function(e){return e.nom;});
-    genPVReunion(deptNom, user, ordreJour, presents, absents, decisions, stats);
+    const html = genPVReunion(deptNom, user, ordreJour, presents, absents, decisions, stats);
+    onGenerate(html);
+    onClose();
   };
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -7883,6 +7883,8 @@ function DocumentsAnimateurPage() {
   const [loading, setLoading] = useState(true);
   const [selTrimAnim, setSelTrimAnim] = useState("ANN");
   const [showPV, setShowPV] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [previewLabel, setPreviewLabel] = useState("");
 
   useEffect(()=>{
     if(!data||!user) return;
@@ -7947,7 +7949,7 @@ function DocumentsAnimateurPage() {
                 </div>
                 <button onClick={()=>{
                   const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
-                  imprimerHTML(html);
+                  setPreviewHtml(html); setPreviewLabel("Fiche suivi — "+e.nom);
                 }}
                   style={{padding:"7px 14px",borderRadius:8,border:"none",background:C.green,color:"#fff",
                     fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
@@ -7965,7 +7967,7 @@ function DocumentsAnimateurPage() {
                 {stats.enseignants.length} enseignants · {stats.tauxMoyen}% moy. · {selTrimAnim==="ANN"?"Année":selTrimAnim}
               </div>
             </div>
-            <button onClick={()=>genRapportDept(stats,user,selTrimAnim)}
+            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); setPreviewHtml(html); setPreviewLabel("Rapport trimestriel département"); }}
               style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#D4AF37",color:"#0B3D20",
                 fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
               📥 Exporter PDF
@@ -7990,7 +7992,31 @@ function DocumentsAnimateurPage() {
       </div>
 
             {showPV && (
-        <PVReunionModal stats={stats} user={user} onClose={()=>setShowPV(false)}/>
+        <PVReunionModal stats={stats} user={user} onClose={()=>setShowPV(false)}
+          onGenerate={(html)=>{ setPreviewHtml(html); setPreviewLabel("PV de réunion de département"); }}/>
+      )}
+      {previewHtml && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
+          <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
+            <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📄 {previewLabel}</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>imprimerHTML(previewHtml)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  Imprimer
+                </button>
+                <button onClick={()=>{setPreviewHtml(null);setPreviewLabel("");}}
+                  style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+            <div style={{flex:1,overflow:"hidden",background:"#e5e7eb",padding:12}}>
+              <iframe srcDoc={previewHtml} title="apercu"
+                style={{width:"100%",height:"100%",border:"none",borderRadius:8,background:"#fff"}}/>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
