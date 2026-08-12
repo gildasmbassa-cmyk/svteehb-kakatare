@@ -2808,11 +2808,11 @@ function EnsListe({ data, onSelect }) {
                     {bon    && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700, flexShrink:0}}>✓ Objectif</span>}
                     {ens.epAttente>0 && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.amberPale, color:C.amber, fontWeight:700, flexShrink:0}}>⏳ {ens.epAttente} épreuve{ens.epAttente>1?"s":""}</span>}
                   </div>
-                  <div style={{display:"flex", alignItems:"center", gap:8}}>
-                    <div style={{flex:1, maxWidth:200}}><ProgBar value={ens.taux}/></div>
-                    <span style={{fontSize:12, fontWeight:800, color:taux2col(ens.taux), minWidth:36}}>{ens.taux}%</span>
-                    <span style={{fontSize:11, color:C.txtMuted}}>{ens.totalFait}/{ens.totalRef} leçons</span>
-                    <span style={{fontSize:11, color:C.txtMuted}}>· {(ens.classes||[]).length} classe{(ens.classes||[]).length>1?"s":""}</span>
+                  <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
+                    <div style={{flex:"1 1 80px", minWidth:60}}><ProgBar value={ens.taux}/></div>
+                    <span style={{fontSize:12, fontWeight:800, color:taux2col(ens.taux), flexShrink:0}}>{ens.taux}%</span>
+                    <span style={{fontSize:10, color:C.txtMuted, flexShrink:0}}>{ens.totalFait}/{ens.totalRef} leç.</span>
+                    <span style={{fontSize:10, color:C.txtMuted, flexShrink:0}}>{(ens.classes||[]).length} cl.</span>
                   </div>
                 </div>
 
