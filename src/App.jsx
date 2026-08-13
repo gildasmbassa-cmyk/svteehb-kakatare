@@ -96,7 +96,7 @@ const sb = {
         "admin_delete_all_epreuves","admin_delete_edt_slots_by_teacher","admin_delete_epreuves_by_teacher",
         "admin_delete_prog_by_classe","admin_delete_prog_by_teacher","admin_delete_teacher",
         "admin_set_edt_slots","admin_set_password","admin_upsert_teacher",
-        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import",
+        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire",
       ];
       const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
@@ -7035,9 +7035,9 @@ function DashboardSurveillance() {
     if(!form.eleve_id||!form.classe){setFormErr("Sélectionnez une classe et un élève.");return;}
     setFormErr("");setSaving(true);
     const payload={type:typeMap[tab]||"retard",eleve_id:form.eleve_id,classe:form.classe,
-      motif:form.motif||null,details:form.details||null,
-      gravite:(tab==="retards")?"faible":form.gravite||"faible",enregistre_par:user?.id||"sg"};
-    const ok=await sb.upsert("vie_scolaire",payload);
+          motif:form.motif||null,details:form.details||null,
+          gravite:(tab==="retards")?"faible":form.gravite||"faible",enregistre_par:user?.id||"sg"};
+    const ok=await sb.rpc("submit_vie_scolaire",{p_type:payload.type,p_eleve_id:payload.eleve_id,p_classe:payload.classe,p_motif:payload.motif,p_details:payload.details,p_gravite:payload.gravite});
     if(ok){await loadVieSco();setShowForm(false);}
     else setFormErr("Erreur d'enregistrement.");
     setSaving(false);
