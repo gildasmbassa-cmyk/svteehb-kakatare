@@ -319,6 +319,8 @@ async function syncElevesImport() {
 }
 
 async function loadAllData(departementId = null) {
+  await loadTrimestres();
+  await loadCoefficients();
   await syncElevesImport();
   const [classes, users, prog, epreuves, exceptions, notes, absences, edtBase] = await Promise.all([
     sb.get("classes", departementId ? `?select=code,effectif,enseignant,departement_id&departement_id=eq.${departementId}&order=code` : "?select=code,effectif,enseignant,departement_id&order=code"),
@@ -7518,18 +7520,397 @@ function DashboardSurveillance() {
 
 
 // ── Calendrier scolaire 2025-2026 : date → {trim, sem} ──────────
+// Trimestres chargés depuis Supabase (table annee_scolaire), fallback 2025-2026
+let TRIMESTRES_DYNAMIQUES = [
+  {trim:1, debut:new Date("2025-10-06")},
+  {trim:2, debut:new Date("2026-01-05")},
+  {trim:3, debut:new Date("2026-04-06")},
+];
+async function loadTrimestres() {
+  try {
+    const rows = await sb.get("annee_scolaire","?select=trim,debut,fin&active=eq.true&order=trim.asc");
+    if (rows && rows.length >= 3) {
+      TRIMESTRES_DYNAMIQUES = rows.map(r=>({trim:r.trim, debut:new Date(r.debut), fin:new Date(r.fin)}));
+    }
+  } catch(e) { /* fallback 2025-2026 */ }
+}
 function getSemaineTrimestre(dateStr) {
-  const STARTS = [new Date("2025-10-06"),new Date("2026-01-05"),new Date("2026-04-06")];
   const dt = new Date(dateStr);
   if (isNaN(dt)) return null;
-  for (let t = 0; t < 3; t++) {
-    const ms = dt - STARTS[t];
+  for (const {trim, debut} of TRIMESTRES_DYNAMIQUES) {
+    const ms = dt - debut;
     if (ms < 0) continue;
     const sem = Math.floor(ms / (7 * 86400000)) + 1;
-    if (sem >= 1 && sem <= 6) return { trim: t + 1, sem };
+    if (sem >= 1 && sem <= 6) return { trim, sem };
   }
   return null;
 }
+// ════════════════════════════════════════════════════════════════════
+// SYSTÈME BULLETINS — EduPilot Cameroun / MINESEC
+// Format : bulletin de notes par séquence avec coefficients officiels
+// ════════════════════════════════════════════════════════════════════
+
+// Chargement des coefficients depuis Supabase
+let COEFFICIENTS_DB = [];
+async function loadCoefficients() {
+  try {
+    const rows = await sb.get("coefficients","?select=niveau,serie,matiere,coef&order=niveau.asc,matiere.asc");
+    if (rows && rows.length > 0) COEFFICIENTS_DB = rows;
+  } catch(e) {}
+}
+
+// Résoudre niveau+série depuis nom de classe
+function parseClasseNiveauSerie(classe) {
+  const c = (classe||"").trim();
+  let niveau = "6ème", serie = "";
+  if (/^6/i.test(c)) niveau = "6ème";
+  else if (/^5/i.test(c)) niveau = "5ème";
+  else if (/^4/i.test(c)) {
+    niveau = "4ème";
+    if (/ALL|Alle/i.test(c)) serie = "ALL";
+    else if (/ESP|Esp/i.test(c)) serie = "ESP";
+    else if (/ARB|Ara/i.test(c)) serie = "ARB";
+    else if (/ITA|Ita/i.test(c)) serie = "ITA";
+    else if (/CHI|Chi/i.test(c)) serie = "CHI";
+  }
+  else if (/^3/i.test(c)) {
+    niveau = "3ème";
+    if (/ALL|Alle/i.test(c)) serie = "ALL";
+    else if (/ESP|Esp/i.test(c)) serie = "ESP";
+    else if (/ARB|Ara/i.test(c)) serie = "ARB";
+    else if (/ITA|Ita/i.test(c)) serie = "ITA";
+    else if (/CHI|Chi/i.test(c)) serie = "CHI";
+  }
+  else if (/^2nde|^2de|^2nd/i.test(c)) {
+    niveau = "2nde";
+    if (/ALL|Alle/i.test(c)) serie = "ALL";
+    else if (/ESP|Esp/i.test(c)) serie = "ESP";
+    else if (/ARA|Ara/i.test(c)) serie = "ARA";
+    else if (/ITA|Ita/i.test(c)) serie = "ITA";
+    else if (/CHI|Chi/i.test(c)) serie = "CHI";
+    else serie = "C";
+  }
+  else if (/^1/i.test(c)) {
+    niveau = "1ère";
+    if (/A4/i.test(c)) {
+      if (/ALL|Alle/i.test(c)) serie = "ALL";
+      else if (/ESP|Esp/i.test(c)) serie = "ESP";
+      else if (/ARA|Ara/i.test(c)) serie = "ARA";
+      else if (/ITA|Ita/i.test(c)) serie = "ITA";
+      else if (/CHI|Chi/i.test(c)) serie = "CHI";
+      else serie = "A4";
+    }
+    else if (/Ti/i.test(c)) serie = "Ti";
+    else if (/C/.test(c)) serie = "C";
+    else if (/D/.test(c)) serie = "D";
+    else serie = "A4";
+  }
+  else if (/^Tle|^Ter/i.test(c)) {
+    niveau = "Tle";
+    if (/A4/i.test(c)) {
+      if (/ALL|Alle/i.test(c)) serie = "ALL";
+      else if (/ESP|Esp/i.test(c)) serie = "ESP";
+      else if (/ARA|Ara/i.test(c)) serie = "ARA";
+      else if (/ITA|Ita/i.test(c)) serie = "ITA";
+      else if (/CHI|Chi/i.test(c)) serie = "CHI";
+      else serie = "A4";
+    }
+    else if (/Ti/i.test(c)) serie = "Ti";
+    else if (/C|/C/.test(c)) serie = "C";
+    else if (/D|/D/.test(c)) serie = "D";
+    else serie = "A4";
+  }
+  return { niveau, serie };
+}
+
+function getCoefsForClasse(classe) {
+  const { niveau, serie } = parseClasseNiveauSerie(classe);
+  return COEFFICIENTS_DB.filter(r => r.niveau === niveau && r.serie === (serie||""));
+}
+
+function calcMoyClasse(classe, sequence, matiere, notesIndex, elevesClasse) {
+  const key = `${classe}||${matiere}-S${sequence}`;
+  const notes = elevesClasse.map(e => (notesIndex[key]||{})[e.id]).filter(n => n !== undefined && n !== null && n !== "").map(Number);
+  if (!notes.length) return null;
+  return Math.round((notes.reduce((a,b)=>a+b,0)/notes.length)*100)/100;
+}
+
+function calcRangsClasse(classe, sequence, notesIndex, elevesClasse) {
+  const coefs = getCoefsForClasse(classe);
+  const moyennes = elevesClasse.map(e => {
+    let tp=0, tc=0;
+    coefs.forEach(({matiere,coef}) => {
+      const k=`${classe}||${matiere}-S${sequence}`;
+      const n=(notesIndex[k]||{})[e.id];
+      if(n!==undefined&&n!==null&&n!==""){tp+=+n*coef;tc+=coef;}
+    });
+    return {id:e.id, nom:e.nom, moyenne: tc>0?Math.round(tp/tc*100)/100:null};
+  }).filter(e=>e.moyenne!==null).sort((a,b)=>b.moyenne-a.moyenne);
+  const rangs={};
+  moyennes.forEach((e,i)=>{rangs[e.id]=i+1;});
+  return {rangs, classees:moyennes};
+}
+
+function getMention(m) {
+  if(m===null) return "";
+  if(m>=16) return "Bien";
+  if(m>=14) return "Assez Bien";
+  if(m>=10) return "Passable";
+  return "Insuffisant";
+}
+
+function getAppreciation(n) {
+  if(n===null) return "—";
+  if(n>=18) return "Excellent"; if(n>=16) return "Très Bien";
+  if(n>=14) return "Bien"; if(n>=12) return "Assez Bien";
+  if(n>=10) return "Passable"; if(n>=8) return "Insuffisant";
+  return "Très Insuffisant";
+}
+
+function genBulletin(opts) {
+  const {eleve,classe,sequence,annee="2025-2026",notesIndex={},absencesIndex={},elevesClasse=[],appreciation="",decision=""} = opts;
+  const coefs = getCoefsForClasse(classe);
+  const {niveau,serie} = parseClasseNiveauSerie(classe);
+  const seq=parseInt(sequence);
+  const trim=seq<=2?1:seq<=4?2:3;
+  const G="#0B4D2C", gold="#D4AF37";
+  let totalPts=0,totalCoef=0;
+  const lignes=coefs.map(({matiere,coef})=>{
+    const key=`${classe}||${matiere}-S${seq}`;
+    const note=(notesIndex[key]||{})[eleve.id];
+    const n=(note!==undefined&&note!==null&&note!=="")?+note:null;
+    const moyC=calcMoyClasse(classe,seq,matiere,notesIndex,elevesClasse);
+    if(n!==null){totalPts+=n*coef;totalCoef+=coef;}
+    const col=n===null?"#9ca3af":n>=10?"#15803d":"#dc2626";
+    return `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:5px 8px;font-size:12px;font-weight:600;">${matiere}</td><td style="text-align:center;padding:5px 8px;font-size:12px;">${coef}</td><td style="text-align:center;padding:5px 8px;font-size:13px;font-weight:700;color:${col};">${n!==null?n.toFixed(2):"—"}</td><td style="text-align:center;padding:5px 8px;font-size:12px;color:#6b7280;">${moyC!==null?moyC.toFixed(2):"—"}</td><td style="padding:5px 8px;font-size:11px;color:#6b7280;font-style:italic;">${getAppreciation(n)}</td></tr>`;
+  });
+  const moyenne=totalCoef>0?Math.round(totalPts/totalCoef*100)/100:null;
+  const {rangs}=calcRangsClasse(classe,seq,notesIndex,elevesClasse);
+  const rang=rangs[eleve.id]||"—";
+  const mention=getMention(moyenne);
+  const decColor=decision==="Passage"?"#16a34a":decision==="Redoublement"?"#dc2626":"#d97706";
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#1f2937;font-size:12px;padding:14px;}
+.hdr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:3px solid ${G};padding-bottom:10px;margin-bottom:14px;}
+.hdr-l,.hdr-r{font-size:9px;color:#6b7280;line-height:1.6;}.hdr-r{text-align:right;}
+.hdr-c{text-align:center;}.logo{font-size:18px;font-weight:900;color:${G};}
+.school{font-size:10px;color:#374151;}.titre{font-size:14px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+.seq{display:inline-block;background:${G};color:#fff;border-radius:4px;padding:2px 10px;font-size:10px;margin-top:3px;}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.ic{background:#f0fdf4;border-radius:6px;padding:8px 12px;}.ic-l{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;}
+.ic-v{font-size:13px;font-weight:800;color:#1f2937;margin-top:1px;}
+table{width:100%;border-collapse:collapse;margin-bottom:12px;}
+th{background:${G};color:#fff;padding:5px 8px;font-size:10px;font-weight:700;text-align:center;}th:first-child{text-align:left;}
+.res{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.rc{background:#f0fdf4;border:2px solid ${G};border-radius:8px;padding:10px;text-align:center;}
+.rn{font-size:24px;font-weight:900;color:${G};}.rl{font-size:9px;color:#6b7280;margin-top:2px;}
+.mb{display:inline-block;background:${gold};color:#000;border-radius:20px;padding:3px 14px;font-size:12px;font-weight:900;margin-top:3px;}
+.sec{font-size:10px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:.8px;margin:12px 0 5px;padding-bottom:2px;border-bottom:2px solid ${G};}
+.tb{background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;min-height:35px;font-size:11px;color:#374151;margin-bottom:8px;}
+.dec{background:${decColor}22;border:2px solid ${decColor};border-radius:6px;padding:8px 14px;text-align:center;margin-bottom:12px;}
+.sig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px;}
+.sb{text-align:center;border-top:1px solid #e5e7eb;padding-top:6px;font-size:10px;color:#6b7280;}
+@media print{body{padding:8px;}@page{margin:10mm;size:A4;}}
+</style><script>window.onload=()=>window.print();</script></head><body>
+<div class="hdr">
+<div class="hdr-l">République du Cameroun<br>Paix — Travail — Patrie<br>Min. des Enseignements Secondaires<br>Délégation Rég. du Nord</div>
+<div class="hdr-c"><div class="logo">EduPilot Cameroun</div><div class="school">Lycée de Kakatare-Maroua</div><div class="titre">Bulletin de Notes</div><div class="seq">Séquence ${seq} — Trimestre ${trim}</div><div style="font-size:9px;color:#6b7280;margin-top:3px;">Année scolaire ${annee}</div></div>
+<div class="hdr-r">Republic of Cameroon<br>Peace — Work — Fatherland<br>Min. of Secondary Education<br>Regional Deleg. of the North</div>
+</div>
+<div class="info">
+<div class="ic"><div class="ic-l">Nom de l'élève</div><div class="ic-v">${eleve.nom}</div></div>
+<div class="ic"><div class="ic-l">Classe · Série</div><div class="ic-v">${classe}${serie?" · "+serie:""}</div></div>
+<div class="ic"><div class="ic-l">N° d'ordre</div><div class="ic-v">${eleve.numero||"—"}</div></div>
+<div class="ic"><div class="ic-l">Sexe</div><div class="ic-v">${eleve.sexe==="G"||eleve.sexe==="M"?"Masculin":"Féminin"}</div></div>
+</div>
+<table><thead><tr><th style="width:28%;text-align:left;">Matière</th><th style="width:8%;">Coef.</th><th style="width:12%;">Note /20</th><th style="width:14%;">Moy. Classe</th><th>Appréciation</th></tr></thead><tbody>${lignes.join("")}</tbody></table>
+<div class="res">
+<div class="rc"><div class="rl">Moyenne Générale</div><div class="rn">${moyenne!==null?moyenne.toFixed(2):"—"}<span style="font-size:12px;font-weight:400;color:#6b7280;">/20</span></div></div>
+<div class="rc"><div class="rl">Rang dans la classe</div><div class="rn">${rang}<span style="font-size:12px;font-weight:400;color:#6b7280;">/${elevesClasse.length}</span></div></div>
+<div class="rc"><div class="rl">Mention</div><div class="mb">${mention||"—"}</div></div>
+</div>
+${decision?`<div class="dec"><div style="font-size:9px;color:#6b7280;margin-bottom:2px;">DÉCISION DU CONSEIL DE CLASSE</div><div style="font-size:14px;font-weight:900;color:${decColor};">${decision}</div></div>`:""}
+<div class="sec">Appréciation du Conseil de Classe</div>
+<div class="tb">${appreciation||"—"}</div>
+<div class="sig">
+<div class="sb"><div style="height:32px;"></div>Le Proviseur</div>
+<div class="sb"><div style="height:32px;"></div>Le Censeur</div>
+<div class="sb"><div style="height:32px;"></div>Parent / Tuteur</div>
+</div>
+</body></html>`;
+}
+
+// ════════════════════════════════════════════════════
+// PAGE BULLETINS
+// ════════════════════════════════════════════════════
+function BulletinsPage() {
+  const {user,data} = useApp();
+  const {isMobile} = useDevice();
+  const isAdm = isAdminRole(user?.role)||user?.role==="censeur";
+  // Classes disponibles selon rôle
+  const classes = useMemo(()=>{
+    if(!data) return [];
+    const set=new Set();
+    if(isAdm){
+      Object.values(data.users||{}).forEach(u=>(u.classes||[]).forEach(c=>set.add(c)));
+    } else {
+      (user?.classes||[]).forEach(c=>set.add(c));
+    }
+    return [...set].sort();
+  },[data,user,isAdm]);
+
+  const [selClasse,setSelClasse]=useState("");
+  const [selSeq,setSelSeq]=useState(1);
+  const [selEleve,setSelEleve]=useState(null);
+  const [previewHtml,setPreviewHtml]=useState(null);
+  const [searchTerm,setSearchTerm]=useState("");
+
+  const elevesClasse = useMemo(()=>{
+    if(!selClasse||!data) return [];
+    // Chercher dans ELEVES_DB (frontend) — fallback si table eleves pas encore chargée
+    return (ELEVES_DB[selClasse]||[]).map(e=>({id:e.id, nom:e.n||e.nom||"", sexe:e.g||e.sexe||"G", numero:e.num||e.numero||""}));
+  },[selClasse,data]);
+
+  const filteredEleves = useMemo(()=>{
+    if(!searchTerm) return elevesClasse;
+    return elevesClasse.filter(e=>(e.nom||"").toLowerCase().includes(searchTerm.toLowerCase()));
+  },[elevesClasse,searchTerm]);
+
+  const {rangs} = useMemo(()=>{
+    if(!selClasse||!data) return {rangs:{}};
+    return calcRangsClasse(selClasse,selSeq,data.notes||{},elevesClasse);
+  },[selClasse,selSeq,data,elevesClasse]);
+
+  const handlePreview = (eleve) => {
+    const html = genBulletin({
+      eleve, classe:selClasse, sequence:selSeq,
+      notesIndex:data?.notes||{}, absencesIndex:data?.absences||{},
+      elevesClasse
+    });
+    setPreviewHtml(stripAutoPrint(html));
+    setSelEleve(eleve);
+  };
+
+  const handlePrintAll = () => {
+    if(!filteredEleves.length) return;
+    const htmls = filteredEleves.map(e=>genBulletin({
+      eleve:e, classe:selClasse, sequence:selSeq,
+      notesIndex:data?.notes||{}, absencesIndex:data?.absences||{},
+      elevesClasse
+    })).join('<div style="page-break-after:always;"></div>');
+    imprimerHTML(htmls);
+  };
+
+  const inp={border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff",width:"100%",boxSizing:"border-box"};
+
+  return (
+    <div style={{padding:isMobile?"12px":"24px",maxWidth:1000,margin:"0 auto"}}>
+      {/* En-tête */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>📋 Bulletins de notes</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Génération · Séquences S1 à S6</div>
+        </div>
+        {selClasse && filteredEleves.length>0 && (
+          <button onClick={handlePrintAll}
+            style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+            🖨 Imprimer tout ({filteredEleves.length})
+          </button>
+        )}
+      </div>
+
+      {/* Filtres */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Classe</div>
+          <select value={selClasse} onChange={e=>{setSelClasse(e.target.value);setSelEleve(null);}} style={inp}>
+            <option value="">— Choisir une classe —</option>
+            {classes.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Séquence</div>
+          <select value={selSeq} onChange={e=>setSelSeq(+e.target.value)} style={inp}>
+            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>Séquence {s} — Trimestre {s<=2?1:s<=4?2:3}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Rechercher</div>
+          <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} style={inp} placeholder="Nom de l'élève…"/>
+        </div>
+      </div>
+
+      {/* Liste élèves */}
+      {!selClasse ? (
+        <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>
+          <div style={{fontSize:40,marginBottom:12}}>📋</div>
+          <div style={{fontSize:15,fontWeight:700}}>Choisissez une classe pour commencer</div>
+        </div>
+      ) : filteredEleves.length===0 ? (
+        <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Aucun élève dans cette classe</div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto auto auto",gap:10,padding:"8px 14px",background:"#f0fdf4",borderRadius:8,fontSize:11,fontWeight:700,color:"#0B4D2C",textTransform:"uppercase",letterSpacing:".5px"}}>
+            <div>#</div><div>Nom</div><div>Moy.</div><div>Rang</div><div></div>
+          </div>
+          {filteredEleves.map((e,i)=>{
+            // Calculer moyenne à la volée
+            const coefs=getCoefsForClasse(selClasse);
+            let tp=0,tc=0;
+            coefs.forEach(({matiere,coef})=>{
+              const k=`${selClasse}||${matiere}-S${selSeq}`;
+              const n=(data?.notes?.[k]||{})[e.id];
+              if(n!==undefined&&n!==null&&n!==""){tp+=+n*coef;tc+=coef;}
+            });
+            const moy=tc>0?Math.round(tp/tc*100)/100:null;
+            const rang=rangs[e.id]||"—";
+            const moyCol=moy===null?"#9ca3af":moy>=10?"#15803d":"#dc2626";
+            return (
+              <div key={e.id} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7eb",padding:"12px 16px",display:"grid",gridTemplateColumns:"40px 1fr 70px 50px auto",alignItems:"center",gap:10}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:"#0B4D2C",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:12,flexShrink:0}}>
+                  {(e.nom||"?")[0]}
+                </div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:13,color:"#1f2937"}}>{e.nom}</div>
+                  <div style={{fontSize:11,color:"#6b7280"}}>{e.sexe==="G"||e.sexe==="M"?"Garçon":"Fille"}</div>
+                </div>
+                <div style={{fontWeight:900,fontSize:15,color:moyCol}}>
+                  {moy!==null?moy.toFixed(2):"—"}<span style={{fontSize:10,color:"#9ca3af"}}>/20</span>
+                </div>
+                <div style={{fontSize:13,fontWeight:700,color:"#6b7280"}}>{rang}</div>
+                <button onClick={()=>handlePreview(e)}
+                  style={{padding:"6px 14px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                  👁 Bulletin
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Aperçu PDF */}
+      {previewHtml && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
+          <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
+            <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📋 Bulletin — {selEleve?.nom} · {selClasse} · S{selSeq}</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>imprimerHTML(previewHtml)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Imprimer</button>
+                <button onClick={()=>setPreviewHtml(null)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Fermer</button>
+              </div>
+            </div>
+            <div style={{flex:1,overflow:"hidden",background:"#e5e7eb",padding:12}}>
+              <iframe srcDoc={previewHtml} title="bulletin" style={{width:"100%",height:"100%",border:"none",borderRadius:8,background:"#fff"}}/>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DashboardCenseur() {
   const {rawData:data, setPage} = useApp();
   const {isMobile} = useDevice();
@@ -10911,6 +11292,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
+    if(page==="bulletins")          return <W><BulletinsPage/></W>
     if(page==="suivi-prog-dept")    return <W><SuiviProgrammePage/></W>
     if(page==="fiche-inspection")   return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<FicheInspectionPage/>:null}</W>
     if(page==="documents-ap")       return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<DocumentsAnimateurPage/>:null}</W>
