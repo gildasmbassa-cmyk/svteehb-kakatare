@@ -7690,7 +7690,7 @@ function genBulletin(opts) {
   const {niveau, serie} = parseClasseNiveauSerie(classe);
   const seq = parseInt(sequence);
   const trim = seq<=2?1:seq<=4?2:3;
-  const G="#0B4D2C", gold="#C9A84C", rouge="#dc2626", gris="#f8f9fa";
+  const G="#0B4D2C", gold="#C9A84C", rouge="#dc2626";
   const SEQUENCES=[1,2,3,4,5,6];
 
   // ── Calculs ──────────────────────────────────────────────
@@ -7709,9 +7709,9 @@ function genBulletin(opts) {
     const moyC = toutes.length ? Math.round(toutes.reduce((a,b)=>a+b,0)/toutes.length*100)/100 : null;
     const minC = toutes.length ? Math.min(...toutes) : null;
     const maxC = toutes.length ? Math.max(...toutes) : null;
-    const nEleve = (notesIndex[keySeq]||{})[eleve.id];
-    const nEleveNum = (nEleve!==undefined&&nEleve!==null&&nEleve!=="")?+nEleve:null;
-    const rang = nEleveNum!==null ? toutes.filter(n=>n>nEleveNum).length+1 : null;
+    const nEleveNum = (notesIndex[keySeq]||{})[eleve.id];
+    const nNum = (nEleveNum!==undefined&&nEleveNum!==null&&nEleveNum!=="")?+nEleveNum:null;
+    const rang = nNum!==null ? toutes.filter(n=>n>nNum).length+1 : null;
     if(moy!==null){totalPts+=(pts||0);totalCoef+=coef;nbMatieres++;}
     return {matiere,coef,notesSeq,moy,pts,moyC,minC,maxC,rang};
   });
@@ -7723,12 +7723,12 @@ function genBulletin(opts) {
   const mentionAff = mention||getMention(moyenne);
   const decColor = decision&&(decision.includes("ADMIS")||decision==="Passage") ? "#16a34a" : decision==="Redoublement" ? "#dc2626" : "#d97706";
 
-  // Points forts / À renforcer (top 4 / bottom 4 par moyenne)
+  // Points forts / À renforcer
   const avecMoy = lignes.filter(l=>l.moy!==null).sort((a,b)=>b.moy-a.moy);
   const pointsForts = avecMoy.slice(0,4);
   const aRenforcer = [...avecMoy].reverse().slice(0,5);
 
-  // Évolution des moyennes S1→Sseq (pour le graphique)
+  // Évolution S1→seq
   const evoData = SEQUENCES.slice(0,seq).map(s => {
     let tp=0,tc=0;
     coefs.forEach(({matiere,coef:c})=>{
@@ -7739,362 +7739,333 @@ function genBulletin(opts) {
     return tc>0?Math.round(tp/tc*100)/100:null;
   }).filter(v=>v!==null);
 
-  // SVG graphique évolution
-  const chartW=280, chartH=80, padX=20, padY=10;
-  const vals = evoData.length>1?evoData:[0];
-  const minV=Math.min(...vals)-1, maxV=Math.max(...vals)+1;
-  const scaleX = (i)=>padX+(i/(Math.max(vals.length-1,1)))*(chartW-padX*2);
-  const scaleY = (v)=>chartH-padY-((v-minV)/(maxV-minV+0.01))*(chartH-padY*2);
-  const points = vals.map((v,i)=>`${scaleX(i).toFixed(1)},${scaleY(v).toFixed(1)}`).join(" ");
-  const polyline = vals.length>1?`<polyline points="${points}" fill="none" stroke="${G}" stroke-width="2" stroke-linejoin="round"/>`:"";
-  const dots = vals.map((v,i)=>`<circle cx="${scaleX(i).toFixed(1)}" cy="${scaleY(v).toFixed(1)}" r="4" fill="${G}" stroke="white" stroke-width="1.5"/>`).join("");
-  const labels = SEQUENCES.slice(0,seq).map((_,i)=>`<text x="${scaleX(i).toFixed(1)}" y="${chartH+4}" text-anchor="middle" font-size="9" fill="#6b7280">S${i+1}</text>`).join("");
+  // SVG graphique
+  const chartH=70, chartW=260, padX=18, padY=8;
+  const vals = evoData.length>1?evoData:[null];
+  const hasData = vals.filter(v=>v!==null).length>1;
+  let svgContent="";
+  if(hasData){
+    const minV=Math.min(...vals)-1, maxV=Math.max(...vals)+1;
+    const sx=(i)=>padX+(i/(vals.length-1))*(chartW-padX*2);
+    const sy=(v)=>chartH-padY-((v-minV)/(maxV-minV+0.01))*(chartH-padY*2);
+    const pts2=vals.map((v,i)=>`${sx(i).toFixed(1)},${sy(v).toFixed(1)}`).join(" ");
+    svgContent=`<polyline points="${pts2}" fill="none" stroke="${G}" stroke-width="2"/>
+    ${vals.map((v,i)=>`<circle cx="${sx(i).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="3.5" fill="${G}" stroke="white" stroke-width="1.5"/>`).join("")}
+    ${vals.map((v,i)=>`<text x="${sx(i).toFixed(1)}" y="${chartH+2}" text-anchor="middle" font-size="7.5" fill="#6b7280">S${i+1}</text>`).join("")}`;
+  }
   const lastVal = evoData.length>=2?(evoData[evoData.length-1]-evoData[0]).toFixed(1):null;
-  const progression = lastVal!==null?(+lastVal>0?`+${lastVal}`:`${lastVal}`):"—";
-  const progColor = lastVal===null?"#6b7280":+lastVal>0?"#16a34a":"#dc2626";
+  const prog = lastVal!==null?(+lastVal>0?`+${lastVal}`:`${lastVal}`):"—";
+  const progCol = lastVal===null?"#9ca3af":+lastVal>0?"#16a34a":"#dc2626";
+  const progArrow = lastVal===null?"":+lastVal>0?"▲":"▼";
 
   // Groupes matières
-  const scientif=["Mathématiques","PCT","SVT","Sciences Physiques","Physique-Chimie","Informatique","SVTEEHB","Physique-Chimie-Tech","Biologie","Chimie","Physique"];
-  const littera=["Français","Anglais","Histoire","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","Italien","Chinois","Étude de texte","Expression","Éducation à la citoyenneté","Correction orthographique"];
+  const SCI=["Mathématiques","PCT","SVT","Sciences Physiques","Physique-Chimie","Informatique","SVTEEHB","Physique-Chimie-Tech","Biologie","Chimie","Physique"];
+  const LIT=["Français","Anglais","Histoire","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","Italien","Chinois","Étude de texte","Expression","Éducation à la citoyenneté","Correction orthographique","Éducation à la citoyenneté et à la morale"];
+  const EPS_MAT=["EPS","Éducation Physique","Sport"];
+  const OTHER_EXCL=[...SCI,...LIT];
 
-  const renderLignes = (groupe) => lignes.filter(l=>{
-    if(groupe==="sci") return scientif.some(s=>l.matiere.toLowerCase().includes(s.toLowerCase()));
-    if(groupe==="lit") return littera.some(s=>l.matiere.toLowerCase().includes(s.toLowerCase()));
-    return !scientif.some(s=>l.matiere.toLowerCase().includes(s.toLowerCase()))&&!littera.some(s=>l.matiere.toLowerCase().includes(s.toLowerCase()));
-  }).map(l=>{
-    const notesCols = SEQUENCES.map((s,i)=>{
+  const inGroup=(mat,grp)=>grp.some(g=>mat.toLowerCase().includes(g.toLowerCase()));
+
+  const renderLigne=(l)=>{
+    const nc=SEQUENCES.map((s,i)=>{
       const n=l.notesSeq[i];
       if(i>=seq) return `<td class="na">—</td>`;
       const col=n===null?"#9ca3af":n>=10?"#1a6b3a":"#dc2626";
       return `<td style="color:${col};font-weight:${n!==null?"700":"400"}">${n!==null?n.toFixed(2):"—"}</td>`;
     }).join("");
-    const moyCol=l.moy===null?"#9ca3af":l.moy>=10?"#1a6b3a":"#dc2626";
-    const appTxt=l.moy===null?"—":l.moy>=16?"Très Bien":l.moy>=14?"Bien":l.moy>=12?"Assez Bien":l.moy>=10?"Passable":l.moy>=8?"Insuffisant":"Faible";
-    const dotCol=l.moy===null?"#9ca3af":l.moy>=14?"#16a34a":l.moy>=10?"#f59e0b":"#dc2626";
-    return `<tr>
-      <td class="mat">${l.matiere}</td>
-      ${notesCols}
-      <td style="color:${moyCol};font-weight:700">${l.moy!==null?l.moy.toFixed(2):"—"}</td>
-      <td>${l.coef}</td>
-      <td>${l.pts!==null?l.pts.toFixed(2):"—"}</td>
-      <td>${l.rang!==null?l.rang:"—"}</td>
-      <td>${l.minC!==null?l.minC.toFixed(1):"—"}</td>
-      <td>${l.moyC!==null?l.moyC.toFixed(1):"—"}</td>
-      <td>${l.maxC!==null?l.maxC.toFixed(1):"—"}</td>
-      <td class="app">${appTxt} <span style="color:${dotCol}">●</span></td>
-    </tr>`;
-  }).join("");
+    const mc=l.moy===null?"#9ca3af":l.moy>=10?"#1a6b3a":"#dc2626";
+    const ap=l.moy===null?"—":l.moy>=16?"Très Bien":l.moy>=14?"Bien":l.moy>=12?"Assez Bien":l.moy>=10?"Passable":l.moy>=8?"Insuffisant":"Faible";
+    const dc=l.moy===null?"#9ca3af":l.moy>=14?"#16a34a":l.moy>=10?"#f59e0b":"#dc2626";
+    return `<tr><td class="mat">${l.matiere}</td>${nc}<td style="color:${mc};font-weight:700">${l.moy!==null?l.moy.toFixed(2):"—"}</td><td>${l.coef}</td><td>${l.pts!==null?l.pts.toFixed(2):"—"}</td><td>${l.rang!==null?l.rang:"—"}</td><td>${l.minC!==null?l.minC.toFixed(1):"—"}</td><td>${l.moyC!==null?l.moyC.toFixed(1):"—"}</td><td>${l.maxC!==null?l.maxC.toFixed(1):"—"}</td><td class="app">${ap} <span style="color:${dc}">●</span></td></tr>`;
+  };
 
-  const hasGrp=(g)=>renderLignes(g).trim()!=="";
-  const grpRow=(title)=>`<tr class="grp-row"><td colspan="15">${title}</td></tr>`;
+  const grpHdr=(t)=>`<tr class="grp"><td colspan="15">${t}</td></tr>`;
 
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  const sciLignes=lignes.filter(l=>inGroup(l.matiere,SCI));
+  const litLignes=lignes.filter(l=>inGroup(l.matiere,LIT));
+  const autLignes=lignes.filter(l=>!inGroup(l.matiere,SCI)&&!inGroup(l.matiere,LIT));
+
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:"Arial Narrow",Arial,sans-serif;font-size:10.5px;color:#1a1a1a;background:#fff;padding:8mm;}
-.page{max-width:297mm;margin:0 auto;}
+body{font-family:"Arial Narrow",Arial,sans-serif;font-size:10px;color:#111;background:#fff;padding:8mm;}
+.page{max-width:210mm;margin:0 auto;}
 
 /* ── EN-TÊTE ── */
-.top{display:grid;grid-template-columns:200px 1fr 160px;gap:0;border-bottom:4px solid ${G};padding-bottom:8px;margin-bottom:0;}
-.top-l{font-size:9px;line-height:1.8;color:#1a1a1a;}
-.top-l strong{font-size:9.5px;color:${G};}
-.rep{font-size:9.5px;font-weight:700;color:#1a1a1a;}
-.rep-sub{font-size:8.5px;color:${gold};font-style:italic;margin-bottom:4px;}
-.top-c{text-align:center;padding:0 8px;}
-.logo-img{width:90px;height:90px;border-radius:50%;object-fit:cover;border:2px solid ${gold};}
-.top-r{text-align:right;}
-.bulletin-badge{border:2px solid ${G};border-radius:4px;padding:6px 12px;display:inline-block;text-align:center;margin-bottom:6px;}
-.badge-title{font-size:13px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:1px;}
-.annee-box{border:2px solid ${G};border-radius:4px;padding:5px 10px;text-align:center;margin-bottom:4px;}
-.annee-label{font-size:8px;font-weight:700;color:#6b7280;text-transform:uppercase;}
-.annee-val{font-size:13px;font-weight:900;color:${G};}
-.trim-box{border:2px solid ${gold};border-radius:4px;padding:4px 10px;text-align:center;}
-.trim-label{font-size:8px;font-weight:700;color:#6b7280;text-transform:uppercase;}
-.trim-val{font-size:22px;font-weight:900;color:${gold};line-height:1;}
-
-/* Bande titre */
-.title-band{background:${G};color:#fff;text-align:center;padding:6px 0;margin:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:5px 20px;}
-.title-band-text{font-size:18px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:#fff;}
-.title-band-sub{font-size:9px;color:#a7c9b5;margin-top:1px;}
-.etab-name{font-size:20px;font-weight:900;color:${G};text-align:center;margin:4px 0 1px;}
-.etab-sub{font-size:8.5px;color:#6b7280;text-align:center;margin-bottom:6px;letter-spacing:.5px;}
+.hdr{display:grid;grid-template-columns:180px 1fr 155px;align-items:start;padding-bottom:8px;margin-bottom:0;}
+.hdr-l{font-size:8.5px;line-height:1.9;}
+.rep{font-size:10px;font-weight:900;color:#111;}
+.rep-it{font-size:8px;color:${gold};font-style:italic;letter-spacing:.3px;}
+.reg{font-size:8.5px;font-weight:700;margin-top:5px;color:#111;}
+.hdr-c{text-align:center;padding:0 6px;}
+.logo-wrap{display:flex;justify-content:center;margin-bottom:3px;}
+.logo-img{width:85px;height:85px;border-radius:50%;object-fit:cover;border:2.5px solid ${gold};}
+.hdr-r{text-align:right;}
+.bull-box{border:2px solid ${G};border-radius:3px;padding:5px 10px;text-align:center;margin-bottom:5px;background:#fff;}
+.bull-title{font-size:13px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:1.5px;line-height:1.2;}
+.an-box{border:1.5px solid ${G};border-radius:3px;padding:4px 8px;text-align:center;margin-bottom:4px;}
+.an-lbl{font-size:7.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;}
+.an-val{font-size:12px;font-weight:900;color:${G};}
+.tr-box{border:1.5px solid ${gold};border-radius:3px;padding:3px 8px;text-align:center;}
+.tr-lbl{font-size:7.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;}
+.tr-val{font-size:20px;font-weight:900;color:${gold};line-height:1.1;}
+.etab-name{font-size:19px;font-weight:900;color:${G};text-align:center;text-transform:uppercase;letter-spacing:2px;margin:4px 0 1px;border-top:3px solid ${G};border-bottom:3px solid ${G};padding:3px 0;}
+.etab-sub{font-size:8px;color:#6b7280;text-align:center;letter-spacing:.4px;margin-bottom:4px;}
+.deco{display:flex;align-items:center;gap:6px;margin:3px 0 5px;}
+.deco::before,.deco::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,${gold},transparent);}
+.deco-d{color:${gold};font-size:9px;}
 
 /* ── INFOS ÉLÈVE ── */
-.eleve-section{background:#fff;border:1.5px solid #e5e7eb;border-radius:4px;margin-bottom:6px;overflow:hidden;}
-.eleve-header{background:${G};color:#fff;font-size:10px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.8px;}
-.eleve-body{display:grid;grid-template-columns:80px 1fr auto;gap:10px;padding:8px 10px;align-items:start;}
-.photo-box{width:72px;height:90px;background:#e8f0e8;border:1.5px solid #d1d5db;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#9ca3af;font-size:22px;}
-.eleve-info{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;}
-.ei-row{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:10px;}
-.ei-icon{font-size:11px;width:14px;flex-shrink:0;}
-.ei-label{color:#6b7280;}
-.ei-val{font-weight:700;color:#1a1a1a;}
-.eleve-name{font-size:15px;font-weight:900;color:${G};margin-bottom:6px;grid-column:1/-1;}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;align-self:start;}
-.kpi{border:1.5px solid #e5e7eb;border-radius:4px;padding:6px 4px;text-align:center;background:#fff;}
-.kpi-num{font-size:16px;font-weight:900;color:${G};line-height:1.1;}
-.kpi-den{font-size:9px;color:#9ca3af;}
-.kpi-lbl{font-size:7px;color:#6b7280;margin-top:1px;text-transform:uppercase;letter-spacing:.2px;line-height:1.2;}
+.el-sec{border:1.5px solid #d1d5db;border-radius:4px;margin-bottom:5px;overflow:hidden;}
+.el-hdr{background:${G};color:#fff;font-size:9.5px;font-weight:700;padding:3px 8px;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px;}
+.el-body{display:grid;grid-template-columns:72px 1fr auto;gap:8px;padding:6px 8px;align-items:start;}
+.photo{width:66px;height:82px;background:#e8f0e8;border:1.5px solid #d1d5db;border-radius:2px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#9ca3af;font-size:24px;}
+.el-name{font-size:14px;font-weight:900;color:${G};margin-bottom:4px;}
+.ei{display:flex;align-items:center;gap:4px;font-size:9px;padding:1.5px 0;border-bottom:1px dotted #e5e7eb;}
+.ei-ic{font-size:10px;width:12px;}
+.ei-lbl{color:#6b7280;}
+.ei-v{font-weight:700;}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
+.kpi{border:1.5px solid #e5e7eb;border-radius:4px;padding:5px 3px;text-align:center;background:#fff;}
+.kn{font-size:14px;font-weight:900;color:${G};line-height:1;}
+.kd{font-size:8px;color:#9ca3af;line-height:1.2;}
+.kl{font-size:7px;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:.2px;line-height:1.2;}
 
-/* ── TABLEAU RÉSULTATS ── */
-.results-header{background:${G};color:#fff;font-size:10px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:0;display:flex;align-items:center;gap:6px;}
-table{width:100%;border-collapse:collapse;font-size:9.5px;margin-bottom:6px;}
-th{background:#1f2937;color:#fff;padding:4px 5px;font-weight:700;text-align:center;font-size:8.5px;}
-th:first-child{text-align:left;padding-left:6px;}
-td{padding:3.5px 5px;text-align:center;border-bottom:1px solid #f0f0f0;}
-td.mat{text-align:left;padding-left:6px;font-weight:600;font-size:9.5px;}
+/* ── TABLEAU ── */
+.res-hdr{background:${G};color:#fff;font-size:9.5px;font-weight:700;padding:3px 8px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:0;display:flex;align-items:center;gap:5px;}
+table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:5px;}
+th{background:#1f2937;color:#fff;padding:3.5px 4px;font-weight:700;text-align:center;font-size:8px;}
+th:first-child{text-align:left;padding-left:5px;}
+td{padding:3px 4px;text-align:center;border-bottom:1px solid #f0f0f0;}
+td.mat{text-align:left;padding-left:5px;font-weight:600;font-size:9px;}
 td.na{color:#d1d5db;}
-td.app{text-align:left;font-size:9px;}
+td.app{text-align:left;font-size:8.5px;}
 tr:nth-child(even) td{background:#f9fafb;}
-.grp-row td{background:#374151;color:#fff;font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;padding:3px 6px;}
-tr.grp-row + tr td, tr.grp-row ~ tr:not(.grp-row) td{background:#fff;}
-tr.grp-row + tr td:first-child, tr.grp-row ~ tr:not(.grp-row) td:first-child{}
+tr.grp td{background:#374151;color:#fff;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;padding:2.5px 5px;}
 
-/* ── BAS DE PAGE ── */
-.bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px;}
-.card{border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;}
-.card-hdr{background:${G};color:#fff;font-size:8.5px;font-weight:700;padding:3px 8px;text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:4px;}
-.card-body{padding:7px 8px;}
-.card-row{display:flex;justify-content:space-between;align-items:center;font-size:9px;padding:2px 0;border-bottom:1px dotted #f0f0f0;}
-.card-label{color:#6b7280;}
-.card-val{font-weight:700;color:#1a1a1a;}
-.abs-table{width:100%;border-collapse:collapse;font-size:8.5px;margin-bottom:5px;}
-.abs-table th{background:#f3f4f6;color:#374151;padding:3px 5px;font-weight:700;}
-.abs-table td{padding:3px 5px;text-align:center;border:1px solid #e5e7eb;}
-.abs-nj{color:#dc2626;font-weight:700;}
+/* ── BAS ── */
+.bot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px;}
+.card{border:1px solid #e5e7eb;border-radius:3px;overflow:hidden;}
+.ch{background:${G};color:#fff;font-size:8.5px;font-weight:700;padding:3px 7px;display:flex;align-items:center;gap:3px;}
+.ch-red{background:#7f1d1d;}
+.cb{padding:5px 7px;}
+.cr{display:flex;justify-content:space-between;font-size:8.5px;padding:1.5px 0;border-bottom:1px dotted #f0f0f0;}
+.cl{color:#6b7280;}
+.cv{font-weight:700;}
+.pf{display:flex;align-items:flex-start;gap:3px;font-size:8px;padding:1px 0;}
+.pd{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:2px;}
+.abs-t{width:100%;border-collapse:collapse;font-size:8.5px;margin-bottom:4px;}
+.abs-t th{background:#f3f4f6;color:#374151;padding:2.5px 4px;font-weight:700;font-size:8px;}
+.abs-t td{padding:2.5px 4px;text-align:center;border:1px solid #e5e7eb;}
+.nj{color:#dc2626;font-weight:700;}
+.cc-app{font-size:8.5px;color:#374151;font-style:italic;min-height:28px;line-height:1.5;margin-bottom:4px;}
+.enc{text-align:center;margin:3px 0;}
+.enc-b{display:inline-block;border:1.5px solid ${gold};color:${gold};border-radius:3px;padding:2px 12px;font-size:9px;font-weight:900;letter-spacing:1px;}
+.enc-star{color:${gold};font-size:11px;}
 
-/* Graphique */
-.chart-wrap{position:relative;}
-.chart-svg{width:100%;height:90px;}
-.chart-footer{text-align:center;font-size:9px;margin-top:2px;}
-.prog-badge{display:inline-flex;align-items:center;gap:3px;font-weight:700;}
+/* ── DÉCISION ── */
+.dec-wrap{border:2px solid ${gold};border-radius:4px;padding:6px 10px;text-align:center;margin-bottom:5px;background:linear-gradient(135deg,#fdfbf0,#fff9e6);}
+.dec-lbl{font-size:7.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:3px;}
+.dec-t{font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+.dec-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-top:1px solid #f0e8c0;padding-top:4px;}
+.ds{text-align:center;}
+.ds-l{font-size:7px;color:#6b7280;text-transform:uppercase;}
+.ds-v{font-size:10px;font-weight:900;color:${G};}
 
-/* Points forts */
-.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
-.pf-item{display:flex;align-items:flex-start;gap:3px;font-size:8.5px;padding:1px 0;}
-.pf-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:2px;}
+/* ── SIGNATURES ── */
+.sig{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;margin-top:6px;align-items:end;}
+.sb{text-align:center;}
+.st{font-size:8px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
+.sn{font-size:9.5px;font-weight:700;margin-bottom:4px;font-style:italic;}
+.sl{height:35px;border-bottom:1px solid #ccc;}
+.sc{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.star-g{color:${gold};font-size:28px;line-height:1;}
+.cachet{width:72px;height:72px;border-radius:50%;border:2px solid ${G};display:flex;align-items:center;justify-content:center;font-size:7px;color:${G};font-weight:700;text-align:center;padding:5px;line-height:1.3;}
 
-/* Conseil de classe */
-.cc-app{font-size:9px;color:#374151;font-style:italic;min-height:32px;line-height:1.5;margin-bottom:6px;}
-.encourage{text-align:center;margin:4px 0;}
-.enc-badge{display:inline-block;background:${gold};color:#fff;border-radius:20px;padding:3px 16px;font-size:10px;font-weight:900;letter-spacing:1px;}
-.star-gold{color:${gold};font-size:16px;}
+/* ── FOOTER ── */
+.footer{background:${G};color:${gold};text-align:center;padding:4px;font-size:9.5px;font-weight:700;letter-spacing:3px;margin-top:5px;border-radius:2px;}
+.footer::before,.footer::after{content:" ✦ ";}
 
-/* Décision */
-.decision-wrap{border:2px solid ${gold};border-radius:4px;padding:8px;text-align:center;margin-bottom:6px;background:linear-gradient(135deg,#fdfbf0 0%,#fff9e6 100%);}
-.dec-label{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px;}
-.dec-text{font-size:16px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.dec-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border-top:1px solid #f0e8c0;padding-top:6px;}
-.ds-item{text-align:center;}
-.ds-lbl{font-size:7.5px;color:#6b7280;text-transform:uppercase;}
-.ds-val{font-size:11px;font-weight:900;color:${G};}
-
-/* Signatures */
-.sig-area{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;margin-top:8px;align-items:end;}
-.sig-box{text-align:center;}
-.sig-title{font-size:8.5px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
-.sig-name{font-size:10px;font-weight:700;margin-bottom:6px;}
-.sig-line{border-top:1px solid #d1d5db;padding-top:6px;font-size:9px;color:#6b7280;min-height:45px;display:flex;flex-direction:column;justify-content:flex-end;}
-.sig-center{display:flex;flex-direction:column;align-items:center;gap:4px;}
-.star-large{font-size:32px;color:${gold};}
-.cachet{width:70px;height:70px;border-radius:50%;border:2px solid ${G};display:flex;align-items:center;justify-content:center;font-size:8px;color:${G};font-weight:700;text-align:center;padding:4px;}
-
-/* Footer */
-.footer{background:${G};color:${gold};text-align:center;padding:5px;font-size:10px;font-weight:700;letter-spacing:3px;margin-top:6px;border-radius:2px;}
-
-/* Séparateur décoratif */
-.deco-line{display:flex;align-items:center;gap:8px;margin:4px 0;}
-.deco-line::before,.deco-line::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,${gold},transparent);}
-.deco-dot{color:${gold};font-size:10px;}
-
-@media print{body{padding:5mm;}@page{margin:5mm;size:A4;}table{page-break-inside:avoid;}}
+@media print{body{padding:5mm;}@page{margin:5mm;size:A4;}}
 </style>
 <script>window.onload=()=>window.print();<\/script>
 </head><body><div class="page">
 
 <!-- ══ EN-TÊTE ══ -->
-<div class="top">
-  <div class="top-l">
+<div class="hdr">
+  <div class="hdr-l">
     <div class="rep">RÉPUBLIQUE DU CAMEROUN</div>
-    <div class="rep-sub">Paix – Travail – Patrie</div>
-    <div style="margin-top:4px;font-size:9px;line-height:1.8;">
-      <strong>RÉGION DE L'EXTRÊME-NORD</strong><br>
-      DÉPARTEMENT DU DIAMARÉ<br>
-      ARRONDISSEMENT DE MAROUA II
+    <div class="rep-it">Paix – Travail – Patrie</div>
+    <div class="reg">RÉGION DE L'EXTRÊME-NORD</div>
+    <div style="font-size:8.5px;">DÉPARTEMENT DU DIAMARÉ</div>
+    <div style="font-size:8.5px;">ARRONDISSEMENT DE MAROUA II</div>
+  </div>
+  <div class="hdr-c">
+    <div class="logo-wrap">
+      <img src="https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/logo_lycee_kakatare.jpg/logo_lycee_kakatare.jpg" class="logo-img" alt="Logo" onerror="this.style.display='none'"/>
     </div>
   </div>
-  <div class="top-c">
-    <img src="https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/logo_lycee_kakatare.jpg/logo_lycee_kakatare.jpg" class="logo-img" alt="Logo" onerror="this.style.display='none'"/>
-  </div>
-  <div class="top-r">
-    <div class="bulletin-badge">
-      <div class="badge-title">Bulletin Scolaire</div>
-    </div><br>
-    <div class="annee-box">
-      <div class="annee-label">Année Scolaire</div>
-      <div class="annee-val">${annee}</div>
+  <div class="hdr-r">
+    <div class="bull-box">
+      <div class="bull-title">BULLETIN<br>SCOLAIRE</div>
     </div>
-    <div class="trim-box">
-      <div class="trim-label">Trimestre</div>
-      <div class="trim-val">${trim}</div>
+    <div class="an-box">
+      <div class="an-lbl">Année Scolaire</div>
+      <div class="an-val">${annee.replace("-","–")}</div>
+    </div>
+    <div class="tr-box">
+      <div class="tr-lbl">Trimestre</div>
+      <div class="tr-val">${trim}</div>
     </div>
   </div>
 </div>
 
 <div class="etab-name">LYCÉE DE KAKATARE-MAROUA</div>
 <div class="etab-sub">BP 162 MAROUA – TÉL. 222 29 21 63 – MLE 0CJ1GSF8111231106</div>
-<div class="deco-line"><span class="deco-dot">◆</span></div>
+<div class="deco"><span class="deco-d">◆</span></div>
 
 <!-- ══ INFOS ÉLÈVE ══ -->
-<div class="eleve-section">
-  <div class="eleve-header">📋 Informations de l'Élève</div>
-  <div class="eleve-body">
-    <div class="photo-box">👤<div style="font-size:8px;margin-top:4px;color:#9ca3af;">Photo</div></div>
-    <div class="eleve-info">
-      <div class="eleve-name">${eleve.nom}</div>
-      <div class="ei-row"><span class="ei-icon">🎓</span><span class="ei-label">Classe :</span><span class="ei-val">${classe}${serie?" · "+serie:""}</span></div>
-      <div class="ei-row"><span class="ei-icon">🪪</span><span class="ei-label">Matricule :</span><span class="ei-val">${eleve.numero||"—"}</span></div>
-      <div class="ei-row"><span class="ei-icon">👤</span><span class="ei-label">Sexe :</span><span class="ei-val">${eleve.sexe==="G"||eleve.sexe==="M"?"Masculin":"Féminin"}</span></div>
-      <div class="ei-row"><span class="ei-icon">📅</span><span class="ei-label">Née le :</span><span class="ei-val">—</span></div>
-      <div class="ei-row" style="grid-column:1/-1"><span class="ei-icon">👨‍🏫</span><span class="ei-label">Professeur principal :</span><span class="ei-val">${profPrincipalNom}</span></div>
+<div class="el-sec">
+  <div class="el-hdr">📋 Informations de l'Élève</div>
+  <div class="el-body">
+    <div class="photo">👤<div style="font-size:7px;margin-top:3px;color:#9ca3af;">Photo</div></div>
+    <div>
+      <div class="el-name">${eleve.nom}</div>
+      <div class="ei"><span class="ei-ic">🎓</span><span class="ei-lbl">Classe :</span>&nbsp;<span class="ei-v">${classe}</span>&nbsp;<span style="font-size:8px;color:#6b7280;margin-left:8px;">🪪 Matricule :</span>&nbsp;<span class="ei-v">${eleve.numero||"—"}</span></div>
+      <div class="ei"><span class="ei-ic">👤</span><span class="ei-lbl">Sexe :</span>&nbsp;<span class="ei-v">${eleve.sexe==="G"||eleve.sexe==="M"?"Masculin":"Féminin"}</span>&nbsp;<span style="font-size:8px;color:#6b7280;margin-left:8px;">📅 Née le :</span>&nbsp;<span class="ei-v">—</span></div>
+      <div class="ei"><span class="ei-ic">👨‍🏫</span><span class="ei-lbl">Professeur principal :</span>&nbsp;<span class="ei-v">${profPrincipalNom}</span></div>
     </div>
     <div class="kpis">
-      <div class="kpi"><div class="kpi-num">${moyenne!==null?moyenne.toFixed(2):"—"}</div><div class="kpi-den">/20</div><div class="kpi-lbl">Moyenne générale</div></div>
-      <div class="kpi"><div class="kpi-num">${typeof rang==="number"?rang:"—"}</div><div class="kpi-den">/${effectif}</div><div class="kpi-lbl">Rang</div></div>
-      <div class="kpi"><div class="kpi-num">${nbMatieres}</div><div class="kpi-den">/${coefs.length}</div><div class="kpi-lbl">Matières évaluées</div></div>
-      <div class="kpi"><div class="kpi-num" style="font-size:12px;">${totalPts>0?totalPts.toFixed(1):"—"}</div><div class="kpi-lbl">Total pts</div></div>
-      <div class="kpi"><div class="kpi-num">—</div><div class="kpi-den">h</div><div class="kpi-lbl">Absences</div></div>
-      <div class="kpi"><div class="kpi-num">${conduite!==null?conduite:"—"}</div><div class="kpi-den">/20</div><div class="kpi-lbl">Conduite</div></div>
+      <div class="kpi"><div class="kn">${moyenne!==null?moyenne.toFixed(2):"—"}</div><div class="kd">/20</div><div class="kl">Moyenne générale</div></div>
+      <div class="kpi"><div class="kn">${rang}</div><div class="kd">/${effectif}</div><div class="kl">Rang</div></div>
+      <div class="kpi"><div class="kn">${nbMatieres}</div><div class="kd">/${coefs.length}</div><div class="kl">Matières évaluées</div></div>
+      <div class="kpi"><div class="kn" style="font-size:11px;">${totalPts>0?totalPts.toFixed(1):"—"}</div><div class="kl">Total points</div></div>
+      <div class="kpi"><div class="kn">—</div><div class="kd">h</div><div class="kl">Absences</div></div>
+      <div class="kpi"><div class="kn">${conduite!==null?conduite:"—"}</div><div class="kd">/20</div><div class="kl">Conduite</div></div>
     </div>
   </div>
 </div>
 
-<!-- ══ RÉSULTATS ACADÉMIQUES ══ -->
-<div class="results-header">📊 Résultats Académiques</div>
+<!-- ══ RÉSULTATS ══ -->
+<div class="res-hdr">📊 Résultats Académiques</div>
 <table>
-  <thead>
-    <tr>
-      <th style="width:22%;text-align:left;">MATIÈRE</th>
-      <th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th>
-      <th>MOY.</th><th>COEF.</th><th>POINTS</th><th>RANG</th>
-      <th>MIN.</th><th>MOY.</th><th>MAX.</th>
-      <th style="width:13%;text-align:left;">APPRÉCIATION</th>
-    </tr>
-  </thead>
+  <thead><tr>
+    <th style="width:22%;text-align:left;">MATIÈRE</th>
+    <th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th>
+    <th>MOY.</th><th>COEF.</th><th>POINTS</th><th>RANG</th>
+    <th>MIN.</th><th>MOY.</th><th>MAX.</th>
+    <th style="width:12%;text-align:left;">APPRÉCIATION</th>
+  </tr></thead>
   <tbody>
-    ${hasGrp("sci")?grpRow("MATIÈRES SCIENTIFIQUES")+renderLignes("sci"):""}
-    ${hasGrp("lit")?grpRow("MATIÈRES LITTÉRAIRES")+renderLignes("lit"):""}
-    ${hasGrp("aut")?grpRow("AUTRES MATIÈRES")+renderLignes("aut"):""}
+    ${sciLignes.length?grpHdr("MATIÈRES SCIENTIFIQUES")+sciLignes.map(renderLigne).join(""):""}
+    ${litLignes.length?grpHdr("MATIÈRES LITTÉRAIRES")+litLignes.map(renderLigne).join(""):""}
+    ${autLignes.length?grpHdr("AUTRES MATIÈRES")+autLignes.map(renderLigne).join(""):""}
   </tbody>
 </table>
 
-<!-- ══ BAS DE PAGE : 3 colonnes ══ -->
-<div class="bottom">
-
-  <!-- COL 1 : Évolution + Points forts/À renforcer -->
-  <div style="display:flex;flex-direction:column;gap:6px;">
+<!-- ══ BAS ══ -->
+<div class="bot">
+  <!-- Col 1 -->
+  <div style="display:flex;flex-direction:column;gap:4px;">
     <div class="card">
-      <div class="card-hdr">📈 Évolution du Travail</div>
-      <div class="card-body" style="padding:6px 8px;">
-        <svg viewBox="0 0 300 95" class="chart-svg">
-          ${polyline}${dots}
-          ${SEQUENCES.slice(0,seq).map((_,i)=>`<text x="${(20+(i/(Math.max(seq-1,1)))*(260)).toFixed(1)}" y="93" text-anchor="middle" font-size="8" fill="#6b7280">S${i+1}</text>`).join("")}
-          <line x1="20" y1="10" x2="20" y2="80" stroke="#e5e7eb" stroke-width="1"/>
-          <line x1="20" y1="80" x2="280" y2="80" stroke="#e5e7eb" stroke-width="1"/>
+      <div class="ch">📈 Évolution du Travail</div>
+      <div class="cb" style="padding:4px 6px;">
+        <svg viewBox="0 0 280 80" style="width:100%;height:80px;">
+          <line x1="18" y1="10" x2="18" y2="72" stroke="#e5e7eb" stroke-width="1"/>
+          <line x1="18" y1="72" x2="262" y2="72" stroke="#e5e7eb" stroke-width="1"/>
+          ${svgContent}
         </svg>
-        <div class="chart-footer">
-          <span class="prog-badge" style="color:${progColor}">
-            Progression : ${progression} pts ${+progression>0?"▲":"▼"}
-          </span>
+        <div style="text-align:center;font-size:8px;margin-top:2px;">
+          <span style="font-weight:700;color:${progCol}">Progression : ${prog} pts ${progArrow}</span>
         </div>
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr">👍 Points Forts</div>
-      <div class="card-body">
-        ${pointsForts.length?pointsForts.map(l=>`<div class="pf-item"><div class="pf-dot" style="background:#16a34a;margin-top:3px"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):"<div style=\"font-size:9px;color:#9ca3af;font-style:italic;\">Aucune note saisie</div>"}
+      <div class="ch">👍 Points Forts</div>
+      <div class="cb">
+        ${pointsForts.length?pointsForts.map(l=>`<div class="pf"><div class="pd" style="background:#16a34a"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):`<div style="font-size:8px;color:#9ca3af;font-style:italic;">Aucune note saisie</div>`}
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr" style="background:#7f1d1d;">🎯 À Renforcer</div>
-      <div class="card-body">
-        ${aRenforcer.length?aRenforcer.map(l=>`<div class="pf-item"><div class="pf-dot" style="background:#dc2626;margin-top:3px"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):"<div style=\"font-size:9px;color:#9ca3af;font-style:italic;\">Aucune note saisie</div>"}
+      <div class="ch ch-red">🎯 À Renforcer</div>
+      <div class="cb">
+        ${aRenforcer.length?aRenforcer.map(l=>`<div class="pf"><div class="pd" style="background:#dc2626"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):`<div style="font-size:8px;color:#9ca3af;font-style:italic;">Aucune note saisie</div>`}
       </div>
     </div>
   </div>
 
-  <!-- COL 2 : Assiduité + Conduite -->
-  <div style="display:flex;flex-direction:column;gap:6px;">
+  <!-- Col 2 -->
+  <div style="display:flex;flex-direction:column;gap:4px;">
     <div class="card">
-      <div class="card-hdr">⏱ Assiduité</div>
-      <div class="card-body">
-        <table class="abs-table">
+      <div class="ch">⏱ Assiduité</div>
+      <div class="cb">
+        <table class="abs-t">
           <tr><th></th><th>TOTAL</th><th>JUSTIFIÉES</th><th>NON JUST.</th></tr>
-          <tr><td style="font-weight:700;">Absences</td><td>— h</td><td>0 h</td><td class="abs-nj">— h</td></tr>
+          <tr><td style="font-weight:700;">Absences</td><td>— h</td><td>0 h</td><td class="nj">— h</td></tr>
         </table>
-        <div class="card-row"><span class="card-label">Retards :</span><span class="card-val">${retards}</span></div>
+        <div class="cr"><span class="cl">Retards :</span><span class="cv">${retards}</span></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr">🛡 Conduite & Vie Scolaire</div>
-      <div class="card-body">
-        <div class="card-row"><span class="card-label">Note de conduite :</span><span class="card-val">${conduite!==null?conduite+" / 20":"—"}</span></div>
-        <div class="card-row"><span class="card-label">Retards :</span><span class="card-val">${retards}</span></div>
-        <div class="card-row"><span class="card-label">Exclusions (heures) :</span><span class="card-val">${exclusionsH} h</span></div>
-        <div class="card-row"><span class="card-label">Exclusions (jours) :</span><span class="card-val">${exclusionsJ} j</span></div>
-        <div class="card-row"><span class="card-label">Consignes (heures) :</span><span class="card-val">${consignesH} h</span></div>
-        <div class="card-row"><span class="card-label">Consignes (jours) :</span><span class="card-val">${consignesJ} j</span></div>
-        <div class="card-row"><span class="card-label">Blâme travail :</span><span class="card-val">${blameTravail}</span></div>
-        <div class="card-row"><span class="card-label">Blâme conduite :</span><span class="card-val">${blameConduite}</span></div>
+      <div class="ch">🛡 Conduite & Vie Scolaire</div>
+      <div class="cb">
+        <div class="cr"><span class="cl">Note de conduite :</span><span class="cv">${conduite!==null?conduite+" / 20":"—"}</span></div>
+        <div class="cr"><span class="cl">Retards :</span><span class="cv">${retards}</span></div>
+        <div class="cr"><span class="cl">Exclusions (heures) :</span><span class="cv">${exclusionsH} h</span></div>
+        <div class="cr"><span class="cl">Exclusions (jours) :</span><span class="cv">${exclusionsJ} j</span></div>
+        <div class="cr"><span class="cl">Consignes (heures) :</span><span class="cv">${consignesH} h</span></div>
+        <div class="cr"><span class="cl">Consignes (jours) :</span><span class="cv">${consignesJ} j</span></div>
+        <div class="cr"><span class="cl">Blâme travail :</span><span class="cv">${blameTravail}</span></div>
+        <div class="cr"><span class="cl">Blâme conduite :</span><span class="cv">${blameConduite}</span></div>
       </div>
     </div>
   </div>
 
-  <!-- COL 3 : Conseil de classe + Décision -->
-  <div style="display:flex;flex-direction:column;gap:6px;">
+  <!-- Col 3 -->
+  <div style="display:flex;flex-direction:column;gap:4px;">
     <div class="card">
-      <div class="card-hdr">👥 Conseil de Classe</div>
-      <div class="card-body">
-        <div style="font-size:8.5px;font-weight:700;color:${G};margin-bottom:3px;">Appréciation générale :</div>
+      <div class="ch">👥 Conseil de Classe</div>
+      <div class="cb">
+        <div style="font-size:8.5px;font-weight:700;color:${G};margin-bottom:2px;">Appréciation générale :</div>
         <div class="cc-app">${appreciation||"—"}</div>
-        ${decision&&(decision.toLowerCase().includes("encouragement")||moyenne!==null&&moyenne>=14)?
-          `<div class="encourage"><div class="enc-badge">✦ ENCOURAGEMENTS ✦</div></div>`:
-          decision&&moyenne!==null&&moyenne>=10?`<div class="encourage"><div class="enc-badge" style="background:#2563eb;">✦ FÉLICITATIONS ✦</div></div>`:""
-        }
+        ${decision&&moyenne!==null&&moyenne>=12?`<div class="enc"><div class="enc-b">✦ ENCOURAGEMENTS ✦</div></div>`:""}
+        ${decision&&moyenne!==null&&moyenne>=15?`<div class="enc" style="margin-top:3px;"><div class="enc-b" style="border-color:#2563eb;color:#2563eb;">✦ FÉLICITATIONS ✦</div></div>`:""}
       </div>
     </div>
-    <div class="decision-wrap">
-      <div class="dec-label">🎓 Décision du Conseil de Classe</div>
-      <div class="dec-text" style="color:${decision?decColor:"#9ca3af"};">${decision||"En attente"}</div>
+    ${decision?`
+    <div class="dec-wrap">
+      <div class="dec-lbl">🎓 Décision du Conseil de Classe</div>
+      <div class="dec-t" style="color:${decColor};">${decision}</div>
       <div class="dec-stats">
-        <div class="ds-item"><div class="ds-lbl">Moyenne annuelle</div><div class="ds-val">${moyenne!==null?moyenne.toFixed(2)+" / 20":"—"}</div></div>
-        <div class="ds-item"><div class="ds-lbl">Mention</div><div class="ds-val">${mentionAff||"—"}</div></div>
-        <div class="ds-item"><div class="ds-lbl">Rang annuel</div><div class="ds-val">${rang} / ${effectif}</div></div>
-        <div class="ds-item"><div class="ds-lbl">Travail annuel</div><div class="ds-val" style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${decision&&moyenne!==null?(moyenne>=10?"PASSABLE":"INSUFFISANT"):"—"}</div></div>
+        <div class="ds"><div class="ds-l">Moyenne annuelle</div><div class="ds-v">${moyenne!==null?moyenne.toFixed(2)+" / 20":"—"}</div></div>
+        <div class="ds"><div class="ds-l">Mention</div><div class="ds-v">${mentionAff||"—"}</div></div>
+        <div class="ds"><div class="ds-l">Rang annuel</div><div class="ds-v">${rang} / ${effectif}</div></div>
+        <div class="ds"><div class="ds-l">Travail annuel</div><div class="ds-v" style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${moyenne!==null&&moyenne>=10?"PASSABLE":"INSUFFISANT"}</div></div>
       </div>
-    </div>
+    </div>`:
+    `<div class="card"><div class="ch">🎓 Décision</div><div class="cb"><div style="font-size:8.5px;color:#9ca3af;font-style:italic;text-align:center;padding:8px;">En attente du Conseil de Classe</div></div></div>`}
   </div>
 </div>
 
 <!-- ══ SIGNATURES ══ -->
-<div class="sig-area">
-  <div class="sig-box">
-    <div class="sig-title">Le Professeur Principal</div>
-    <div class="sig-name">${profPrincipalNom}</div>
-    <div class="sig-line" style="height:50px;border-top:1px solid #d1d5db;"></div>
+<div class="sig">
+  <div class="sb">
+    <div class="st">Le Professeur Principal</div>
+    <div class="sn">${profPrincipalNom}</div>
+    <div class="sl"></div>
   </div>
-  <div class="sig-center">
-    <div class="star-large">★</div>
-    <div class="cachet">LYCÉE DE KAKATARE-MAROUA<br>Le Proviseur</div>
+  <div class="sc">
+    <div class="star-g">★</div>
+    <div class="cachet">LYCÉE DE<br>KAKATARE-<br>MAROUA<br>Le Proviseur</div>
   </div>
-  <div class="sig-box">
-    <div class="sig-title">Le Chef d'Établissement</div>
-    <div class="sig-name">Le Proviseur</div>
-    <div class="sig-line" style="height:50px;border-top:1px solid #d1d5db;"></div>
+  <div class="sb">
+    <div class="st">Le Chef d'Établissement</div>
+    <div class="sn">Le Proviseur</div>
+    <div class="sl"></div>
   </div>
 </div>
 
-<div class="footer">✦ DISCIPLINE – TRAVAIL – RÉUSSITE ✦</div>
+<div class="footer">DISCIPLINE – TRAVAIL – RÉUSSITE</div>
 </div></body></html>`;
 }
 
