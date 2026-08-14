@@ -375,7 +375,12 @@ const C = {
 const AppCtx = createContext(null);
 const useApp = () => useContext(AppCtx);
 
+// ADMIN_ROLES : rôles qui utilisent filterDataByDept pour le scoping département
+// Censeur volontairement absent (vue globale intentionnelle — même comportement que proviseur)
+// Si on ajoute censeur ici, il faudra aussi gérer son deptIdRef explicitement
 const ADMIN_ROLES = ["animatrice", "animateur", "proviseur"];
+// Rôles avec vue globale explicite (pas de scoping département)
+const GLOBAL_ROLES = ["proviseur", "censeur_a", "censeur_b", "censeur_c", "censeur_d", "censeur_e"];
 const isAdminRole = (role) => ADMIN_ROLES.includes(role);
 // ══════════════════════════════════════════════════════════════════════
 // HOOK : Détecteur automatique mobile / tablette / desktop
@@ -10003,7 +10008,7 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
 
       {/* Toggle collapse */}
       <button onClick={()=>setCollapsed(c=>!c)}
-        style={{position:"absolute",top:18,right:effectiveCollapsed?-12:-12,width:22,height:22,borderRadius:"50%",background:"#0B3D20",border:"1.5px solid rgba(212,175,55,.4)",color:G,cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
+        style={{position:"absolute",top:18,right:8,width:22,height:22,borderRadius:"50%",background:"#0B3D20",border:"1.5px solid rgba(212,175,55,.4)",color:G,cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
         {effectiveCollapsed?"›":"‹"}
       </button>
     </aside>
@@ -10639,7 +10644,7 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
         {collapsed ? "→" : "←"}
       </button>
       <h1 style={{fontSize:14, fontWeight:700, color:C.txt, margin:0}}>{title}</h1>
-      {user?.role==="animatrice" && <GlobalSearch/>}
+      {(user?.role==="animatrice"||user?.role==="proviseur"||user?.role==="censeur_a") && <GlobalSearch/>}
       <div style={{flex:1}}/>
       {!isMobile && (
         <div title={rtCfg.label} style={{display:"flex", alignItems:"center", gap:6, fontSize:10.5, color:C.txtMuted}}>
@@ -12624,7 +12629,16 @@ function filterDataByDept(data, deptId) {
 
   const classesF = (data.classes||[]).filter(c=>c.departement_id===deptId);
 
-  return { ...data, users, prog, absences, epreuves, exceptions, edtBase, classes: classesF, deptFilterActive: true };
+  // Filtrer les notes par département (clé format: "classe||matiere-Sn")
+  // On filtre via les classes des enseignants du département
+  const classesOfDept = new Set(Object.values(users).flatMap(u=>u.classes||[]));
+  const notes = {};
+  Object.entries(data.notes||{}).forEach(([k,v])=>{
+    const classe = k.split("||")[0];
+    if(classesOfDept.has(classe)) notes[k]=v;
+  });
+
+  return { ...data, users, prog, absences, epreuves, exceptions, edtBase, classes: classesF, notes, deptFilterActive: true };
 }
 
 export default function App() {
