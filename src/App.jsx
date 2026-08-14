@@ -7616,8 +7616,8 @@ function parseClasseNiveauSerie(classe) {
       else serie = "A4";
     }
     else if (/Ti/i.test(c)) serie = "Ti";
-    else if (/C|/C/.test(c)) serie = "C";
-    else if (/D|/D/.test(c)) serie = "D";
+    else if (/C/.test(c)) serie = "C";
+    else if (/D/.test(c)) serie = "D";
     else serie = "A4";
   }
   return { niveau, serie };
