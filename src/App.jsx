@@ -10329,17 +10329,6 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   const isAdmin = isAdminRole(user?.role);
   const nav = user?.role==="proviseur" ? NAV_PROVISEUR : user?.role==="surveillant_general" ? NAV_SURVEILLANCE : user?.role==="censeur" ? NAV_CENSEUR : isAdmin ? NAV_ADMIN : NAV_TEACHER;
   // Compter les épreuves en attente pour le badge
-  // Badge babillard : annonces des dernières 24h
-  const [nbNouvellesAnnonces, setNbNouvellesAnnonces] = useState(0);
-  useEffect(()=>{
-    sb.get("babillard","?select=created_at&order=created_at.desc&limit=20").then(rows=>{
-      if(!rows) return;
-      const lastSeen = localStorage.getItem("babillard_last_seen");
-      const cutoff = lastSeen ? new Date(lastSeen) : new Date(Date.now()-24*3600*1000);
-      const nb = rows.filter(r=>new Date(r.created_at)>cutoff&&new Date(r.expire_at||"2099-01-01")>new Date()).length;
-      setNbNouvellesAnnonces(nb);
-    }).catch(()=>{});
-  },[data]);
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
     : (data?.epreuves||[]).filter(e=>e.ens_id===user?.id&&e.statut==="attente").length;
@@ -10606,8 +10595,18 @@ const GlobalSearch = () => {
   );
 };
 
-const Topbar = ({title, onLogout, collapsed, setCollapsed, page, setPage, nbNouvellesAnnonces=0}) => {
-  const {user, realtimeStatus, viewDeptId, setViewDeptId, lang, setLang, t} = useApp();
+const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
+  const {user, realtimeStatus, viewDeptId, setViewDeptId, lang, setLang, t, page, setPage} = useApp();
+  const [nbNouvellesAnnonces, setNbNouvellesAnnonces] = React.useState(0);
+  React.useEffect(()=>{
+    sb.get("babillard","?select=created_at,expire_at&order=created_at.desc&limit=20").then(rows=>{
+      if(!rows) return;
+      const lastSeen = (() => { try { return localStorage.getItem("babillard_last_seen"); } catch { return null; } })();
+      const cutoff = lastSeen ? new Date(lastSeen) : new Date(Date.now()-24*3600*1000);
+      const nb = rows.filter(r=>new Date(r.created_at)>cutoff&&new Date(r.expire_at||"2099-01-01")>new Date()).length;
+      setNbNouvellesAnnonces(nb);
+    }).catch(()=>{});
+  },[]);
   const {isMobile} = useDevice();
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installed, setInstalled]         = useState(false);
@@ -12000,7 +11999,7 @@ const AppLayout = ({onLogout}) => {
     <div style={{display:"flex",height:"100vh",overflow:"hidden",background:C.bg}}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflow:"hidden"}}>
-        <Topbar title={PAGE_TITLES[page]||"—"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed} page={page} setPage={setPage} nbNouvellesAnnonces={nbNouvellesAnnonces}/>
+        <Topbar title={PAGE_TITLES[page]||"—"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed}/>
         <div style={{flex:1, minHeight:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
           {renderPage()}
         </div>
