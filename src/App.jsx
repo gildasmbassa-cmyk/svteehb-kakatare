@@ -6517,6 +6517,7 @@ const NAV_PROVISEUR_GROUPS = [
   { section:"SUIVI & PLANNINGS", items:[
     {id:"edt",      emoji:"📅", label:"Emploi du temps"},
     {id:"epreuves", emoji:"📋", label:"Épreuves & Évaluations"},
+    {id:"bulletins",emoji:"📒", label:"Bulletins de notes"},
     {id:"programme",emoji:"📊", label:"Suivi programme"},
   ]},
   { section:"CYCLE ANNUEL", items:[
@@ -6534,6 +6535,7 @@ const NAV_CENSEUR_GROUPS = [
   { section:"SUIVI & PLANNINGS", items:[
     {id:"edt",      emoji:"📅", label:"Emploi du temps"},
     {id:"epreuves", emoji:"📋", label:"Épreuves & Évaluations"},
+    {id:"bulletins",emoji:"📒", label:"Bulletins de notes"},
     {id:"programme",emoji:"📊", label:"Suivi programme"},
   ]},
   { section:"DISCIPLINE & VIE SCOLAIRE", items:[
