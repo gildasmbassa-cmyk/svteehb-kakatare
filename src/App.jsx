@@ -7829,7 +7829,7 @@ body{font-family:"Arial Narrow",Arial,sans-serif;font-size:10.5px;color:#1a1a1a;
 .kpi{border:1.5px solid #e5e7eb;border-radius:4px;padding:6px 4px;text-align:center;background:#fff;}
 .kpi-num{font-size:16px;font-weight:900;color:${G};line-height:1.1;}
 .kpi-den{font-size:9px;color:#9ca3af;}
-.kpi-lbl{font-size:7.5px;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:.3px;}
+.kpi-lbl{font-size:7px;color:#6b7280;margin-top:1px;text-transform:uppercase;letter-spacing:.2px;line-height:1.2;}
 
 /* ── TABLEAU RÉSULTATS ── */
 .results-header{background:${G};color:#fff;font-size:10px;font-weight:700;padding:4px 10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:0;display:flex;align-items:center;gap:6px;}
@@ -7955,9 +7955,9 @@ tr.grp-row + tr td:first-child, tr.grp-row ~ tr:not(.grp-row) td:first-child{}
     </div>
     <div class="kpis">
       <div class="kpi"><div class="kpi-num">${moyenne!==null?moyenne.toFixed(2):"—"}</div><div class="kpi-den">/20</div><div class="kpi-lbl">Moyenne générale</div></div>
-      <div class="kpi"><div class="kpi-num">${rang}</div><div class="kpi-den">/${effectif}</div><div class="kpi-lbl">Rang</div></div>
+      <div class="kpi"><div class="kpi-num">${typeof rang==="number"?rang:"—"}</div><div class="kpi-den">/${effectif}</div><div class="kpi-lbl">Rang</div></div>
       <div class="kpi"><div class="kpi-num">${nbMatieres}</div><div class="kpi-den">/${coefs.length}</div><div class="kpi-lbl">Matières évaluées</div></div>
-      <div class="kpi"><div class="kpi-num" style="font-size:12px;">${totalPts.toFixed(1)}</div><div class="kpi-lbl">Total points</div></div>
+      <div class="kpi"><div class="kpi-num" style="font-size:12px;">${totalPts>0?totalPts.toFixed(1):"—"}</div><div class="kpi-lbl">Total pts</div></div>
       <div class="kpi"><div class="kpi-num">—</div><div class="kpi-den">h</div><div class="kpi-lbl">Absences</div></div>
       <div class="kpi"><div class="kpi-num">${conduite!==null?conduite:"—"}</div><div class="kpi-den">/20</div><div class="kpi-lbl">Conduite</div></div>
     </div>
@@ -8007,13 +8007,13 @@ tr.grp-row + tr td:first-child, tr.grp-row ~ tr:not(.grp-row) td:first-child{}
     <div class="card">
       <div class="card-hdr">👍 Points Forts</div>
       <div class="card-body">
-        ${pointsForts.map(l=>`<div class="pf-item"><div class="pf-dot" style="background:#16a34a;margin-top:3px"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join("")}
+        ${pointsForts.length?pointsForts.map(l=>`<div class="pf-item"><div class="pf-dot" style="background:#16a34a;margin-top:3px"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):"<div style=\"font-size:9px;color:#9ca3af;font-style:italic;\">Aucune note saisie</div>"}
       </div>
     </div>
     <div class="card">
       <div class="card-hdr" style="background:#7f1d1d;">🎯 À Renforcer</div>
       <div class="card-body">
-        ${aRenforcer.map(l=>`<div class="pf-item"><div class="pf-dot" style="background:#dc2626;margin-top:3px"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join("")}
+        ${aRenforcer.length?aRenforcer.map(l=>`<div class="pf-item"><div class="pf-dot" style="background:#dc2626;margin-top:3px"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):"<div style=\"font-size:9px;color:#9ca3af;font-style:italic;\">Aucune note saisie</div>"}
       </div>
     </div>
   </div>
@@ -8060,12 +8060,12 @@ tr.grp-row + tr td:first-child, tr.grp-row ~ tr:not(.grp-row) td:first-child{}
     </div>
     <div class="decision-wrap">
       <div class="dec-label">🎓 Décision du Conseil de Classe</div>
-      <div class="dec-text" style="color:${decColor};">${decision||"—"}</div>
+      <div class="dec-text" style="color:${decision?decColor:"#9ca3af"};">${decision||"En attente"}</div>
       <div class="dec-stats">
         <div class="ds-item"><div class="ds-lbl">Moyenne annuelle</div><div class="ds-val">${moyenne!==null?moyenne.toFixed(2)+" / 20":"—"}</div></div>
         <div class="ds-item"><div class="ds-lbl">Mention</div><div class="ds-val">${mentionAff||"—"}</div></div>
         <div class="ds-item"><div class="ds-lbl">Rang annuel</div><div class="ds-val">${rang} / ${effectif}</div></div>
-        <div class="ds-item"><div class="ds-lbl">Travail annuel</div><div class="ds-val" style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${moyenne!==null&&moyenne>=10?"PASSABLE":"INSUFFISANT"}</div></div>
+        <div class="ds-item"><div class="ds-lbl">Travail annuel</div><div class="ds-val" style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${decision&&moyenne!==null?(moyenne>=10?"PASSABLE":"INSUFFISANT"):"—"}</div></div>
       </div>
     </div>
   </div>
