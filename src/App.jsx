@@ -96,7 +96,7 @@ const sb = {
         "admin_delete_all_epreuves","admin_delete_edt_slots_by_teacher","admin_delete_epreuves_by_teacher",
         "admin_delete_prog_by_classe","admin_delete_prog_by_teacher","admin_delete_teacher",
         "admin_set_edt_slots","admin_set_password","admin_upsert_teacher",
-        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection",
+        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection","submit_babillard","delete_babillard",
       ];
       const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
@@ -6526,7 +6526,7 @@ const NAV_PROVISEUR_GROUPS = [
 ];
 
 const NAV_CENSEUR_GROUPS = [
-  { section:"", items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"}] },
+  { section:"", items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"}] },
   { section:"ACTEURS & PÉDAGOGIE", items:[
     {id:"eleves",      emoji:"🎓", label:"Élèves"},
     {id:"departements",emoji:"🏛️", label:"Départements & Matières", expandable:true,
@@ -6559,7 +6559,7 @@ const NAV_ANIMATEUR_GROUPS = [
     {id:"edt-teacher",emoji:"📅",label:"Mon emploi du temps"},
   ]},
 ];
-const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"}];
+const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"}];
 
 const PAGE_TITLES = {
   departements:"Départements",
@@ -8253,6 +8253,280 @@ function BulletinsPage() {
             </div>
             <div style={{flex:1,overflow:"hidden",background:"#e5e7eb",padding:12}}>
               <iframe srcDoc={previewHtml} title="bulletin" style={{width:"100%",height:"100%",border:"none",borderRadius:8,background:"#fff"}}/>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// BABILLARD NUMÉRIQUE — Tableau d'affichage de l'établissement
+// ════════════════════════════════════════════════════════════════
+function BabillardPage() {
+  const {user, data} = useApp();
+  const {isMobile} = useDevice();
+  const [annonces, setAnnonces] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [filterCat, setFilterCat] = useState("Tous");
+  const [form, setForm] = useState({
+    titre:"", contenu:"", categorie:"Annonce", epingle:false, duree:30
+  });
+
+  const canWrite = ["proviseur","censeur_a","censeur_b","censeur_c","censeur_d","censeur_e",
+    "sg_6eme","sg_college","sg_2nde","sg_1ere","sg_tle","sg_lycee"].includes(user?.role);
+  const isAdmin = user?.role==="proviseur";
+
+  const CATS = ["Annonce","Urgent","Circulaire","Convocation","Information"];
+  const CAT_COLORS = {
+    "Annonce":   {bg:"#dbeafe",col:"#1d4ed8",dot:"🔵"},
+    "Urgent":    {bg:"#fee2e2",col:"#dc2626",dot:"🔴"},
+    "Circulaire":{bg:"#f0fdf4",col:"#16a34a",dot:"🟢"},
+    "Convocation":{bg:"#fef9c3",col:"#b45309",dot:"🟡"},
+    "Information":{bg:"#f3f4f6",col:"#374151",dot:"⚪"},
+  };
+
+  const loadAnnonces = async () => {
+    setLoading(true);
+    const rows = await sb.get("babillard","?select=*&order=epingle.desc,created_at.desc&limit=100");
+    const now = new Date();
+    setAnnonces((rows||[]).filter(r=>new Date(r.expire_at)>now));
+    setLoading(false);
+  };
+
+  useEffect(()=>{ loadAnnonces(); }, []);
+
+  const resetForm = () => setForm({titre:"",contenu:"",categorie:"Annonce",epingle:false,duree:30});
+
+  const openNew = () => { resetForm(); setEditId(null); setShowForm(true); };
+  const openEdit = (a) => {
+    setForm({titre:a.titre,contenu:a.contenu,categorie:a.categorie,epingle:a.epingle,duree:30});
+    setEditId(a.id); setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if(!form.titre.trim()||!form.contenu.trim()){alert("Titre et contenu obligatoires.");return;}
+    setSaving(true);
+    const res = await sb.rpc("submit_babillard",{
+      p_token:window.__svtSessionToken,
+      p_titre:form.titre, p_contenu:form.contenu,
+      p_categorie:form.categorie, p_epingle:form.epingle,
+      p_duree_jours:parseInt(form.duree)||30,
+      p_id:editId||null
+    });
+    setSaving(false);
+    if(res?.ok){ await loadAnnonces(); setShowForm(false); resetForm(); setEditId(null); }
+    else alert("Erreur: "+(res?.error||"inconnue"));
+  };
+
+  const handleDelete = async (id) => {
+    if(!window.confirm("Supprimer cette annonce ?")) return;
+    await sb.rpc("delete_babillard",{p_token:window.__svtSessionToken, p_id:id});
+    await loadAnnonces();
+  };
+
+  const handleEpingle = async (a) => {
+    await sb.rpc("submit_babillard",{
+      p_token:window.__svtSessionToken,
+      p_titre:a.titre, p_contenu:a.contenu, p_categorie:a.categorie,
+      p_epingle:!a.epingle, p_duree_jours:30, p_id:a.id
+    });
+    await loadAnnonces();
+  };
+
+  const filtered = filterCat==="Tous" ? annonces : annonces.filter(a=>a.categorie===filterCat);
+  const epinglees = filtered.filter(a=>a.epingle);
+  const normales = filtered.filter(a=>!a.epingle);
+
+  const inp = {width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",
+    fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+  const label = {fontSize:11,fontWeight:700,color:"#374151",textTransform:"uppercase",
+    letterSpacing:".5px",marginBottom:4,display:"block"};
+
+  const AnnonceCard = ({a}) => {
+    const cc = CAT_COLORS[a.categorie]||CAT_COLORS["Information"];
+    const canEdit = isAdmin || a.auteur_id===user?.id;
+    const daysLeft = Math.ceil((new Date(a.expire_at)-new Date())/(1000*60*60*24));
+    const dateStr = new Date(a.created_at).toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
+    return (
+      <div style={{background:"#fff",borderRadius:12,border:`2px solid ${a.epingle?"#D4AF37":"#e5e7eb"}`,
+        padding:"14px 18px",marginBottom:10,boxShadow:a.epingle?"0 2px 12px #D4AF3722":"none",
+        position:"relative",overflow:"hidden"}}>
+        {a.epingle && <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#D4AF37,#f0c060,#D4AF37)"}}/>}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+              {a.epingle && <span style={{fontSize:14}}>📌</span>}
+              <span style={{background:cc.bg,color:cc.col,borderRadius:20,padding:"2px 10px",
+                fontSize:10,fontWeight:700}}>{cc.dot} {a.categorie}</span>
+              <span style={{fontSize:10,color:"#9ca3af"}}>{dateStr}</span>
+              {daysLeft<=7 && <span style={{background:"#fee2e2",color:"#dc2626",borderRadius:20,
+                padding:"2px 8px",fontSize:9,fontWeight:700}}>Expire dans {daysLeft}j</span>}
+            </div>
+            <div style={{fontSize:15,fontWeight:800,color:"#1f2937",marginBottom:8}}>{a.titre}</div>
+            <div style={{fontSize:13,color:"#374151",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{a.contenu}</div>
+            <div style={{marginTop:8,fontSize:10,color:"#9ca3af",display:"flex",gap:12}}>
+              <span>✍️ {a.auteur_nom||a.auteur_id}</span>
+              <span>⏱ Expire le {new Date(a.expire_at).toLocaleDateString("fr-FR")}</span>
+            </div>
+          </div>
+          {canWrite && canEdit && (
+            <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+              {isAdmin && (
+                <button onClick={()=>handleEpingle(a)}
+                  style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${a.epingle?"#D4AF37":"#e5e7eb"}`,
+                    background:a.epingle?"#fef9c3":"#f9fafb",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  {a.epingle?"📌 Épinglé":"📌 Épingler"}
+                </button>
+              )}
+              <button onClick={()=>openEdit(a)}
+                style={{padding:"5px 10px",borderRadius:6,border:"1px solid #0B4D2C",
+                  background:"#fff",color:"#0B4D2C",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                ✏️ Modifier
+              </button>
+              <button onClick={()=>handleDelete(a.id)}
+                style={{padding:"5px 10px",borderRadius:6,border:"1px solid #fee2e2",
+                  background:"#fff",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                🗑 Supprimer
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{padding:isMobile?"12px":"24px",maxWidth:860,margin:"0 auto"}}>
+      {/* En-tête */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>📌 Babillard</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Tableau d'affichage du Lycée de Kakatare</div>
+        </div>
+        {canWrite && (
+          <button onClick={openNew}
+            style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",
+              color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            ＋ Nouvelle annonce
+          </button>
+        )}
+      </div>
+
+      {/* Filtres par catégorie */}
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+        {["Tous",...CATS].map(cat=>{
+          const cc = CAT_COLORS[cat];
+          const count = cat==="Tous"?annonces.length:annonces.filter(a=>a.categorie===cat).length;
+          return (
+            <button key={cat} onClick={()=>setFilterCat(cat)}
+              style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${filterCat===cat?"#0B4D2C":"#e5e7eb"}`,
+                background:filterCat===cat?"#0B4D2C":cc?cc.bg:"#f9fafb",
+                color:filterCat===cat?"#fff":cc?cc.col:"#374151",
+                fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              {cc?.dot||"📋"} {cat} {count>0?<span style={{opacity:.7}}>({count})</span>:""}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Contenu */}
+      {loading ? (
+        <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>Chargement…</div>
+      ) : filtered.length===0 ? (
+        <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>
+          <div style={{fontSize:48,marginBottom:12}}>📋</div>
+          <div style={{fontSize:15,fontWeight:700}}>Aucune annonce</div>
+          <div style={{fontSize:13,marginTop:6}}>
+            {canWrite?"Publiez la première annonce !":"Aucune annonce pour le moment."}
+          </div>
+        </div>
+      ) : (
+        <>
+          {epinglees.length>0 && (
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#D4AF37",textTransform:"uppercase",
+                letterSpacing:".8px",marginBottom:8}}>📌 Épinglées</div>
+              {epinglees.map(a=><AnnonceCard key={a.id} a={a}/>)}
+            </div>
+          )}
+          {normales.length>0 && (
+            <div>
+              {epinglees.length>0 && <div style={{fontSize:11,fontWeight:700,color:"#6b7280",
+                textTransform:"uppercase",letterSpacing:".8px",marginBottom:8}}>📢 Annonces récentes</div>}
+              {normales.map(a=><AnnonceCard key={a.id} a={a}/>)}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* FORMULAIRE MODAL */}
+      {showForm && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2000,overflowY:"auto",padding:isMobile?"0":"20px"}}>
+          <div style={{background:"#fff",borderRadius:isMobile?0:16,maxWidth:600,margin:"0 auto",
+            padding:isMobile?"16px":"28px",minHeight:isMobile?"100vh":"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+              <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>
+                {editId?"✏️ Modifier l'annonce":"📌 Nouvelle annonce"}
+              </div>
+              <button onClick={()=>{setShowForm(false);resetForm();setEditId(null);}}
+                style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>✕</button>
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div>
+                <span style={label}>Titre *</span>
+                <input value={form.titre} onChange={e=>setForm(p=>({...p,titre:e.target.value}))}
+                  style={inp} placeholder="Ex: Réunion des enseignants vendredi 15h"/>
+              </div>
+
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div>
+                  <span style={label}>Catégorie</span>
+                  <select value={form.categorie} onChange={e=>setForm(p=>({...p,categorie:e.target.value}))} style={inp}>
+                    {CATS.map(c=><option key={c} value={c}>{CAT_COLORS[c]?.dot} {c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <span style={label}>Durée d'affichage (jours)</span>
+                  <input type="number" min="1" max="365" value={form.duree}
+                    onChange={e=>setForm(p=>({...p,duree:e.target.value}))} style={inp}/>
+                </div>
+              </div>
+
+              <div>
+                <span style={label}>Contenu *</span>
+                <textarea value={form.contenu} onChange={e=>setForm(p=>({...p,contenu:e.target.value}))}
+                  style={{...inp,height:150,resize:"vertical"}}
+                  placeholder="Rédigez votre annonce ici..."/>
+              </div>
+
+              {isAdmin && (
+                <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:13}}>
+                  <input type="checkbox" checked={form.epingle}
+                    onChange={e=>setForm(p=>({...p,epingle:e.target.checked}))}
+                    style={{width:16,height:16}}/>
+                  <span style={{fontWeight:700}}>📌 Épingler cette annonce en haut</span>
+                </label>
+              )}
+
+              <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}>
+                <button onClick={()=>{setShowForm(false);resetForm();setEditId(null);}}
+                  style={{padding:"10px 20px",borderRadius:10,border:"1px solid #e5e7eb",
+                    background:"#f9fafb",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  Annuler
+                </button>
+                <button onClick={handleSave} disabled={saving}
+                  style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#0B4D2C",
+                    color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                    opacity:saving?.6:1}}>
+                  {saving?"Publication…":"📢 Publier"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -11642,6 +11916,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
+    if(page==="babillard")          return <W><BabillardPage/></W>
     if(page==="bulletins")          return <W><BulletinsPage/></W>
     if(page==="suivi-prog-dept")    return <W><SuiviProgrammePage/></W>
     if(page==="fiche-inspection")   return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<FicheInspectionPage/>:null}</W>
