@@ -10606,7 +10606,7 @@ const GlobalSearch = () => {
   );
 };
 
-const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
+const Topbar = ({title, onLogout, collapsed, setCollapsed, page, setPage, nbNouvellesAnnonces=0}) => {
   const {user, realtimeStatus, viewDeptId, setViewDeptId, lang, setLang, t} = useApp();
   const {isMobile} = useDevice();
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -12000,7 +12000,7 @@ const AppLayout = ({onLogout}) => {
     <div style={{display:"flex",height:"100vh",overflow:"hidden",background:C.bg}}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflow:"hidden"}}>
-        <Topbar title={PAGE_TITLES[page]||"—"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed}/>
+        <Topbar title={PAGE_TITLES[page]||"—"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed} page={page} setPage={setPage} nbNouvellesAnnonces={nbNouvellesAnnonces}/>
         <div style={{flex:1, minHeight:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
           {renderPage()}
         </div>
