@@ -7924,7 +7924,7 @@ tr.grp-row + tr td:first-child, tr.grp-row ~ tr:not(.grp-row) td:first-child{}
     </div>
   </div>
   <div class="top-c">
-    <img src="https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/teacher-photos/logo_lycee_kakatare.jpg" class="logo-img" alt="Logo" onerror="this.style.display='none'"/>
+    <img src="https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/logo_lycee_kakatare.jpg/logo_lycee_kakatare.jpg" class="logo-img" alt="Logo" onerror="this.style.display='none'"/>
   </div>
   <div class="top-r">
     <div class="bulletin-badge">
