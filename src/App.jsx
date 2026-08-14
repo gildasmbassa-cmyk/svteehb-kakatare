@@ -8106,10 +8106,10 @@ function FicheInspectionPage() {
   const handlePreview = (f)=>{
     const ens = data?.users?.[f.enseignant_id];
     const html = genFicheInspection({
-      animateur:user?.nom||"", enseignant:ens?.nom||f.enseignant_id,
+      animateur:(user?.nom||"")+" · "+(DEPARTEMENTS_LIST.find(d=>d.id===user?.departement_id)?.nom||""), enseignant:ens?.nom||f.enseignant_id,
       classe:f.classe, matiere:f.matiere,
       dateVisite:f.date_visite, heureDebut:f.heure_debut||"", heureFin:f.heure_fin||"",
-      effectifPresent:f.effectif_present||"",
+      effectifPresent:f.effectif_present??""  ,
       obs:{tenue_correcte:f.obs_tenue_correcte,tableau_structure:f.obs_tableau_structure,
         plan_cours_visible:f.obs_plan_cours_visible,titre_encadre:f.obs_titre_encadre,
         ecriture_lisible:f.obs_ecriture_lisible,voix_audible:f.obs_voix_audible,
