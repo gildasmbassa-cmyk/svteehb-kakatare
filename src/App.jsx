@@ -8298,7 +8298,11 @@ function BabillardPage() {
     setLoading(false);
   };
 
-  useEffect(()=>{ loadAnnonces(); }, []);
+  useEffect(()=>{
+    loadAnnonces();
+    // Marquer comme lus
+    localStorage.setItem("babillard_last_seen", new Date().toISOString());
+  }, []);
 
   const resetForm = () => setForm({titre:"",contenu:"",categorie:"Annonce",epingle:false,duree:30});
 
@@ -8311,12 +8315,28 @@ function BabillardPage() {
   const handleSave = async () => {
     if(!form.titre.trim()||!form.contenu.trim()){alert("Titre et contenu obligatoires.");return;}
     setSaving(true);
+    // Upload pièce jointe si présente
+    let pj = null;
+    if(form.fichier) {
+      try {
+        const fname = `${Date.now()}_${form.fichier.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+        const uploaded = await sb.uploadFile("babillard-files", fname, form.fichier);
+        if(uploaded?.path) {
+          pj = {
+            nom: form.fichier.name,
+            url: `https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/babillard-files/${uploaded.path}`,
+            taille: form.fichier.size
+          };
+        }
+      } catch(e) { console.warn("Upload PJ:", e); }
+    }
     const res = await sb.rpc("submit_babillard",{
       p_token:window.__svtSessionToken,
       p_titre:form.titre, p_contenu:form.contenu,
       p_categorie:form.categorie, p_epingle:form.epingle,
       p_duree_jours:parseInt(form.duree)||30,
-      p_id:editId||null
+      p_id:editId||null,
+      p_piece_jointe: pj ? JSON.stringify(pj) : null
     });
     setSaving(false);
     if(res?.ok){ await loadAnnonces(); setShowForm(false); resetForm(); setEditId(null); }
@@ -8369,10 +8389,26 @@ function BabillardPage() {
             </div>
             <div style={{fontSize:15,fontWeight:800,color:"#1f2937",marginBottom:8}}>{a.titre}</div>
             <div style={{fontSize:13,color:"#374151",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{a.contenu}</div>
-            <div style={{marginTop:8,fontSize:10,color:"#9ca3af",display:"flex",gap:12}}>
+            <div style={{marginTop:8,fontSize:10,color:"#9ca3af",display:"flex",gap:12,flexWrap:"wrap"}}>
               <span>✍️ {a.auteur_nom||a.auteur_id}</span>
               <span>⏱ Expire le {new Date(a.expire_at).toLocaleDateString("fr-FR")}</span>
             </div>
+            {(a.pieces_jointes||[]).length>0&&(
+              <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:6}}>
+                {(a.pieces_jointes||[]).map((pj,i)=>(
+                  <a key={i} href={pj.url} target="_blank" rel="noopener noreferrer" download={pj.nom}
+                    style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",
+                      borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",
+                      textDecoration:"none",color:"#0B4D2C",fontSize:11,fontWeight:700}}>
+                    📎 {pj.nom}
+                    <span style={{color:"#9ca3af",fontWeight:400}}>
+                      ({pj.taille>1048576?(pj.taille/1048576).toFixed(1)+"MB":(pj.taille/1024).toFixed(0)+"KB"})
+                    </span>
+                    ⬇
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           {canWrite && canEdit && (
             <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
@@ -8513,6 +8549,17 @@ function BabillardPage() {
                   <span style={{fontWeight:700}}>📌 Épingler cette annonce en haut</span>
                 </label>
               )}
+
+              {/* Pièces jointes */}
+              <div>
+                <span style={label}>📎 Pièce jointe (PDF, image — max 10 MB)</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  onChange={e=>setForm(p=>({...p,fichier:e.target.files[0]}))}
+                  style={{...inp,padding:"6px 8px",fontSize:12}}/>
+                {form.fichier&&<div style={{fontSize:11,color:"#16a34a",marginTop:4}}>
+                  ✅ {form.fichier.name} ({(form.fichier.size/1024).toFixed(0)} KB)
+                </div>}
+              </div>
 
               <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}>
                 <button onClick={()=>{setShowForm(false);resetForm();setEditId(null);}}
@@ -10282,6 +10329,17 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   const isAdmin = isAdminRole(user?.role);
   const nav = user?.role==="proviseur" ? NAV_PROVISEUR : user?.role==="surveillant_general" ? NAV_SURVEILLANCE : user?.role==="censeur" ? NAV_CENSEUR : isAdmin ? NAV_ADMIN : NAV_TEACHER;
   // Compter les épreuves en attente pour le badge
+  // Badge babillard : annonces des dernières 24h
+  const [nbNouvellesAnnonces, setNbNouvellesAnnonces] = useState(0);
+  useEffect(()=>{
+    sb.get("babillard","?select=created_at&order=created_at.desc&limit=20").then(rows=>{
+      if(!rows) return;
+      const lastSeen = localStorage.getItem("babillard_last_seen");
+      const cutoff = lastSeen ? new Date(lastSeen) : new Date(Date.now()-24*3600*1000);
+      const nb = rows.filter(r=>new Date(r.created_at)>cutoff&&new Date(r.expire_at||"2099-01-01")>new Date()).length;
+      setNbNouvellesAnnonces(nb);
+    }).catch(()=>{});
+  },[data]);
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
     : (data?.epreuves||[]).filter(e=>e.ens_id===user?.id&&e.statut==="attente").length;
@@ -10613,6 +10671,20 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
       <button onClick={()=>setLang(lang==="fr"?"en":"fr")} title="Langue / Language"
         style={{padding:"5px 9px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:700, color:C.txtMuted, fontFamily:"inherit", cursor:"pointer", flexShrink:0}}>
         {lang==="fr" ? "FR" : "EN"}
+      </button>
+      <button onClick={()=>setPage("babillard")} title="Babillard"
+        style={{position:"relative",padding:"5px 10px",borderRadius:8,border:`1px solid ${C.border}`,
+          background:page==="babillard"?C.green:C.white,fontSize:13,cursor:"pointer",
+          color:page==="babillard"?"#fff":C.txtMuted,fontFamily:"inherit",flexShrink:0,
+          display:"flex",alignItems:"center",gap:4}}>
+        📌{!isMobile&&<span style={{fontSize:11,fontWeight:700}}> Babillard</span>}
+        {nbNouvellesAnnonces>0&&(
+          <span style={{position:"absolute",top:-4,right:-4,background:"#dc2626",color:"#fff",
+            borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:900,
+            display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {nbNouvellesAnnonces>9?"9+":nbNouvellesAnnonces}
+          </span>
+        )}
       </button>
       <DarkModeToggle/>
       <button onClick={()=>{ if(window.confirm("Se déconnecter ?")) onLogout(); }}
