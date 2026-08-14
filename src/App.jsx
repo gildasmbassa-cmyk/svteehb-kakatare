@@ -96,7 +96,7 @@ const sb = {
         "admin_delete_all_epreuves","admin_delete_edt_slots_by_teacher","admin_delete_epreuves_by_teacher",
         "admin_delete_prog_by_classe","admin_delete_prog_by_teacher","admin_delete_teacher",
         "admin_set_edt_slots","admin_set_password","admin_upsert_teacher",
-        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire",
+        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection",
       ];
       const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
@@ -319,7 +319,6 @@ async function syncElevesImport() {
 }
 
 async function loadAllData(departementId = null) {
-  await loadTrimestres();
   await syncElevesImport();
   const [classes, users, prog, epreuves, exceptions, notes, absences, edtBase] = await Promise.all([
     sb.get("classes", departementId ? `?select=code,effectif,enseignant,departement_id&departement_id=eq.${departementId}&order=code` : "?select=code,effectif,enseignant,departement_id&order=code"),
@@ -6549,6 +6548,7 @@ const NAV_ANIMATEUR_GROUPS = [
     {id:"suivi-prog-dept",emoji:"📈",label:"Suivi programme"},
   ]},
   { section:"RÉUNIONS & RAPPORTS", items:[
+    {id:"fiche-inspection",emoji:"🔍",label:"Fiches d'inspection"},
     {id:"documents-ap",emoji:"📄",label:"Documents"},
   ]},
   { section:"PLANNINGS", items:[
@@ -7518,28 +7518,15 @@ function DashboardSurveillance() {
 
 
 // ── Calendrier scolaire 2025-2026 : date → {trim, sem} ──────────
-// Trimestres chargés depuis Supabase (table annee_scolaire), fallback 2025-2026
-let TRIMESTRES_DYNAMIQUES = [
-  {trim:1, debut:new Date("2025-10-06")},
-  {trim:2, debut:new Date("2026-01-05")},
-  {trim:3, debut:new Date("2026-04-06")},
-];
-async function loadTrimestres() {
-  try {
-    const rows = await sb.get("annee_scolaire","?select=trim,debut,fin&active=eq.true&order=trim.asc");
-    if (rows && rows.length >= 3) {
-      TRIMESTRES_DYNAMIQUES = rows.map(r=>({trim:r.trim, debut:new Date(r.debut), fin:new Date(r.fin)}));
-    }
-  } catch(e) { /* fallback 2025-2026 */ }
-}
 function getSemaineTrimestre(dateStr) {
+  const STARTS = [new Date("2025-10-06"),new Date("2026-01-05"),new Date("2026-04-06")];
   const dt = new Date(dateStr);
   if (isNaN(dt)) return null;
-  for (const {trim, debut} of TRIMESTRES_DYNAMIQUES) {
-    const ms = dt - debut;
+  for (let t = 0; t < 3; t++) {
+    const ms = dt - STARTS[t];
     if (ms < 0) continue;
     const sem = Math.floor(ms / (7 * 86400000)) + 1;
-    if (sem >= 1 && sem <= 6) return { trim, sem };
+    if (sem >= 1 && sem <= 6) return { trim: t + 1, sem };
   }
   return null;
 }
@@ -7899,6 +7886,496 @@ function PVReunionModal({stats, user, onClose, onGenerate}) {
 }
 
 // Retire le script d'auto-impression avant affichage en apercu (evite le print automatique)
+// ════════════════════════════════════════════════════════════════
+// FICHE D'INSPECTION — Générateur HTML imprimable
+// ════════════════════════════════════════════════════════════════
+function genFicheInspection(data) {
+  const {
+    etablissement="Lycée de Kakatare-Maroua", animateur="", enseignant="",
+    classe="", matiere="", dateVisite="", heureDebut="", heureFin="",
+    effectifPresent="",
+    obs={}, doc={},
+    pointsForts="", pointsAmeliorer="", recommandations="",
+    noteSur20="", mention=""
+  } = data;
+
+  const row = (label, val) => {
+    const v = val===true?"✔ Oui":val===false?"✘ Non":"—";
+    const c = val===true?"#16a34a":val===false?"#dc2626":"#6b7280";
+    return `<tr><td style="padding:5px 10px;border-bottom:1px solid #f0f0f0;font-size:12px;">${label}</td>
+      <td style="padding:5px 10px;border-bottom:1px solid #f0f0f0;text-align:center;font-weight:700;font-size:12px;color:${c};">${v}</td></tr>`;
+  };
+  const mention_color = {"Très bien":"#16a34a","Bien":"#2563eb","Assez bien":"#7c3aed","Passable":"#d97706","Insuffisant":"#dc2626"}[mention]||"#374151";
+
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <style>
+    body{font-family:Arial,sans-serif;color:#1f2937;margin:0;padding:20px;font-size:13px;}
+    .header{text-align:center;border-bottom:3px solid #0B4D2C;padding-bottom:12px;margin-bottom:18px;}
+    .logo{font-size:22px;font-weight:900;color:#0B4D2C;letter-spacing:1px;}
+    .subtitle{font-size:11px;color:#6b7280;margin-top:2px;}
+    .titre-fiche{font-size:16px;font-weight:900;color:#0B4D2C;margin:10px 0 4px;text-transform:uppercase;letter-spacing:1px;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+    .cell{background:#f8fafc;border-radius:6px;padding:10px 14px;}
+    .cell-label{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;font-weight:700;}
+    .cell-val{font-size:13px;font-weight:700;color:#1f2937;margin-top:2px;}
+    h3{font-size:12px;font-weight:900;color:#0B4D2C;text-transform:uppercase;letter-spacing:.8px;margin:16px 0 6px;padding-bottom:4px;border-bottom:2px solid #0B4D2C;}
+    table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+    .note-box{display:flex;align-items:center;gap:20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;padding:14px 20px;margin:14px 0;}
+    .note-num{font-size:36px;font-weight:900;color:#0B4D2C;}
+    .note-label{font-size:11px;color:#6b7280;}
+    .mention{font-size:18px;font-weight:900;color:${mention_color};}
+    .textarea-section{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:10px;min-height:50px;font-size:12px;line-height:1.6;}
+    .signature-area{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px;}
+    .sig-box{text-align:center;border-top:1px solid #d1d5db;padding-top:10px;font-size:11px;color:#6b7280;}
+    @media print{body{padding:10px;}@page{margin:15mm;}}
+  </style>
+  <script>window.onload=()=>{window.print();}</script>
+  </head><body>
+  <div class="header">
+    <div class="logo">EduPilot Cameroun</div>
+    <div class="subtitle">${etablissement}</div>
+    <div class="titre-fiche">Fiche d'Inspection Pédagogique</div>
+    <div style="font-size:11px;color:#6b7280;">Animateur Pédagogique · Visite de classe</div>
+  </div>
+
+  <div class="grid2">
+    <div class="cell"><div class="cell-label">Animateur</div><div class="cell-val">${animateur}</div></div>
+    <div class="cell"><div class="cell-label">Enseignant inspecté</div><div class="cell-val">${enseignant}</div></div>
+    <div class="cell"><div class="cell-label">Classe</div><div class="cell-val">${classe}</div></div>
+    <div class="cell"><div class="cell-label">Matière</div><div class="cell-val">${matiere}</div></div>
+    <div class="cell"><div class="cell-label">Date de visite</div><div class="cell-val">${dateVisite}</div></div>
+    <div class="cell"><div class="cell-label">Horaire · Effectif présent</div><div class="cell-val">${heureDebut} – ${heureFin} &nbsp;|&nbsp; ${effectifPresent} élèves</div></div>
+  </div>
+
+  <h3>I. Observation de la séance de cours</h3>
+  <table>
+    <tr style="background:#f0fdf4;"><th style="text-align:left;padding:6px 10px;font-size:11px;">Critère</th><th style="width:80px;text-align:center;font-size:11px;">Appréciation</th></tr>
+    ${row("Tenue vestimentaire correcte", obs.tenue_correcte)}
+    ${row("Tableau structuré en 3 parties", obs.tableau_structure)}
+    ${row("Plan du cours visible", obs.plan_cours_visible)}
+    ${row("Titre de leçon encadré", obs.titre_encadre)}
+    ${row("Écriture lisible", obs.ecriture_lisible)}
+    ${row("Voix audible par toute la classe", obs.voix_audible)}
+    ${row("Niveau de langue adapté aux élèves", obs.langue_adaptee)}
+    ${row("Élèves interrogés de façon nominative", obs.eleves_interroges)}
+    ${row("Transitions bien menées entre parties", obs.transitions_menees)}
+    ${row("Situation d'apprentissage APC présentée", obs.situation_apc)}
+    ${row("Tâches traduisant les habiletés/contenus", obs.taches_habiletes)}
+    ${row("Trace écrite conforme au programme", obs.trace_ecrite_conforme)}
+    ${row("Exercices corrigés avec participation classe", obs.exercices_corriges)}
+    ${row("Classe impliquée activement", obs.classe_impliquee)}
+  </table>
+
+  <h3>II. Documents administratifs de classe</h3>
+  <table>
+    <tr style="background:#f0fdf4;"><th style="text-align:left;padding:6px 10px;font-size:11px;">Document</th><th style="width:80px;text-align:center;font-size:11px;">État</th></tr>
+    ${row("Cahier de textes tenu à jour", doc.cahier_texte_tenu)}
+    ${row("Progression annuelle collée dans le cahier", doc.progression_collee)}
+    ${row("Progression respectée", doc.progression_respectee)}
+    ${row("Registre de notes tenu correctement", doc.registre_notes_tenu)}
+    ${row("Absences renseignées", doc.absences_renseignees)}
+    ${row("Fiche pédagogique de leçon présente", doc.fiche_pedago_presente)}
+  </table>
+
+  <h3>III. Appréciation globale</h3>
+  <div class="note-box">
+    <div>
+      <div class="note-label">Note attribuée</div>
+      <div class="note-num">${noteSur20} <span style="font-size:18px;font-weight:400;color:#6b7280;">/ 20</span></div>
+    </div>
+    <div>
+      <div class="note-label">Mention</div>
+      <div class="mention">${mention}</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:10px;">
+    <div style="font-size:11px;font-weight:700;color:#0B4D2C;margin-bottom:4px;">✅ Points forts</div>
+    <div class="textarea-section">${pointsForts||"—"}</div>
+  </div>
+  <div style="margin-bottom:10px;">
+    <div style="font-size:11px;font-weight:700;color:#d97706;margin-bottom:4px;">⚠️ Points à améliorer</div>
+    <div class="textarea-section">${pointsAmeliorer||"—"}</div>
+  </div>
+  <div style="margin-bottom:10px;">
+    <div style="font-size:11px;font-weight:700;color:#2563eb;margin-bottom:4px;">📌 Recommandations</div>
+    <div class="textarea-section">${recommandations||"—"}</div>
+  </div>
+
+  <div class="signature-area">
+    <div class="sig-box">
+      <div style="height:40px;"></div>
+      <div>L'Animateur Pédagogique</div>
+      <div style="font-weight:700;margin-top:4px;">${animateur}</div>
+    </div>
+    <div class="sig-box">
+      <div style="height:40px;"></div>
+      <div>L'Enseignant</div>
+      <div style="font-weight:700;margin-top:4px;">${enseignant}</div>
+    </div>
+  </div>
+  </body></html>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// PAGE FICHES D'INSPECTION
+// ════════════════════════════════════════════════════════════════
+function FicheInspectionPage() {
+  const {user, data, sb} = useApp();
+  const {isMobile} = useDevice();
+  const [fiches, setFiches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editFiche, setEditFiche] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    enseignant_id:"", classe:"", matiere:"", date_visite:"", heure_debut:"", heure_fin:"", effectif_present:"",
+    obs:{tenue_correcte:null,tableau_structure:null,plan_cours_visible:null,titre_encadre:null,ecriture_lisible:null,
+      voix_audible:null,langue_adaptee:null,eleves_interroges:null,transitions_menees:null,
+      situation_apc:null,taches_habiletes:null,trace_ecrite_conforme:null,exercices_corriges:null,classe_impliquee:null},
+    doc:{cahier_texte_tenu:null,progression_collee:null,progression_respectee:null,registre_notes_tenu:null,absences_renseignees:null,fiche_pedago_presente:null},
+    points_forts:"", points_ameliorer:"", recommandations:"", note_sur_20:"", mention:""
+  });
+
+  const deptId = user?.departement_id;
+  const enseignantsDept = Object.values(data?.users||{}).filter(u=>u.role==="enseignant"&&u.departement_id===deptId);
+
+  useEffect(()=>{
+    sb.get("fiches_inspection","?order=date_visite.desc&limit=50").then(rows=>{
+      setFiches((rows||[]).filter(r=>r.animateur_id===user?.id));
+      setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[]);
+
+  const resetForm = ()=>setForm({
+    enseignant_id:"", classe:"", matiere:"", date_visite:"", heure_debut:"", heure_fin:"", effectif_present:"",
+    obs:{tenue_correcte:null,tableau_structure:null,plan_cours_visible:null,titre_encadre:null,ecriture_lisible:null,
+      voix_audible:null,langue_adaptee:null,eleves_interroges:null,transitions_menees:null,
+      situation_apc:null,taches_habiletes:null,trace_ecrite_conforme:null,exercices_corriges:null,classe_impliquee:null},
+    doc:{cahier_texte_tenu:null,progression_collee:null,progression_respectee:null,registre_notes_tenu:null,absences_renseignees:null,fiche_pedago_presente:null},
+    points_forts:"", points_ameliorer:"", recommandations:"", note_sur_20:"", mention:""
+  });
+
+  const openNew = ()=>{ resetForm(); setEditFiche(null); setShowForm(true); };
+  const openEdit = (f)=>{
+    setForm({
+      enseignant_id:f.enseignant_id, classe:f.classe, matiere:f.matiere,
+      date_visite:f.date_visite, heure_debut:f.heure_debut||"", heure_fin:f.heure_fin||"",
+      effectif_present:f.effectif_present||"",
+      obs:{tenue_correcte:f.obs_tenue_correcte,tableau_structure:f.obs_tableau_structure,
+        plan_cours_visible:f.obs_plan_cours_visible,titre_encadre:f.obs_titre_encadre,
+        ecriture_lisible:f.obs_ecriture_lisible,voix_audible:f.obs_voix_audible,
+        langue_adaptee:f.obs_langue_adaptee,eleves_interroges:f.obs_eleves_interroges,
+        transitions_menees:f.obs_transitions_menees,situation_apc:f.obs_situation_apc,
+        taches_habiletes:f.obs_taches_habiletes,trace_ecrite_conforme:f.obs_trace_ecrite_conforme,
+        exercices_corriges:f.obs_exercices_corriges,classe_impliquee:f.obs_classe_impliquee},
+      doc:{cahier_texte_tenu:f.doc_cahier_texte_tenu,progression_collee:f.doc_progression_collée,
+        progression_respectee:f.doc_progression_respectee,registre_notes_tenu:f.doc_registre_notes_tenu,
+        absences_renseignees:f.doc_absences_renseignées,fiche_pedago_presente:f.doc_fiche_pedago_presente},
+      points_forts:f.points_forts||"", points_ameliorer:f.points_ameliorer||"",
+      recommandations:f.recommandations||"", note_sur_20:f.note_sur_20||"", mention:f.mention||""
+    });
+    setEditFiche(f.id); setShowForm(true);
+  };
+
+  const handleSave = async ()=>{
+    if(!form.enseignant_id||!form.date_visite||!form.classe){alert("Enseignant, classe et date sont obligatoires.");return;}
+    setSaving(true);
+    const token = window.__svtSessionToken;
+    const res = await sb.rpc("submit_fiche_inspection",{
+      p_token:token, p_enseignant_id:form.enseignant_id, p_classe:form.classe,
+      p_matiere:form.matiere, p_date_visite:form.date_visite,
+      p_heure_debut:form.heure_debut, p_heure_fin:form.heure_fin,
+      p_effectif_present:parseInt(form.effectif_present)||0,
+      p_obs:form.obs, p_doc:form.doc,
+      p_points_forts:form.points_forts, p_points_ameliorer:form.points_ameliorer,
+      p_recommandations:form.recommandations,
+      p_note_sur_20:parseFloat(form.note_sur_20)||null,
+      p_mention:form.mention||null,
+      p_fiche_id:editFiche||null
+    });
+    setSaving(false);
+    if(res?.ok){
+      const rows = await sb.get("fiches_inspection","?order=date_visite.desc&limit=50");
+      setFiches((rows||[]).filter(r=>r.animateur_id===user?.id));
+      setShowForm(false); resetForm(); setEditFiche(null);
+    } else { alert("Erreur : "+(res?.error||"inconnue")); }
+  };
+
+  const handlePreview = (f)=>{
+    const ens = data?.users?.[f.enseignant_id];
+    const html = genFicheInspection({
+      animateur:user?.nom||"", enseignant:ens?.nom||f.enseignant_id,
+      classe:f.classe, matiere:f.matiere,
+      dateVisite:f.date_visite, heureDebut:f.heure_debut||"", heureFin:f.heure_fin||"",
+      effectifPresent:f.effectif_present||"",
+      obs:{tenue_correcte:f.obs_tenue_correcte,tableau_structure:f.obs_tableau_structure,
+        plan_cours_visible:f.obs_plan_cours_visible,titre_encadre:f.obs_titre_encadre,
+        ecriture_lisible:f.obs_ecriture_lisible,voix_audible:f.obs_voix_audible,
+        langue_adaptee:f.obs_langue_adaptee,eleves_interroges:f.obs_eleves_interroges,
+        transitions_menees:f.obs_transitions_menees,situation_apc:f.obs_situation_apc,
+        taches_habiletes:f.obs_taches_habiletes,trace_ecrite_conforme:f.obs_trace_ecrite_conforme,
+        exercices_corriges:f.obs_exercices_corriges,classe_impliquee:f.obs_classe_impliquee},
+      doc:{cahier_texte_tenu:f.doc_cahier_texte_tenu,progression_collee:f.doc_progression_collée,
+        progression_respectee:f.doc_progression_respectee,registre_notes_tenu:f.doc_registre_notes_tenu,
+        absences_renseignees:f.doc_absences_renseignées,fiche_pedago_presente:f.doc_fiche_pedago_presente},
+      pointsForts:f.points_forts, pointsAmeliorer:f.points_ameliorer,
+      recommandations:f.recommandations, noteSur20:f.note_sur_20, mention:f.mention
+    });
+    setPreviewHtml(stripAutoPrint(html));
+  };
+
+  const OuiNonBtn = ({val, onChange})=>(
+    <div style={{display:"flex",gap:6}}>
+      {[["Oui",true],["Non",false],["N/A",null]].map(([lbl,v])=>(
+        <button key={lbl} onClick={()=>onChange(v)}
+          style={{padding:"4px 10px",borderRadius:6,border:"1.5px solid",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+            borderColor:val===v?"#0B4D2C":"#e5e7eb",
+            background:val===v?(v===true?"#dcfce7":v===false?"#fee2e2":"#f3f4f6"):"#fff",
+            color:val===v?(v===true?"#15803d":v===false?"#dc2626":"#374151"):"#9ca3af"}}>
+          {lbl}
+        </button>
+      ))}
+    </div>
+  );
+
+  const obsLabels = [
+    ["tenue_correcte","Tenue vestimentaire correcte"],
+    ["tableau_structure","Tableau structuré en 3 parties"],
+    ["plan_cours_visible","Plan du cours visible"],
+    ["titre_encadre","Titre de leçon encadré"],
+    ["ecriture_lisible","Écriture lisible"],
+    ["voix_audible","Voix audible par toute la classe"],
+    ["langue_adaptee","Niveau de langue adapté"],
+    ["eleves_interroges","Élèves interrogés nominativement"],
+    ["transitions_menees","Transitions bien menées"],
+    ["situation_apc","Situation APC présentée"],
+    ["taches_habiletes","Tâches/habiletés respectées"],
+    ["trace_ecrite_conforme","Trace écrite conforme au programme"],
+    ["exercices_corriges","Exercices corrigés avec la classe"],
+    ["classe_impliquee","Classe activement impliquée"],
+  ];
+  const docLabels = [
+    ["cahier_texte_tenu","Cahier de textes à jour"],
+    ["progression_collee","Progression collée dans le cahier"],
+    ["progression_respectee","Progression respectée"],
+    ["registre_notes_tenu","Registre de notes tenu"],
+    ["absences_renseignees","Absences renseignées"],
+    ["fiche_pedago_presente","Fiche pédagogique présente"],
+  ];
+
+  const mentions = ["Très bien","Bien","Assez bien","Passable","Insuffisant"];
+  const mention_colors = {"Très bien":"#16a34a","Bien":"#2563eb","Assez bien":"#7c3aed","Passable":"#d97706","Insuffisant":"#dc2626"};
+  const inp = {width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+  const label = {fontSize:11,fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:".5px",marginBottom:4,display:"block"};
+
+  return (
+    <div style={{padding:isMobile?"12px":"24px",maxWidth:900,margin:"0 auto"}}>
+      {/* En-tête */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🔍 Fiches d'inspection</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{fiches.length} visite{fiches.length!==1?"s":""} enregistrée{fiches.length!==1?"s":""}</div>
+        </div>
+        <button onClick={openNew}
+          style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+          ＋ Nouvelle inspection
+        </button>
+      </div>
+
+      {/* Liste des fiches */}
+      {loading ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargement…</div> :
+      fiches.length===0 ? (
+        <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>
+          <div style={{fontSize:40,marginBottom:12}}>🔍</div>
+          <div style={{fontSize:15,fontWeight:700}}>Aucune fiche d'inspection</div>
+          <div style={{fontSize:13,marginTop:6}}>Cliquez sur "Nouvelle inspection" pour commencer</div>
+        </div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {fiches.map(f=>{
+            const ens = data?.users?.[f.enseignant_id];
+            const mc = mention_colors[f.mention]||"#6b7280";
+            return (
+              <div key={f.id} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7eb",padding:"14px 18px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+                <div style={{width:40,height:40,borderRadius:"50%",background:"#0B4D2C",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:15,flexShrink:0}}>
+                  {(ens?.nom||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
+                </div>
+                <div style={{flex:1,minWidth:120}}>
+                  <div style={{fontWeight:800,fontSize:14,color:"#1f2937"}}>{ens?.nom||f.enseignant_id}</div>
+                  <div style={{fontSize:12,color:"#6b7280"}}>{f.classe} · {f.matiere} · {f.date_visite}</div>
+                </div>
+                {f.mention && <span style={{background:mc+"22",color:mc,borderRadius:20,padding:"3px 12px",fontSize:11,fontWeight:700}}>{f.mention}</span>}
+                {f.note_sur_20!=null && <span style={{fontWeight:900,color:"#0B4D2C",fontSize:16}}>{f.note_sur_20}<span style={{fontSize:12,fontWeight:400,color:"#9ca3af"}}>/20</span></span>}
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>handlePreview(f)}
+                    style={{padding:"6px 12px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    👁 Aperçu
+                  </button>
+                  <button onClick={()=>openEdit(f)}
+                    style={{padding:"6px 12px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    Modifier
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* FORMULAIRE MODAL */}
+      {showForm && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2000,overflowY:"auto",padding:isMobile?"0":"20px"}}>
+          <div style={{background:"#fff",borderRadius:isMobile?0:16,maxWidth:680,margin:"0 auto",padding:isMobile?"16px":"28px",minHeight:"100vh"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+              <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>🔍 {editFiche?"Modifier":"Nouvelle"} fiche d'inspection</div>
+              <button onClick={()=>{setShowForm(false);resetForm();setEditFiche(null);}}
+                style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>✕</button>
+            </div>
+
+            {/* Infos générales */}
+            <div style={{background:"#f8fafc",borderRadius:10,padding:16,marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>INFORMATIONS GÉNÉRALES</div>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+                <div>
+                  <span style={label}>Enseignant *</span>
+                  <select value={form.enseignant_id} onChange={e=>setForm(p=>({...p,enseignant_id:e.target.value}))} style={inp}>
+                    <option value="">— Choisir —</option>
+                    {enseignantsDept.map(e=><option key={e.id} value={e.id}>{e.nom}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <span style={label}>Classe *</span>
+                  <select value={form.classe} onChange={e=>{
+                    const ens = data?.users?.[form.enseignant_id];
+                    setForm(p=>({...p,classe:e.target.value}));
+                  }} style={inp}>
+                    <option value="">— Choisir —</option>
+                    {(data?.users?.[form.enseignant_id]?.classes||[]).map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <span style={label}>Matière</span>
+                  <input value={form.matiere} onChange={e=>setForm(p=>({...p,matiere:e.target.value}))} style={inp} placeholder="ex: SVT"/>
+                </div>
+                <div>
+                  <span style={label}>Date de visite *</span>
+                  <input type="date" value={form.date_visite} onChange={e=>setForm(p=>({...p,date_visite:e.target.value}))} style={inp}/>
+                </div>
+                <div>
+                  <span style={label}>Heure début</span>
+                  <input type="time" value={form.heure_debut} onChange={e=>setForm(p=>({...p,heure_debut:e.target.value}))} style={inp}/>
+                </div>
+                <div>
+                  <span style={label}>Heure fin</span>
+                  <input type="time" value={form.heure_fin} onChange={e=>setForm(p=>({...p,heure_fin:e.target.value}))} style={inp}/>
+                </div>
+                <div>
+                  <span style={label}>Effectif présent</span>
+                  <input type="number" value={form.effectif_present} onChange={e=>setForm(p=>({...p,effectif_present:e.target.value}))} style={inp} placeholder="ex: 42"/>
+                </div>
+              </div>
+            </div>
+
+            {/* Observation séance */}
+            <div style={{background:"#f8fafc",borderRadius:10,padding:16,marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>I. OBSERVATION DE LA SÉANCE</div>
+              {obsLabels.map(([key,lbl])=>(
+                <div key={key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
+                  <span style={{fontSize:12,color:"#374151",flex:1,marginRight:12}}>{lbl}</span>
+                  <OuiNonBtn val={form.obs[key]} onChange={v=>setForm(p=>({...p,obs:{...p.obs,[key]:v}}))}/>
+                </div>
+              ))}
+            </div>
+
+            {/* Documents */}
+            <div style={{background:"#f8fafc",borderRadius:10,padding:16,marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>II. DOCUMENTS ADMINISTRATIFS</div>
+              {docLabels.map(([key,lbl])=>(
+                <div key={key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
+                  <span style={{fontSize:12,color:"#374151",flex:1,marginRight:12}}>{lbl}</span>
+                  <OuiNonBtn val={form.doc[key]} onChange={v=>setForm(p=>({...p,doc:{...p.doc,[key]:v}}))}/>
+                </div>
+              ))}
+            </div>
+
+            {/* Appréciation */}
+            <div style={{background:"#f8fafc",borderRadius:10,padding:16,marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>III. APPRÉCIATION GLOBALE</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                <div>
+                  <span style={label}>Note / 20</span>
+                  <input type="number" min="0" max="20" step="0.5" value={form.note_sur_20}
+                    onChange={e=>setForm(p=>({...p,note_sur_20:e.target.value}))} style={inp} placeholder="ex: 14.5"/>
+                </div>
+                <div>
+                  <span style={label}>Mention</span>
+                  <select value={form.mention} onChange={e=>setForm(p=>({...p,mention:e.target.value}))} style={inp}>
+                    <option value="">— Mention —</option>
+                    {mentions.map(m=><option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{marginBottom:10}}>
+                <span style={label}>✅ Points forts</span>
+                <textarea value={form.points_forts} onChange={e=>setForm(p=>({...p,points_forts:e.target.value}))}
+                  style={{...inp,height:70,resize:"vertical"}} placeholder="Points positifs observés…"/>
+              </div>
+              <div style={{marginBottom:10}}>
+                <span style={label}>⚠️ Points à améliorer</span>
+                <textarea value={form.points_ameliorer} onChange={e=>setForm(p=>({...p,points_ameliorer:e.target.value}))}
+                  style={{...inp,height:70,resize:"vertical"}} placeholder="Aspects à améliorer…"/>
+              </div>
+              <div>
+                <span style={label}>📌 Recommandations</span>
+                <textarea value={form.recommandations} onChange={e=>setForm(p=>({...p,recommandations:e.target.value}))}
+                  style={{...inp,height:70,resize:"vertical"}} placeholder="Recommandations à l'enseignant…"/>
+              </div>
+            </div>
+
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={()=>{setShowForm(false);resetForm();setEditFiche(null);}}
+                style={{padding:"10px 20px",borderRadius:10,border:"1px solid #e5e7eb",background:"#f9fafb",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                Annuler
+              </button>
+              <button onClick={handleSave} disabled={saving}
+                style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:saving?.6:1}}>
+                {saving?"Enregistrement…":"💾 Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* APERÇU PDF */}
+      {previewHtml && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
+          <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
+            <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📄 Fiche d'inspection</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>imprimerHTML(previewHtml)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  Imprimer
+                </button>
+                <button onClick={()=>setPreviewHtml(null)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+            <div style={{flex:1,overflow:"hidden",background:"#e5e7eb",padding:12}}>
+              <iframe srcDoc={previewHtml} title="apercu-inspection"
+                style={{width:"100%",height:"100%",border:"none",borderRadius:8,background:"#fff"}}/>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function stripAutoPrint(html) {
   let h = (html||"").replace(/<script>window\.onload=\(\)=>\{?window\.print\(\);\}?<\/script>/g, "");
   // Injecte un script de mise a l'echelle automatique pour lisibilite sur mobile
@@ -10429,6 +10906,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
     if(page==="suivi-prog-dept")    return <W><SuiviProgrammePage/></W>
+    if(page==="fiche-inspection")   return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<FicheInspectionPage/>:null}</W>
     if(page==="documents-ap")       return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<DocumentsAnimateurPage/>:null}</W>
     if(page==="settings")          return <W><ChangePasswordPage/></W>
     return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="🚧"/></W>
