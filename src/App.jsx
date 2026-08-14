@@ -319,6 +319,7 @@ async function syncElevesImport() {
 }
 
 async function loadAllData(departementId = null) {
+  await loadTrimestres();
   await syncElevesImport();
   const [classes, users, prog, epreuves, exceptions, notes, absences, edtBase] = await Promise.all([
     sb.get("classes", departementId ? `?select=code,effectif,enseignant,departement_id&departement_id=eq.${departementId}&order=code` : "?select=code,effectif,enseignant,departement_id&order=code"),
@@ -7517,15 +7518,28 @@ function DashboardSurveillance() {
 
 
 // ── Calendrier scolaire 2025-2026 : date → {trim, sem} ──────────
+// Trimestres chargés depuis Supabase (table annee_scolaire), fallback 2025-2026
+let TRIMESTRES_DYNAMIQUES = [
+  {trim:1, debut:new Date("2025-10-06")},
+  {trim:2, debut:new Date("2026-01-05")},
+  {trim:3, debut:new Date("2026-04-06")},
+];
+async function loadTrimestres() {
+  try {
+    const rows = await sb.get("annee_scolaire","?select=trim,debut,fin&active=eq.true&order=trim.asc");
+    if (rows && rows.length >= 3) {
+      TRIMESTRES_DYNAMIQUES = rows.map(r=>({trim:r.trim, debut:new Date(r.debut), fin:new Date(r.fin)}));
+    }
+  } catch(e) { /* fallback 2025-2026 */ }
+}
 function getSemaineTrimestre(dateStr) {
-  const STARTS = [new Date("2025-10-06"),new Date("2026-01-05"),new Date("2026-04-06")];
   const dt = new Date(dateStr);
   if (isNaN(dt)) return null;
-  for (let t = 0; t < 3; t++) {
-    const ms = dt - STARTS[t];
+  for (const {trim, debut} of TRIMESTRES_DYNAMIQUES) {
+    const ms = dt - debut;
     if (ms < 0) continue;
     const sem = Math.floor(ms / (7 * 86400000)) + 1;
-    if (sem >= 1 && sem <= 6) return { trim: t + 1, sem };
+    if (sem >= 1 && sem <= 6) return { trim, sem };
   }
   return null;
 }
