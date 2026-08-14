@@ -8021,7 +8021,7 @@ function genFicheInspection(data) {
 // PAGE FICHES D'INSPECTION
 // ════════════════════════════════════════════════════════════════
 function FicheInspectionPage() {
-  const {user, data, sb} = useApp();
+  const {user, data} = useApp();
   const {isMobile} = useDevice();
   const [fiches, setFiches] = useState([]);
   const [loading, setLoading] = useState(true);
