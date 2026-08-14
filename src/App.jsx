@@ -10141,7 +10141,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
 
       {/* Toggle collapse */}
       <button onClick={()=>setCollapsed(c=>!c)}
-        style={{position:"absolute",top:18,right:-12,width:22,height:22,borderRadius:"50%",
+        style={{position:"absolute",top:18,right:8,width:22,height:22,borderRadius:"50%",
           background:C.sidebar,border:"1.5px solid rgba(255,255,255,.2)",color:"rgba(255,255,255,.6)",
           cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",
           boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
@@ -10284,7 +10284,7 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
 
       {/* Toggle */}
       <button onClick={()=>setCollapsed(c=>!c)}
-        style={{position:"absolute",top:18,right:-12,width:22,height:22,borderRadius:"50%",
+        style={{position:"absolute",top:18,right:8,width:22,height:22,borderRadius:"50%",
           background:C.sidebar,border:"1.5px solid rgba(255,255,255,.2)",color:"rgba(255,255,255,.6)",
           cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",
           boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
