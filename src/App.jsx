@@ -8105,11 +8105,17 @@ function FicheInspectionPage() {
 
   const handlePreview = (f)=>{
     const ens = data?.users?.[f.enseignant_id];
+    // Calcul effectif présent depuis absences de l'enseignant ce jour-là
+    const totalClasse = (ELEVES_DB[f.classe]||[]).length;
+    const absKey = f.enseignant_id+"||"+f.classe;
+    const absSeance = (data?.absences?.[absKey]||[]).find(a=>a.seance===f.date_visite);
+    const nbAbsents = absSeance ? (absSeance.absents||[]).length : 0;
+    const effectifCalcule = totalClasse > 0 ? (totalClasse - nbAbsents) : (f.effectif_present||"");
     const html = genFicheInspection({
-      animateur:(user?.nom||"")+" · "+(DEPARTEMENTS_LIST.find(d=>d.id===user?.departement_id)?.nom||""), enseignant:ens?.nom||f.enseignant_id,
+      animateur:user?.nom||"", enseignant:ens?.nom||f.enseignant_id,
       classe:f.classe, matiere:f.matiere,
       dateVisite:f.date_visite, heureDebut:f.heure_debut||"", heureFin:f.heure_fin||"",
-      effectifPresent:f.effectif_present??""  ,
+      effectifPresent:effectifCalcule,
       obs:{tenue_correcte:f.obs_tenue_correcte,tableau_structure:f.obs_tableau_structure,
         plan_cours_visible:f.obs_plan_cours_visible,titre_encadre:f.obs_titre_encadre,
         ecriture_lisible:f.obs_ecriture_lisible,voix_audible:f.obs_voix_audible,
@@ -8272,8 +8278,8 @@ function FicheInspectionPage() {
                   <input type="time" value={form.heure_fin} onChange={e=>setForm(p=>({...p,heure_fin:e.target.value}))} style={inp}/>
                 </div>
                 <div>
-                  <span style={label}>Effectif présent</span>
-                  <input type="number" value={form.effectif_present} onChange={e=>setForm(p=>({...p,effectif_present:e.target.value}))} style={inp} placeholder="ex: 42"/>
+                  <span style={label}>Effectif présent <span style={{fontWeight:400,color:"#9ca3af"}}>(calculé auto si vide)</span></span>
+                  <input type="number" value={form.effectif_present} onChange={e=>setForm(p=>({...p,effectif_present:e.target.value}))} style={inp} placeholder="Auto depuis absences"/>
                 </div>
               </div>
             </div>
