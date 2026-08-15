@@ -7690,10 +7690,10 @@ function genBulletin(opts) {
   const {niveau, serie} = parseClasseNiveauSerie(classe);
   const seq = parseInt(sequence);
   const trim = seq<=2?1:seq<=4?2:3;
-  const G="#0B4D2C", gold="#C9A84C", rouge="#dc2626";
+  const G="#0b5321", gold="#d4af37";
   const SEQUENCES=[1,2,3,4,5,6];
 
-  // ── Calculs ──────────────────────────────────────────────
+  // ── Calculs ──
   let totalPts=0, totalCoef=0, nbMatieres=0;
   const lignes = coefs.map(({matiere, coef}) => {
     const notesSeq = SEQUENCES.map(s => {
@@ -7739,334 +7739,285 @@ function genBulletin(opts) {
     return tc>0?Math.round(tp/tc*100)/100:null;
   }).filter(v=>v!==null);
 
-  // SVG graphique
-  const chartH=70, chartW=260, padX=18, padY=8;
-  const vals = evoData.length>1?evoData:[null];
-  const hasData = vals.filter(v=>v!==null).length>1;
-  let svgContent="";
-  if(hasData){
-    const minV=Math.min(...vals)-1, maxV=Math.max(...vals)+1;
-    const sx=(i)=>padX+(i/(vals.length-1))*(chartW-padX*2);
-    const sy=(v)=>chartH-padY-((v-minV)/(maxV-minV+0.01))*(chartH-padY*2);
-    const pts2=vals.map((v,i)=>`${sx(i).toFixed(1)},${sy(v).toFixed(1)}`).join(" ");
-    svgContent=`<polyline points="${pts2}" fill="none" stroke="${G}" stroke-width="2"/>
-    ${vals.map((v,i)=>`<circle cx="${sx(i).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="3.5" fill="${G}" stroke="white" stroke-width="1.5"/>`).join("")}
-    ${vals.map((v,i)=>`<text x="${sx(i).toFixed(1)}" y="${chartH+2}" text-anchor="middle" font-size="7.5" fill="#6b7280">S${i+1}</text>`).join("")}`;
-  }
   const lastVal = evoData.length>=2?(evoData[evoData.length-1]-evoData[0]).toFixed(1):null;
   const prog = lastVal!==null?(+lastVal>0?`+${lastVal}`:`${lastVal}`):"—";
-  const progCol = lastVal===null?"#9ca3af":+lastVal>0?"#16a34a":"#dc2626";
-  const progArrow = lastVal===null?"":+lastVal>0?"▲":"▼";
+  const progCol = lastVal===null?"#6b7280":+lastVal>0?"#16a34a":"#dc2626";
+
+  // SVG graphique
+  let svgPoly="", svgDots="", svgLabels="";
+  if(evoData.length>1){
+    const minV=Math.min(...evoData)-1, maxV=Math.max(...evoData)+1;
+    const pts2=evoData.map((v,i)=>{
+      const x=20+(i/(evoData.length-1))*140;
+      const y=50-((v-minV)/(maxV-minV+0.01))*40;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+    svgPoly=`<polyline points="${pts2}" fill="none" stroke="${G}" stroke-width="2"/>`;
+    svgDots=evoData.map((v,i)=>{
+      const x=20+(i/(evoData.length-1))*140;
+      const y=50-((v-minV)/(maxV-minV+0.01))*40;
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${G}"/>`;
+    }).join("");
+    svgLabels=evoData.map((_,i)=>{
+      const x=20+(i/(evoData.length-1))*140;
+      return `<text x="${x.toFixed(1)}" y="58" text-anchor="middle" font-size="7" fill="#6b7280">S${i+1}</text>`;
+    }).join("");
+  }
 
   // Groupes matières
-  const SCI=["Mathématiques","PCT","SVT","Sciences Physiques","Physique-Chimie","Informatique","SVTEEHB","Physique-Chimie-Tech","Biologie","Chimie","Physique"];
-  const LIT=["Français","Anglais","Histoire","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","Italien","Chinois","Étude de texte","Expression","Éducation à la citoyenneté","Correction orthographique","Éducation à la citoyenneté et à la morale"];
-  const EPS_MAT=["EPS","Éducation Physique","Sport"];
-  const OTHER_EXCL=[...SCI,...LIT];
+  const SCI=["Mathématiques","PCT","SVT","Physique","Chimie","Informatique","SVTEEHB","Physique-Chimie-Tech","Biologie"];
+  const LIT=["Français","Anglais","Histoire","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","Italien","Chinois","Étude de texte","Expression","Citoyenneté","Correction orthographique","Expression orale","Travail manuel"];
+  const inG=(m,g)=>g.some(x=>m.toLowerCase().includes(x.toLowerCase()));
 
-  const inGroup=(mat,grp)=>grp.some(g=>mat.toLowerCase().includes(g.toLowerCase()));
+  const sciL=lignes.filter(l=>inG(l.matiere,SCI));
+  const litL=lignes.filter(l=>inG(l.matiere,LIT));
+  const autL=lignes.filter(l=>!inG(l.matiere,SCI)&&!inG(l.matiere,LIT));
+
+  const noteCol=(n)=>n===null?"":n>=14?"note-good":n>=10?"note-med":"note-low";
+  const appTxt=(n)=>n===null?"—":n>=16?"Très Bien":n>=14?"Bien":n>=12?"Assez Bien":n>=10?"Passable":n>=8?"Insuffisant":"Faible";
+  const appDot=(n)=>n===null?"⚫":n>=14?"🟢":n>=10?"🟠":"🔴";
 
   const renderLigne=(l)=>{
     const nc=SEQUENCES.map((s,i)=>{
       const n=l.notesSeq[i];
-      if(i>=seq) return `<td class="na">—</td>`;
-      const col=n===null?"#9ca3af":n>=10?"#1a6b3a":"#dc2626";
-      return `<td style="color:${col};font-weight:${n!==null?"700":"400"}">${n!==null?n.toFixed(2):"—"}</td>`;
+      if(i>=seq) return `<td style="color:#d1d5db;">—</td>`;
+      const cl=n===null?"":n>=10?"note-good":"note-low";
+      return `<td class="${cl}">${n!==null?n.toFixed(2):"—"}</td>`;
     }).join("");
-    const mc=l.moy===null?"#9ca3af":l.moy>=10?"#1a6b3a":"#dc2626";
-    const ap=l.moy===null?"—":l.moy>=16?"Très Bien":l.moy>=14?"Bien":l.moy>=12?"Assez Bien":l.moy>=10?"Passable":l.moy>=8?"Insuffisant":"Faible";
-    const dc=l.moy===null?"#9ca3af":l.moy>=14?"#16a34a":l.moy>=10?"#f59e0b":"#dc2626";
-    return `<tr><td class="mat">${l.matiere}</td>${nc}<td style="color:${mc};font-weight:700">${l.moy!==null?l.moy.toFixed(2):"—"}</td><td>${l.coef}</td><td>${l.pts!==null?l.pts.toFixed(2):"—"}</td><td>${l.rang!==null?l.rang:"—"}</td><td>${l.minC!==null?l.minC.toFixed(1):"—"}</td><td>${l.moyC!==null?l.moyC.toFixed(1):"—"}</td><td>${l.maxC!==null?l.maxC.toFixed(1):"—"}</td><td class="app">${ap} <span style="color:${dc}">●</span></td></tr>`;
+    const mc=noteCol(l.moy);
+    return `<tr>
+      <td class="subj-name">${l.matiere}</td>
+      ${nc}
+      <td class="${mc}">${l.moy!==null?l.moy.toFixed(2):"—"}</td>
+      <td>${l.coef}</td>
+      <td>${l.pts!==null?l.pts.toFixed(2):"—"}</td>
+      <td>${l.rang!==null?l.rang:"—"}</td>
+      <td>${l.minC!==null?l.minC.toFixed(1):"—"}</td>
+      <td>${l.moyC!==null?l.moyC.toFixed(1):"—"}</td>
+      <td>${l.maxC!==null?l.maxC.toFixed(1):"—"}</td>
+      <td>${appTxt(l.moy)} ${appDot(l.moy)}</td>
+    </tr>`;
   };
 
-  const grpHdr=(t)=>`<tr class="grp"><td colspan="15">${t}</td></tr>`;
-
-  const sciLignes=lignes.filter(l=>inGroup(l.matiere,SCI));
-  const litLignes=lignes.filter(l=>inGroup(l.matiere,LIT));
-  const autLignes=lignes.filter(l=>!inGroup(l.matiere,SCI)&&!inGroup(l.matiere,LIT));
+  const grpRow=(t)=>`<tr><td colspan="15" class="cat-row">${t}</td></tr>`;
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:"Arial Narrow",Arial,sans-serif;font-size:10px;color:#111;background:#fff;padding:8mm;}
-.page{max-width:210mm;margin:0 auto;}
-
-/* ── EN-TÊTE ── */
-.hdr{display:grid;grid-template-columns:180px 1fr 155px;align-items:start;padding-bottom:8px;margin-bottom:0;}
-.hdr-l{font-size:8.5px;line-height:1.9;}
-.rep{font-size:10px;font-weight:900;color:#111;}
-.rep-it{font-size:8px;color:${gold};font-style:italic;letter-spacing:.3px;}
-.reg{font-size:8.5px;font-weight:700;margin-top:5px;color:#111;}
-.hdr-c{text-align:center;padding:0 6px;}
-.logo-wrap{display:flex;justify-content:center;margin-bottom:3px;}
-.logo-img{width:85px;height:85px;border-radius:50%;object-fit:cover;border:2.5px solid ${gold};}
-.hdr-r{text-align:right;}
-.bull-box{border:2px solid ${G};border-radius:3px;padding:5px 10px;text-align:center;margin-bottom:5px;background:#fff;}
-.bull-title{font-size:13px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:1.5px;line-height:1.2;}
-.an-box{border:1.5px solid ${G};border-radius:3px;padding:4px 8px;text-align:center;margin-bottom:4px;}
-.an-lbl{font-size:7.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;}
-.an-val{font-size:12px;font-weight:900;color:${G};}
-.tr-box{border:1.5px solid ${gold};border-radius:3px;padding:3px 8px;text-align:center;}
-.tr-lbl{font-size:7.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;}
-.tr-val{font-size:20px;font-weight:900;color:${gold};line-height:1.1;}
-.etab-name{font-size:19px;font-weight:900;color:${G};text-align:center;text-transform:uppercase;letter-spacing:2px;margin:4px 0 1px;border-top:3px solid ${G};border-bottom:3px solid ${G};padding:3px 0;}
-.etab-sub{font-size:8px;color:#6b7280;text-align:center;letter-spacing:.4px;margin-bottom:4px;}
-.deco{display:flex;align-items:center;gap:6px;margin:3px 0 5px;}
-.deco::before,.deco::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,${gold},transparent);}
-.deco-d{color:${gold};font-size:9px;}
-
-/* ── INFOS ÉLÈVE ── */
-.el-sec{border:1.5px solid #d1d5db;border-radius:4px;margin-bottom:5px;overflow:hidden;}
-.el-hdr{background:${G};color:#fff;font-size:9.5px;font-weight:700;padding:3px 8px;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px;}
-.el-body{display:grid;grid-template-columns:72px 1fr auto;gap:8px;padding:6px 8px;align-items:start;}
-.photo{width:66px;height:82px;background:#e8f0e8;border:1.5px solid #d1d5db;border-radius:2px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#9ca3af;font-size:24px;}
-.el-name{font-size:14px;font-weight:900;color:${G};margin-bottom:4px;}
-.ei{display:flex;align-items:center;gap:4px;font-size:9px;padding:1.5px 0;border-bottom:1px dotted #e5e7eb;}
-.ei-ic{font-size:10px;width:12px;}
-.ei-lbl{color:#6b7280;}
-.ei-v{font-weight:700;}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
-.kpi{border:1.5px solid #e5e7eb;border-radius:4px;padding:5px 3px;text-align:center;background:#fff;}
-.kn{font-size:14px;font-weight:900;color:${G};line-height:1;}
-.kd{font-size:8px;color:#9ca3af;line-height:1.2;}
-.kl{font-size:7px;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:.2px;line-height:1.2;}
-
-/* ── TABLEAU ── */
-.res-hdr{background:${G};color:#fff;font-size:9.5px;font-weight:700;padding:3px 8px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:0;display:flex;align-items:center;gap:5px;}
-table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:5px;}
-th{background:#1f2937;color:#fff;padding:3.5px 4px;font-weight:700;text-align:center;font-size:8px;}
-th:first-child{text-align:left;padding-left:5px;}
-td{padding:3px 4px;text-align:center;border-bottom:1px solid #f0f0f0;}
-td.mat{text-align:left;padding-left:5px;font-weight:600;font-size:9px;}
-td.na{color:#d1d5db;}
-td.app{text-align:left;font-size:8.5px;}
-tr:nth-child(even) td{background:#f9fafb;}
-tr.grp td{background:#374151;color:#fff;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;padding:2.5px 5px;}
-
-/* ── BAS ── */
-.bot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px;}
-.card{border:1px solid #e5e7eb;border-radius:3px;overflow:hidden;}
-.ch{background:${G};color:#fff;font-size:8.5px;font-weight:700;padding:3px 7px;display:flex;align-items:center;gap:3px;}
-.ch-red{background:#7f1d1d;}
-.cb{padding:5px 7px;}
-.cr{display:flex;justify-content:space-between;font-size:8.5px;padding:1.5px 0;border-bottom:1px dotted #f0f0f0;}
-.cl{color:#6b7280;}
-.cv{font-weight:700;}
-.pf{display:flex;align-items:flex-start;gap:3px;font-size:8px;padding:1px 0;}
-.pd{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:2px;}
-.abs-t{width:100%;border-collapse:collapse;font-size:8.5px;margin-bottom:4px;}
-.abs-t th{background:#f3f4f6;color:#374151;padding:2.5px 4px;font-weight:700;font-size:8px;}
-.abs-t td{padding:2.5px 4px;text-align:center;border:1px solid #e5e7eb;}
-.nj{color:#dc2626;font-weight:700;}
-.cc-app{font-size:8.5px;color:#374151;font-style:italic;min-height:28px;line-height:1.5;margin-bottom:4px;}
-.enc{text-align:center;margin:3px 0;}
-.enc-b{display:inline-block;border:1.5px solid ${gold};color:${gold};border-radius:3px;padding:2px 12px;font-size:9px;font-weight:900;letter-spacing:1px;}
-.enc-star{color:${gold};font-size:11px;}
-
-/* ── DÉCISION ── */
-.dec-wrap{border:2px solid ${gold};border-radius:4px;padding:6px 10px;text-align:center;margin-bottom:5px;background:linear-gradient(135deg,#fdfbf0,#fff9e6);}
-.dec-lbl{font-size:7.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:3px;}
-.dec-t{font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
-.dec-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-top:1px solid #f0e8c0;padding-top:4px;}
-.ds{text-align:center;}
-.ds-l{font-size:7px;color:#6b7280;text-transform:uppercase;}
-.ds-v{font-size:10px;font-weight:900;color:${G};}
-
-/* ── SIGNATURES ── */
-.sig{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;margin-top:6px;align-items:end;}
-.sb{text-align:center;}
-.st{font-size:8px;font-weight:900;color:${G};text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
-.sn{font-size:9.5px;font-weight:700;margin-bottom:4px;font-style:italic;}
-.sl{height:35px;border-bottom:1px solid #ccc;}
-.sc{display:flex;flex-direction:column;align-items:center;gap:3px;}
-.star-g{color:${gold};font-size:28px;line-height:1;}
-.cachet{width:72px;height:72px;border-radius:50%;border:2px solid ${G};display:flex;align-items:center;justify-content:center;font-size:7px;color:${G};font-weight:700;text-align:center;padding:5px;line-height:1.3;}
-
-/* ── FOOTER ── */
-.footer{background:${G};color:${gold};text-align:center;padding:4px;font-size:9.5px;font-weight:700;letter-spacing:3px;margin-top:5px;border-radius:2px;}
-.footer::before,.footer::after{content:" ✦ ";}
-
-@media print{body{padding:5mm;}@page{margin:5mm;size:A4;}}
+@page{size:A4;margin:8mm;}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;}
+body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
+.top-bar{height:4px;background:linear-gradient(90deg,#0b5321 0%,#116b2e 70%,#d4af37 100%);margin-bottom:6px;}
+.header-table{width:100%;border-collapse:collapse;margin-bottom:6px;}
+.header-table td{vertical-align:top;text-align:center;}
+.header-left{width:32%;font-size:7.5pt;font-weight:bold;text-align:left;}
+.header-center{width:36%;}
+.header-right{width:32%;}
+.school-name{font-size:11pt;font-weight:bold;text-transform:uppercase;margin-top:4px;}
+.school-sub{font-size:7pt;color:#333;}
+.logo-img{width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid ${gold};}
+.bulletin-box{border:1.5px solid #0b5321;border-radius:6px;padding:4px;background:#f8faf8;width:85%;margin:0 auto;}
+.bulletin-title{background:#0b5321;color:white;font-weight:bold;font-size:9pt;padding:2px 0;border-radius:3px;}
+.trimestre-badge{display:inline-block;background:#0b5321;color:white;font-weight:bold;font-size:10pt;padding:1px 8px;border-radius:3px;}
+.annee-val{font-size:9pt;font-weight:900;color:#0b5321;}
+.section-header{background:#0b5321;color:white;font-weight:bold;font-size:8.5pt;padding:3px 6px;border-radius:2px;margin-bottom:4px;}
+.student-info-table{width:100%;border-collapse:collapse;margin-bottom:6px;}
+.stat-card{border:1px solid #0b5321;border-radius:5px;text-align:center;padding:3px 1px;background:#fff;}
+.stat-val{font-weight:bold;font-size:9pt;}
+.stat-lbl{font-size:6.5pt;color:#4b5563;text-transform:uppercase;}
+.results-table{width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:6px;}
+.results-table th,.results-table td{border:1px solid #a3a3a3;padding:2.5px 2px;text-align:center;}
+.results-table th{background:#0b5321;color:white;font-size:7pt;}
+.cat-row{background:#e2e8f0;font-weight:bold;text-align:left;padding-left:5px;color:#0b5321;}
+.subj-name{text-align:left;padding-left:4px;font-weight:bold;}
+.note-low{color:#dc2626;font-weight:bold;}
+.note-med{color:#d97706;font-weight:bold;}
+.note-good{color:#16a34a;font-weight:bold;}
+.bottom-table{width:100%;border-collapse:collapse;margin-bottom:6px;}
+.bottom-table>tbody>tr>td{width:33.33%;vertical-align:top;padding:0 3px;}
+.card-box{border:1px solid #9ca3af;border-radius:4px;padding:4px;background:#fff;height:100%;}
+.card-title{font-size:7.5pt;font-weight:bold;color:#0b5321;border-bottom:1px solid #d1d5db;padding-bottom:2px;margin-bottom:4px;}
+.pf-item{font-size:7pt;padding:1px 0;display:flex;align-items:center;gap:3px;}
+.footer-table{width:100%;border-collapse:collapse;margin-top:4px;font-size:7.5pt;text-align:center;}
+.sig-space{height:35px;border-bottom:1px solid #ccc;margin:4px 0;}
+.bottom-motto{text-align:center;font-size:7.5pt;font-weight:bold;color:#0b5321;border-top:1px solid #0b5321;padding-top:2px;margin-top:4px;letter-spacing:2px;}
+@media print{@page{margin:6mm;size:A4;}}
 </style>
 <script>window.onload=()=>window.print();<\/script>
-</head><body><div class="page">
+</head><body>
 
-<!-- ══ EN-TÊTE ══ -->
-<div class="hdr">
-  <div class="hdr-l">
-    <div class="rep">RÉPUBLIQUE DU CAMEROUN</div>
-    <div class="rep-it">Paix – Travail – Patrie</div>
-    <div class="reg">RÉGION DE L'EXTRÊME-NORD</div>
-    <div style="font-size:8.5px;">DÉPARTEMENT DU DIAMARÉ</div>
-    <div style="font-size:8.5px;">ARRONDISSEMENT DE MAROUA II</div>
-  </div>
-  <div class="hdr-c">
-    <div class="logo-wrap">
-      <img src="https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/logo_lycee_kakatare.jpg/logo_lycee_kakatare.jpg" class="logo-img" alt="Logo" onerror="this.style.display='none'"/>
-    </div>
-  </div>
-  <div class="hdr-r">
-    <div class="bull-box">
-      <div class="bull-title">BULLETIN<br>SCOLAIRE</div>
-    </div>
-    <div class="an-box">
-      <div class="an-lbl">Année Scolaire</div>
-      <div class="an-val">${annee.replace("-","–")}</div>
-    </div>
-    <div class="tr-box">
-      <div class="tr-lbl">Trimestre</div>
-      <div class="tr-val">${trim}</div>
-    </div>
-  </div>
-</div>
+<div class="top-bar"></div>
 
-<div class="etab-name">LYCÉE DE KAKATARE-MAROUA</div>
-<div class="etab-sub">BP 162 MAROUA – TÉL. 222 29 21 63 – MLE 0CJ1GSF8111231106</div>
-<div class="deco"><span class="deco-d">◆</span></div>
-
-<!-- ══ INFOS ÉLÈVE ══ -->
-<div class="el-sec">
-  <div class="el-hdr">📋 Informations de l'Élève</div>
-  <div class="el-body">
-    <div class="photo">👤<div style="font-size:7px;margin-top:3px;color:#9ca3af;">Photo</div></div>
-    <div>
-      <div class="el-name">${eleve.nom}</div>
-      <div class="ei"><span class="ei-ic">🎓</span><span class="ei-lbl">Classe :</span>&nbsp;<span class="ei-v">${classe}</span>&nbsp;<span style="font-size:8px;color:#6b7280;margin-left:8px;">🪪 Matricule :</span>&nbsp;<span class="ei-v">${eleve.numero||"—"}</span></div>
-      <div class="ei"><span class="ei-ic">👤</span><span class="ei-lbl">Sexe :</span>&nbsp;<span class="ei-v">${eleve.sexe==="G"||eleve.sexe==="M"?"Masculin":"Féminin"}</span>&nbsp;<span style="font-size:8px;color:#6b7280;margin-left:8px;">📅 Née le :</span>&nbsp;<span class="ei-v">—</span></div>
-      <div class="ei"><span class="ei-ic">👨‍🏫</span><span class="ei-lbl">Professeur principal :</span>&nbsp;<span class="ei-v">${profPrincipalNom}</span></div>
+<!-- EN-TÊTE -->
+<table class="header-table">
+<tr>
+  <td class="header-left">
+    RÉPUBLIQUE DU CAMEROUN<br>
+    <span style="font-weight:normal;font-style:italic;">Paix – Travail – Patrie</span><br>
+    <span style="color:#ccc;">──────────────</span><br>
+    RÉGION DE L'EXTRÊME-NORD<br>
+    DÉPARTEMENT DU DIAMARÉ<br>
+    ARRONDISSEMENT DE MAROUA II
+  </td>
+  <td class="header-center">
+    <img src="https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/logo_lycee_kakatare.jpg/logo_lycee_kakatare.jpg" class="logo-img" alt="Logo" onerror="this.style.display='none'"/>
+    <div class="school-name">Lycée de Kakatare-Maroua</div>
+    <div class="school-sub">BP 162 MAROUA – TÉL. 222 29 21 63 – Mle 0CJ1GSF8111231106</div>
+  </td>
+  <td class="header-right">
+    <div class="bulletin-box">
+      <div class="bulletin-title">BULLETIN SCOLAIRE</div>
+      <div style="font-size:8pt;margin-top:3px;">ANNÉE SCOLAIRE<br><span class="annee-val">${annee.replace("-","–")}</span></div>
+      <div style="font-size:7.5pt;margin-top:2px;">TRIMESTRE</div>
+      <div class="trimestre-badge">${trim}</div>
     </div>
-    <div class="kpis">
-      <div class="kpi"><div class="kn">${moyenne!==null?moyenne.toFixed(2):"—"}</div><div class="kd">/20</div><div class="kl">Moyenne générale</div></div>
-      <div class="kpi"><div class="kn">${rang}</div><div class="kd">/${effectif}</div><div class="kl">Rang</div></div>
-      <div class="kpi"><div class="kn">${nbMatieres}</div><div class="kd">/${coefs.length}</div><div class="kl">Matières évaluées</div></div>
-      <div class="kpi"><div class="kn" style="font-size:11px;">${totalPts>0?totalPts.toFixed(1):"—"}</div><div class="kl">Total points</div></div>
-      <div class="kpi"><div class="kn">—</div><div class="kd">h</div><div class="kl">Absences</div></div>
-      <div class="kpi"><div class="kn">${conduite!==null?conduite:"—"}</div><div class="kd">/20</div><div class="kl">Conduite</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ RÉSULTATS ══ -->
-<div class="res-hdr">📊 Résultats Académiques</div>
-<table>
-  <thead><tr>
-    <th style="width:22%;text-align:left;">MATIÈRE</th>
-    <th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th>
-    <th>MOY.</th><th>COEF.</th><th>POINTS</th><th>RANG</th>
-    <th>MIN.</th><th>MOY.</th><th>MAX.</th>
-    <th style="width:12%;text-align:left;">APPRÉCIATION</th>
-  </tr></thead>
-  <tbody>
-    ${sciLignes.length?grpHdr("MATIÈRES SCIENTIFIQUES")+sciLignes.map(renderLigne).join(""):""}
-    ${litLignes.length?grpHdr("MATIÈRES LITTÉRAIRES")+litLignes.map(renderLigne).join(""):""}
-    ${autLignes.length?grpHdr("AUTRES MATIÈRES")+autLignes.map(renderLigne).join(""):""}
-  </tbody>
+  </td>
+</tr>
 </table>
 
-<!-- ══ BAS ══ -->
-<div class="bot">
-  <!-- Col 1 -->
-  <div style="display:flex;flex-direction:column;gap:4px;">
-    <div class="card">
-      <div class="ch">📈 Évolution du Travail</div>
-      <div class="cb" style="padding:4px 6px;">
-        <svg viewBox="0 0 280 80" style="width:100%;height:80px;">
-          <line x1="18" y1="10" x2="18" y2="72" stroke="#e5e7eb" stroke-width="1"/>
-          <line x1="18" y1="72" x2="262" y2="72" stroke="#e5e7eb" stroke-width="1"/>
-          ${svgContent}
+<!-- INFOS ÉLÈVE -->
+<div class="section-header">INFORMATIONS DE L'ÉLÈVE</div>
+<table class="student-info-table">
+<tr>
+  <td style="width:55px;">
+    <div style="width:55px;height:65px;border:1px solid #999;background:#e5e7eb;text-align:center;line-height:65px;font-size:20pt;color:#6b7280;border-radius:3px;">&#128100;</div>
+  </td>
+  <td style="padding-left:8px;">
+    <table style="width:100%;font-size:8pt;">
+      <tr><td colspan="2" style="font-size:9.5pt;font-weight:bold;">${eleve.nom}</td></tr>
+      <tr><td><strong>Classe :</strong> ${classe}</td><td><strong>Matricule :</strong> ${eleve.numero||"—"}</td></tr>
+      <tr><td><strong>Sexe :</strong> ${eleve.sexe==="G"||eleve.sexe==="M"?"Masculin":"Féminin"}</td><td><strong>Née le :</strong> —</td></tr>
+      <tr><td colspan="2"><strong>Professeur principal :</strong> ${profPrincipalNom}</td></tr>
+    </table>
+  </td>
+  <td style="width:52%;">
+    <table style="width:100%;border-collapse:separate;border-spacing:3px 0;">
+    <tr>
+      <td><div class="stat-card" style="background:#f0fdf4;border-color:#16a34a;"><div class="stat-val" style="color:#15803d;">${moyenne!==null?moyenne.toFixed(2):"—"}<span style="font-size:6pt;">/20</span></div><div class="stat-lbl">Moyenne</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">${rang}<span style="font-size:6pt;">/${effectif}</span></div><div class="stat-lbl">Rang</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">${nbMatieres}<span style="font-size:6pt;">/${coefs.length}</span></div><div class="stat-lbl">Matières</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">${totalPts>0?totalPts.toFixed(1):"—"}</div><div class="stat-lbl">Total pts</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">— h</div><div class="stat-lbl">Absences</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">${conduite!==null?conduite:"—"}<span style="font-size:6pt;">/20</span></div><div class="stat-lbl">Conduite</div></div></td>
+    </tr>
+    </table>
+  </td>
+</tr>
+</table>
+
+<!-- TABLEAU ACADÉMIQUE -->
+<div class="section-header">RÉSULTATS ACADÉMIQUES</div>
+<table class="results-table">
+<thead>
+  <tr>
+    <th rowspan="2" style="width:22%;">MATIÈRE</th>
+    <th colspan="6">ÉVALUATIONS</th>
+    <th rowspan="2">MOY.</th>
+    <th rowspan="2">COEF.</th>
+    <th rowspan="2">POINTS</th>
+    <th rowspan="2">RANG</th>
+    <th colspan="3">STATISTIQUES CLASSE</th>
+    <th rowspan="2" style="width:13%;">APPRÉCIATION</th>
+  </tr>
+  <tr>
+    <th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th>
+    <th>MIN</th><th>MOY</th><th>MAX</th>
+  </tr>
+</thead>
+<tbody>
+  ${sciL.length?grpRow("MATIÈRES SCIENTIFIQUES")+sciL.map(renderLigne).join(""):""}
+  ${litL.length?grpRow("MATIÈRES LITTÉRAIRES")+litL.map(renderLigne).join(""):""}
+  ${autL.length?grpRow("AUTRES MATIÈRES")+autL.map(renderLigne).join(""):""}
+</tbody>
+</table>
+
+<!-- BLOCS INFÉRIEURS -->
+<table class="bottom-table">
+<tr>
+  <!-- COL 1 : Évolution + Points forts/À renforcer -->
+  <td>
+    <div class="card-box" style="margin-bottom:4px;">
+      <div class="card-title">📈 ÉVOLUTION DU TRAVAIL</div>
+      <div style="text-align:center;">
+        <svg width="160" height="62" viewBox="0 0 165 65">
+          ${svgPoly}${svgDots}${svgLabels}
+          <line x1="15" y1="10" x2="15" y2="52" stroke="#e5e7eb" stroke-width="1"/>
+          <line x1="15" y1="52" x2="155" y2="52" stroke="#e5e7eb" stroke-width="1"/>
         </svg>
-        <div style="text-align:center;font-size:8px;margin-top:2px;">
-          <span style="font-weight:700;color:${progCol}">Progression : ${prog} pts ${progArrow}</span>
-        </div>
+        <div style="font-size:7.5pt;">Progression : <strong style="color:${progCol}">${prog} pts</strong></div>
       </div>
     </div>
-    <div class="card">
-      <div class="ch">👍 Points Forts</div>
-      <div class="cb">
-        ${pointsForts.length?pointsForts.map(l=>`<div class="pf"><div class="pd" style="background:#16a34a"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):`<div style="font-size:8px;color:#9ca3af;font-style:italic;">Aucune note saisie</div>`}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+      <div class="card-box">
+        <div class="card-title">👍 Points Forts</div>
+        ${pointsForts.length?pointsForts.map(l=>`<div class="pf-item"><span style="color:#16a34a;">●</span> ${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</div>`).join(""):`<div style="font-size:7pt;color:#9ca3af;font-style:italic;">—</div>`}
+      </div>
+      <div class="card-box">
+        <div class="card-title" style="color:#dc2626;">🎯 À Renforcer</div>
+        ${aRenforcer.length?aRenforcer.map(l=>`<div class="pf-item"><span style="color:#dc2626;">●</span> ${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</div>`).join(""):`<div style="font-size:7pt;color:#9ca3af;font-style:italic;">—</div>`}
       </div>
     </div>
-    <div class="card">
-      <div class="ch ch-red">🎯 À Renforcer</div>
-      <div class="cb">
-        ${aRenforcer.length?aRenforcer.map(l=>`<div class="pf"><div class="pd" style="background:#dc2626"></div><span>${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</span></div>`).join(""):`<div style="font-size:8px;color:#9ca3af;font-style:italic;">Aucune note saisie</div>`}
-      </div>
-    </div>
-  </div>
+  </td>
 
-  <!-- Col 2 -->
-  <div style="display:flex;flex-direction:column;gap:4px;">
-    <div class="card">
-      <div class="ch">⏱ Assiduité</div>
-      <div class="cb">
-        <table class="abs-t">
-          <tr><th></th><th>TOTAL</th><th>JUSTIFIÉES</th><th>NON JUST.</th></tr>
-          <tr><td style="font-weight:700;">Absences</td><td>— h</td><td>0 h</td><td class="nj">— h</td></tr>
-        </table>
-        <div class="cr"><span class="cl">Retards :</span><span class="cv">${retards}</span></div>
+  <!-- COL 2 : Assiduité + Conduite -->
+  <td>
+    <div class="card-box" style="margin-bottom:4px;">
+      <div class="card-title">⏱ ASSIDUITÉ</div>
+      <table style="width:100%;font-size:7pt;border-collapse:collapse;margin-bottom:4px;">
+        <tr><th style="background:#f3f4f6;padding:2px 3px;border:1px solid #e5e7eb;"></th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">TOTAL</th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">JUSTIFIÉES</th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">NON JUST.</th></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:2px 3px;font-weight:700;">Absences</td><td style="border:1px solid #e5e7eb;text-align:center;">— h</td><td style="border:1px solid #e5e7eb;text-align:center;">0 h</td><td style="border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:700;">— h</td></tr>
+      </table>
+      <div style="font-size:7pt;">Retards : <strong>${retards}</strong></div>
+    </div>
+    <div class="card-box">
+      <div class="card-title">🛡 CONDUITE & VIE SCOLAIRE</div>
+      <div style="font-size:7pt;line-height:1.6;">
+        <div>Note de conduite : <strong>${conduite!==null?conduite+" / 20":"—"}</strong></div>
+        <div>Retards : ${retards} | Exclusions : ${exclusionsH} h (${exclusionsJ} j)</div>
+        <div>Consignes : ${consignesH} h (${consignesJ} j)</div>
+        <div>Blâme travail : ${blameTravail} | Blâme conduite : ${blameConduite}</div>
       </div>
     </div>
-    <div class="card">
-      <div class="ch">🛡 Conduite & Vie Scolaire</div>
-      <div class="cb">
-        <div class="cr"><span class="cl">Note de conduite :</span><span class="cv">${conduite!==null?conduite+" / 20":"—"}</span></div>
-        <div class="cr"><span class="cl">Retards :</span><span class="cv">${retards}</span></div>
-        <div class="cr"><span class="cl">Exclusions (heures) :</span><span class="cv">${exclusionsH} h</span></div>
-        <div class="cr"><span class="cl">Exclusions (jours) :</span><span class="cv">${exclusionsJ} j</span></div>
-        <div class="cr"><span class="cl">Consignes (heures) :</span><span class="cv">${consignesH} h</span></div>
-        <div class="cr"><span class="cl">Consignes (jours) :</span><span class="cv">${consignesJ} j</span></div>
-        <div class="cr"><span class="cl">Blâme travail :</span><span class="cv">${blameTravail}</span></div>
-        <div class="cr"><span class="cl">Blâme conduite :</span><span class="cv">${blameConduite}</span></div>
-      </div>
-    </div>
-  </div>
+  </td>
 
-  <!-- Col 3 -->
-  <div style="display:flex;flex-direction:column;gap:4px;">
-    <div class="card">
-      <div class="ch">👥 Conseil de Classe</div>
-      <div class="cb">
-        <div style="font-size:8.5px;font-weight:700;color:${G};margin-bottom:2px;">Appréciation générale :</div>
-        <div class="cc-app">${appreciation||"—"}</div>
-        ${decision&&moyenne!==null&&moyenne>=12?`<div class="enc"><div class="enc-b">✦ ENCOURAGEMENTS ✦</div></div>`:""}
-        ${decision&&moyenne!==null&&moyenne>=15?`<div class="enc" style="margin-top:3px;"><div class="enc-b" style="border-color:#2563eb;color:#2563eb;">✦ FÉLICITATIONS ✦</div></div>`:""}
-      </div>
+  <!-- COL 3 : Conseil + Décision -->
+  <td>
+    <div class="card-box" style="margin-bottom:4px;">
+      <div class="card-title">👥 CONSEIL DE CLASSE</div>
+      <div style="font-size:7.5pt;font-style:italic;min-height:28px;line-height:1.4;color:#374151;">${appreciation||"—"}</div>
+      ${decision&&((mentionAff==="Bien"||mentionAff==="Assez Bien"||moyenne!==null&&moyenne>=12))?
+        `<div style="text-align:center;font-weight:bold;color:#0b5321;font-size:8pt;margin-top:3px;">★ ENCOURAGEMENTS ★</div>`:""}
+      ${decision&&moyenne!==null&&moyenne>=15?
+        `<div style="text-align:center;font-weight:bold;color:#1d4ed8;font-size:8pt;margin-top:2px;">★ FÉLICITATIONS ★</div>`:""}
     </div>
     ${decision?`
-    <div class="dec-wrap">
-      <div class="dec-lbl">🎓 Décision du Conseil de Classe</div>
-      <div class="dec-t" style="color:${decColor};">${decision}</div>
-      <div class="dec-stats">
-        <div class="ds"><div class="ds-l">Moyenne annuelle</div><div class="ds-v">${moyenne!==null?moyenne.toFixed(2)+" / 20":"—"}</div></div>
-        <div class="ds"><div class="ds-l">Mention</div><div class="ds-v">${mentionAff||"—"}</div></div>
-        <div class="ds"><div class="ds-l">Rang annuel</div><div class="ds-v">${rang} / ${effectif}</div></div>
-        <div class="ds"><div class="ds-l">Travail annuel</div><div class="ds-v" style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${moyenne!==null&&moyenne>=10?"PASSABLE":"INSUFFISANT"}</div></div>
+    <div class="card-box">
+      <div class="card-title">🎓 DÉCISION DU CONSEIL</div>
+      <div style="background:#f0fdf4;border:1px solid #16a34a;color:#15803d;font-weight:bold;text-align:center;padding:4px;font-size:8.5pt;border-radius:3px;margin-bottom:4px;">${decision}</div>
+      <div style="font-size:7pt;line-height:1.6;">
+        <div>Moyenne annuelle : <strong>${moyenne!==null?moyenne.toFixed(2)+" / 20":"—"}</strong></div>
+        <div>Mention : <strong>${mentionAff||"—"}</strong></div>
+        <div>Rang annuel : <strong>${rang} / ${effectif}</strong></div>
+        <div>Travail annuel : <strong style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${decision&&moyenne!==null?(moyenne>=10?"PASSABLE":"INSUFFISANT"):"—"}</strong></div>
       </div>
     </div>`:
-    `<div class="card"><div class="ch">🎓 Décision</div><div class="cb"><div style="font-size:8.5px;color:#9ca3af;font-style:italic;text-align:center;padding:8px;">En attente du Conseil de Classe</div></div></div>`}
-  </div>
-</div>
+    `<div class="card-box"><div class="card-title">🎓 DÉCISION</div><div style="font-size:7pt;color:#9ca3af;font-style:italic;text-align:center;padding:8px;">En attente du Conseil de Classe</div></div>`}
+  </td>
+</tr>
+</table>
 
-<!-- ══ SIGNATURES ══ -->
-<div class="sig">
-  <div class="sb">
-    <div class="st">Le Professeur Principal</div>
-    <div class="sn">${profPrincipalNom}</div>
-    <div class="sl"></div>
-  </div>
-  <div class="sc">
-    <div class="star-g">★</div>
-    <div class="cachet">LYCÉE DE<br>KAKATARE-<br>MAROUA<br>Le Proviseur</div>
-  </div>
-  <div class="sb">
-    <div class="st">Le Chef d'Établissement</div>
-    <div class="sn">Le Proviseur</div>
-    <div class="sl"></div>
-  </div>
-</div>
+<!-- SIGNATURES -->
+<table class="footer-table">
+<tr>
+  <td><strong>PROFESSEUR PRINCIPAL</strong><br><span style="font-size:7pt;">${profPrincipalNom}</span><div class="sig-space"></div></td>
+  <td style="width:80px;">
+    <div style="width:25px;height:25px;border:1.5px solid ${gold};border-radius:50%;margin:0 auto;color:${gold};text-align:center;line-height:23px;font-size:14pt;">★</div>
+  </td>
+  <td><strong>CHEF D'ÉTABLISSEMENT</strong><br><span style="font-size:7pt;">Le Proviseur</span><div class="sig-space"></div></td>
+</tr>
+</table>
 
-<div class="footer">DISCIPLINE – TRAVAIL – RÉUSSITE</div>
-</div></body></html>`;
+<div class="bottom-motto">◆ DISCIPLINE – TRAVAIL – RÉUSSITE ◆</div>
+</body></html>`;
 }
 
 function BulletinsPage() {
