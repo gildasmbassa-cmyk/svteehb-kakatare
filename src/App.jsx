@@ -96,7 +96,7 @@ const sb = {
         "admin_delete_all_epreuves","admin_delete_edt_slots_by_teacher","admin_delete_epreuves_by_teacher",
         "admin_delete_prog_by_classe","admin_delete_prog_by_teacher","admin_delete_teacher",
         "admin_set_edt_slots","admin_set_password","admin_upsert_teacher",
-        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection","submit_babillard","delete_babillard",
+        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection","submit_babillard","delete_babillard","update_eleve_profil",
       ];
       const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
@@ -1348,6 +1348,9 @@ function ElevesPage() {
   const [newGenre, setNewGenre]     = useState("M");
   const [confirmRetrait, setConfirmRetrait] = useState(null);
   const [toast, setToast]           = useState(null);
+  const [profilModal, setProfilModal] = useState(null);
+  const {user} = useApp();
+  const isProviseur = user?.role === "proviseur";
 
   function showToast(msg, ok=true) {
     setToast({msg,ok});
@@ -1607,7 +1610,13 @@ function ElevesPage() {
                             {e.g==="F"?"♀ F":"♂ M"}
                           </span>
                         </td>
-                        <td style={{padding:"10px 12px",textAlign:"center"}}>
+                        <td style={{padding:"10px 12px",textAlign:"center",display:"flex",gap:4,justifyContent:"center"}}>
+                          {isProviseur && (
+                            <button onClick={()=>setProfilModal(e)} title="Modifier profil"
+                              style={{padding:"4px 9px",borderRadius:7,border:"1px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                              ✏️
+                            </button>
+                          )}
                           <button onClick={()=>setConfirmRetrait(e)}
                             style={{padding:"4px 10px",background:C.redPale,border:`1px solid ${C.redBorder}`,borderRadius:7,color:C.red,fontSize:11,fontWeight:700,cursor:"pointer"}}>
                             ✕ Retirer
@@ -8028,6 +8037,189 @@ body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
 
 <div class="bottom-motto">◆ DISCIPLINE – TRAVAIL – RÉUSSITE ◆</div>
 </body></html>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// PROFIL ÉLÈVE — Modal de modification (Proviseur uniquement)
+// ════════════════════════════════════════════════════════════════
+function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
+  const {isMobile} = useDevice();
+  const [form, setForm] = useState({
+    nom: eleve.nom||eleve.n||"",
+    prenom: eleve.prenom||"",
+    sexe: eleve.sexe||eleve.g||"M",
+    date_naissance: eleve.date_naissance||"",
+    lieu_naissance: eleve.lieu_naissance||"",
+    numero: eleve.numero||eleve.num||"",
+    classe: classe||eleve.classe||"",
+    statut: eleve.statut||"actif"
+  });
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(eleve.photo_url||null);
+  const [msg, setMsg] = useState(null);
+
+  const inp = {width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,
+    padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none",
+    boxSizing:"border-box",background:"#fff"};
+  const lbl = {fontSize:11,fontWeight:700,color:"#374151",
+    textTransform:"uppercase",letterSpacing:".5px",marginBottom:4,display:"block"};
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const fname = `eleve_${eleve.id}_${Date.now()}.${ext}`;
+      const uploaded = await sb.uploadFile("eleves-photos", fname, file);
+      if (uploaded?.path) {
+        const url = `https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/eleves-photos/${uploaded.path}`;
+        setPhotoPreview(url);
+        setForm(p=>({...p, photo_url: url}));
+        setMsg({ok:true, txt:"Photo uploadée ✓"});
+      }
+    } catch(e) {
+      setMsg({ok:false, txt:"Erreur upload photo"});
+    }
+    setUploading(false);
+  };
+
+  const handleSave = async () => {
+    if (!form.nom.trim()) { setMsg({ok:false,txt:"Le nom est obligatoire"}); return; }
+    setSaving(true);
+    const res = await sb.rpc("update_eleve_profil", {
+      p_token: window.__svtSessionToken,
+      p_eleve_id: eleve.id,
+      p_nom: form.nom.trim().toUpperCase(),
+      p_prenom: form.prenom.trim(),
+      p_sexe: form.sexe,
+      p_date_naissance: form.date_naissance||null,
+      p_lieu_naissance: form.lieu_naissance.trim()||null,
+      p_numero: form.numero.trim()||null,
+      p_classe: form.classe||null,
+      p_statut: form.statut||null,
+      p_photo_url: form.photo_url||photoPreview||null
+    });
+    setSaving(false);
+    if (res?.ok) {
+      setMsg({ok:true, txt:"Profil mis à jour ✓"});
+      setTimeout(()=>{ onSaved&&onSaved({...eleve,...form,photo_url:photoPreview}); onClose(); }, 800);
+    } else {
+      setMsg({ok:false, txt: res?.error||"Erreur"});
+    }
+  };
+
+  const STATUTS = ["actif","redoublant","transfere","exclu","diplome"];
+  const STATUT_COLORS = {actif:"#16a34a",redoublant:"#d97706",transfere:"#2563eb",exclu:"#dc2626",diplome:"#7c3aed"};
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:3000,overflowY:"auto",padding:isMobile?"0":"20px"}}>
+      <div style={{background:"#fff",borderRadius:isMobile?0:16,maxWidth:560,margin:"0 auto",
+        padding:isMobile?"16px":"28px",minHeight:isMobile?"100vh":"auto"}}>
+
+        {/* En-tête */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>👤 Profil élève</div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>✕</button>
+        </div>
+
+        {/* Photo */}
+        <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20,padding:14,
+          background:"#f8fafc",borderRadius:10}}>
+          <div style={{width:72,height:90,borderRadius:6,overflow:"hidden",border:"2px solid #e5e7eb",
+            background:"#e5e7eb",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            {photoPreview
+              ? <img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="photo"/>
+              : <span style={{fontSize:32,color:"#9ca3af"}}>👤</span>}
+          </div>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:"#1f2937",marginBottom:6}}>
+              {form.nom} {form.prenom}
+            </div>
+            <label style={{display:"inline-block",padding:"6px 14px",borderRadius:8,border:"1.5px solid #0B4D2C",
+              color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",background:"#fff"}}>
+              {uploading?"Envoi...":"📷 Changer la photo"}
+              <input type="file" accept="image/*" onChange={handlePhoto} style={{display:"none"}}/>
+            </label>
+            <div style={{fontSize:10,color:"#9ca3af",marginTop:4}}>JPG, PNG, WEBP — max 5 MB</div>
+          </div>
+        </div>
+
+        {/* Formulaire */}
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:16}}>
+          <div style={{gridColumn:"1/-1"}}>
+            <span style={lbl}>Nom *</span>
+            <input value={form.nom} onChange={e=>setForm(p=>({...p,nom:e.target.value.toUpperCase()}))}
+              style={inp} placeholder="NOM DE FAMILLE"/>
+          </div>
+          <div>
+            <span style={lbl}>Prénom</span>
+            <input value={form.prenom} onChange={e=>setForm(p=>({...p,prenom:e.target.value}))}
+              style={inp} placeholder="Prénom(s)"/>
+          </div>
+          <div>
+            <span style={lbl}>Sexe</span>
+            <select value={form.sexe} onChange={e=>setForm(p=>({...p,sexe:e.target.value}))} style={inp}>
+              <option value="M">Masculin</option>
+              <option value="F">Féminin</option>
+            </select>
+          </div>
+          <div>
+            <span style={lbl}>Date de naissance</span>
+            <input type="date" value={form.date_naissance}
+              onChange={e=>setForm(p=>({...p,date_naissance:e.target.value}))} style={inp}/>
+          </div>
+          <div>
+            <span style={lbl}>Lieu de naissance</span>
+            <input value={form.lieu_naissance}
+              onChange={e=>setForm(p=>({...p,lieu_naissance:e.target.value}))}
+              style={inp} placeholder="Ville, pays"/>
+          </div>
+          <div>
+            <span style={lbl}>Matricule</span>
+            <input value={form.numero} onChange={e=>setForm(p=>({...p,numero:e.target.value}))}
+              style={inp} placeholder="Ex: E1800649"/>
+          </div>
+          <div>
+            <span style={lbl}>Classe</span>
+            <input value={form.classe} onChange={e=>setForm(p=>({...p,classe:e.target.value}))}
+              style={inp} placeholder="Ex: 3e ARA"/>
+          </div>
+          <div>
+            <span style={lbl}>Statut</span>
+            <select value={form.statut} onChange={e=>setForm(p=>({...p,statut:e.target.value}))} style={inp}>
+              {STATUTS.map(s=><option key={s} value={s} style={{color:STATUT_COLORS[s]}}>
+                {s.charAt(0).toUpperCase()+s.slice(1)}
+              </option>)}
+            </select>
+          </div>
+        </div>
+
+        {msg && (
+          <div style={{padding:"8px 14px",borderRadius:8,marginBottom:12,fontSize:13,fontWeight:700,
+            background:msg.ok?"#f0fdf4":"#fef2f2",color:msg.ok?"#16a34a":"#dc2626",
+            border:`1px solid ${msg.ok?"#bbf7d0":"#fecaca"}`}}>
+            {msg.txt}
+          </div>
+        )}
+
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose}
+            style={{padding:"10px 20px",borderRadius:10,border:"1px solid #e5e7eb",
+              background:"#f9fafb",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            Annuler
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#0B4D2C",
+              color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+              opacity:saving?.6:1}}>
+            {saving?"Enregistrement…":"💾 Enregistrer"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function BulletinsPage() {
