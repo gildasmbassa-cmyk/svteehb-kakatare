@@ -5483,42 +5483,21 @@ function genCompilation(data, trim = "ANN") {
 // ═══════════════════════════════════════════════════
 // printGuard: déclaré globalement
 function imprimerHTML(html) {
-  // Sur mobile : ouvrir dans un nouvel onglet (window.print() dans iframe ne fonctionne pas)
-  // Sur desktop : comportement normal via blob URL
-  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobileDevice) {
-    // Ouvrir dans un nouvel onglet — l'utilisateur peut sauvegarder en PDF
-    const blob = new Blob([html], {type:"text/html;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-    return;
-  }
-  // Desktop : impression via iframe
-  if (printGuard) return;
-  printGuard = true;
+  // Solution universelle mobile + desktop :
+  // Ouvrir dans un nouvel onglet → le HTML contient window.onload=print
+  // qui déclenche automatiquement la boîte d'impression
   const blob = new Blob([html], {type:"text/html;charset=utf-8"});
   const url = URL.createObjectURL(blob);
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
-  iframe.src = url;
-  document.body.appendChild(iframe);
-  iframe.onload = () => {
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    } catch(e) {}
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      URL.revokeObjectURL(url);
-      printGuard = false;
-    }, 3000);
-  };
+  const win = window.open(url, "_blank");
+  if (!win) {
+    // Popup bloqué → fallback lien direct
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+    return;
+  }
+  setTimeout(()=>URL.revokeObjectURL(url), 10000);
 }
 
 // ═══════════════════════════════════════════════════
