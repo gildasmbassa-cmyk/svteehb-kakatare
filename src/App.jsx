@@ -7764,14 +7764,17 @@ function genBulletin(opts) {
     }).join("");
   }
 
-  // Groupes matières
-  const SCI=["Mathématiques","PCT","SVT","Physique","Chimie","Informatique","SVTEEHB","Physique-Chimie-Tech","Biologie"];
-  const LIT=["Français","Anglais","Histoire","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","Italien","Chinois","Étude de texte","Expression","Citoyenneté","Correction orthographique","Expression orale","Travail manuel"];
-  const inG=(m,g)=>g.some(x=>m.toLowerCase().includes(x.toLowerCase()));
+  // Groupes matières — listes exactes basées sur la DB coefficients
+  const MATIERES_SCI = ["Mathématiques","PCT","SVT","Informatique","SVTEEHB","Physique-Chimie-Tech.","Sciences Physiques","Biologie","Chimie","Physique"];
+  const MATIERES_LIT = ["Français","Anglais","Histoire-Géographie","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","LV2","Étude de texte","Expression orale","Correction orthographique","Éducation à la citoyenneté et à la morale","Travail manuel et économie sociale et familiale"];
+  const MATIERES_SPORT = ["EPS","Éducation Physique et Sportive"];
 
-  const sciL=lignes.filter(l=>inG(l.matiere,SCI));
-  const litL=lignes.filter(l=>inG(l.matiere,LIT));
-  const autL=lignes.filter(l=>!inG(l.matiere,SCI)&&!inG(l.matiere,LIT));
+  // Toutes les matières dans l'ordre de la DB
+  const toutesMatieres = lignes.map(l=>l.matiere);
+
+  const sciL = lignes.filter(l=>MATIERES_SCI.some(m=>l.matiere===m||l.matiere.toLowerCase().includes(m.toLowerCase())));
+  const litL = lignes.filter(l=>!sciL.includes(l)&&MATIERES_LIT.some(m=>l.matiere===m||l.matiere.toLowerCase().includes(m.toLowerCase())));
+  const autL = lignes.filter(l=>!sciL.includes(l)&&!litL.includes(l));
 
   const noteCol=(n)=>n===null?"":n>=14?"note-good":n>=10?"note-med":"note-low";
   const appTxt=(n)=>n===null?"—":n>=16?"Très Bien":n>=14?"Bien":n>=12?"Assez Bien":n>=10?"Passable":n>=8?"Insuffisant":"Faible";
