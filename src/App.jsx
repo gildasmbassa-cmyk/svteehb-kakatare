@@ -5483,18 +5483,42 @@ function genCompilation(data, trim = "ANN") {
 // ═══════════════════════════════════════════════════
 // printGuard: déclaré globalement
 function imprimerHTML(html) {
+  // Sur mobile : ouvrir dans un nouvel onglet (window.print() dans iframe ne fonctionne pas)
+  // Sur desktop : comportement normal via blob URL
+  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobileDevice) {
+    // Ouvrir dans un nouvel onglet — l'utilisateur peut sauvegarder en PDF
+    const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    return;
+  }
+  // Desktop : impression via iframe
   if (printGuard) return;
   printGuard = true;
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
   const iframe = document.createElement("iframe");
   iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;";
+  iframe.src = url;
   document.body.appendChild(iframe);
-  const doc = iframe.contentDocument || iframe.contentWindow.document;
-  doc.open(); doc.write(html); doc.close();
-  setTimeout(() => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-    setTimeout(() => { document.body.removeChild(iframe); printGuard = false; }, 2000);
-  }, 400);
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch(e) {}
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      URL.revokeObjectURL(url);
+      printGuard = false;
+    }, 3000);
+  };
 }
 
 // ═══════════════════════════════════════════════════
