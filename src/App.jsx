@@ -7765,7 +7765,11 @@ function genBulletin(opts) {
   }
 
   // Groupes matières — listes exactes basées sur la DB coefficients
-  const MATIERES_SCI = ["Mathématiques","PCT","SVT","Informatique","SVTEEHB","Physique-Chimie-Tech.","Sciences Physiques","Biologie","Chimie","Physique"];
+  // Nomenclature officielle Lycée de Kakatare :
+  // 6ème/5ème + 2nde/1ère/Tle séries littéraires → "Sciences"
+  // 4ème/3ème → "SVT"
+  // 2nde/1ère/Tle séries scientifiques (C/D/Ti) → "SVTEEHB"
+  const MATIERES_SCI = ["Mathématiques","PCT","SVT","SVTEEHB","Sciences","Informatique","Physique-Chimie-Tech.","Biologie","Chimie","Physique"];
   const MATIERES_LIT = ["Français","Anglais","Histoire-Géographie","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","LV2","Étude de texte","Expression orale","Correction orthographique","Éducation à la citoyenneté et à la morale","Travail manuel et économie sociale et familiale"];
   const MATIERES_SPORT = ["EPS","Éducation Physique et Sportive"];
 
