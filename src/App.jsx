@@ -1349,8 +1349,8 @@ function ElevesPage() {
   const [confirmRetrait, setConfirmRetrait] = useState(null);
   const [toast, setToast]           = useState(null);
   const [profilModal, setProfilModal] = useState(null);
-  const {user} = useApp();
-  const isProviseur = user?.role === "proviseur";
+  const {user: userCtx} = useApp();
+  const isProviseur = userCtx?.role === "proviseur";
 
   function showToast(msg, ok=true) {
     setToast({msg,ok});
@@ -1421,6 +1421,17 @@ function ElevesPage() {
 
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,overflow:"hidden"}}>
+
+      {/* Modal profil élève — Proviseur uniquement */}
+      {profilModal && isProviseur && (
+        <ProfilEleveModal eleve={profilModal} classe={selClasse}
+          onClose={()=>setProfilModal(null)}
+          onSaved={(updated)=>{
+            const liste=(localDB[selClasse]||[]).map(e=>e.id===updated.id?{...e,...updated}:e);
+            setLocalDB(p=>({...p,[selClasse]:liste}));
+            ELEVES_DB[selClasse]=liste;
+          }}/>
+      )}
 
       {/* ── Barre d'onglets + KPIs (remplace l'ancien header propre) ── */}
       <div style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:"8px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
