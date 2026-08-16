@@ -810,6 +810,9 @@ function MesClassesPage() {
   // Notes
   const [selTrim,   setSelTrim]   = useState("T1");
   const [selEval,   setSelEval]   = useState("E1");
+  const [selMatiere, setSelMatiere] = useState("");
+  // Correspondance Trimestre+Eval → Séquence (format bulletin)
+  const TRIM_EVAL_TO_SEQ = {"T1-E1":1,"T1-E2":2,"T2-E1":3,"T2-E2":4,"T3-E1":5,"T3-E2":6};
   const [savingNote, setSavingNote] = useState({}); // {eleveId: 'pending'|'saved'|'error'}
   const syncTimer = useRef({});
   const [ficheEleveSG, setFicheEleveSG] = useState(null);
@@ -845,7 +848,9 @@ function MesClassesPage() {
   };
 
   // ── Notes ────────────────────────────────────────────────────
-  const evalCode = `${selTrim}-${selEval}`;
+  // evalCode : format bulletin "matiere-Sn" pour alignement avec genBulletin
+  const seqNum = {"T1-E1":1,"T1-E2":2,"T2-E1":3,"T2-E2":4,"T3-E1":5,"T3-E2":6}[`${selTrim}-${selEval}`]||1;
+  const evalCode = selMatiere ? `${selMatiere}-S${seqNum}` : `${selTrim}-${selEval}`;
   const notesEval = selClasse ? (data?.notes?.[`${selClasse}||${evalCode}`]||{}) : {};
 
   const saveNote = (eleveId, valeur) => {
@@ -1049,6 +1054,24 @@ function MesClassesPage() {
               ))}
             </div>
           </div>
+
+          {/* Sélecteur matière */}
+          {selClasse && (()=>{
+            const matieres = getCoefsForClasse(selClasse).map(c=>c.matiere);
+            return matieres.length>0 ? (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",flexShrink:0}}>
+                {matieres.map(m=>(
+                  <button key={m} onClick={()=>setSelMatiere(m)}
+                    style={{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,
+                      fontFamily:"inherit",cursor:"pointer",border:`1.5px solid ${selMatiere===m?"#7c3aed":"#cbd5e1"}`,
+                      background:selMatiere===m?"#f5f3ff":"#f8fafc",
+                      color:selMatiere===m?"#7c3aed":"#475569"}}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            ) : null;
+          })()}
 
           {/* Liste notes */}
           <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0}}>
