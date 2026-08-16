@@ -8101,7 +8101,7 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
     setSaving(true);
     const res = await sb.rpc("update_eleve_profil", {
       p_token: window.__svtSessionToken,
-      p_eleve_id: eleve.id,
+      p_eleve_id: String(eleve.id),
       p_nom: form.nom.trim().toUpperCase(),
       p_prenom: form.prenom.trim(),
       p_sexe: form.sexe,
@@ -8110,7 +8110,8 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
       p_numero: form.numero.trim()||null,
       p_classe: form.classe||null,
       p_statut: form.statut||null,
-      p_photo_url: form.photo_url||photoPreview||null
+      p_photo_url: form.photo_url||photoPreview||null,
+      p_nom_original: (eleve.nom||eleve.n||"").toUpperCase()
     });
     setSaving(false);
     if (res?.ok) {
