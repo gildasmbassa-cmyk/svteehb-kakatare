@@ -96,7 +96,7 @@ const sb = {
         "admin_delete_all_epreuves","admin_delete_edt_slots_by_teacher","admin_delete_epreuves_by_teacher",
         "admin_delete_prog_by_classe","admin_delete_prog_by_teacher","admin_delete_teacher",
         "admin_set_edt_slots","admin_set_password","admin_upsert_teacher",
-        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection","submit_babillard","delete_babillard","update_eleve_profil","submit_conduite",
+        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection","submit_babillard","delete_babillard","update_eleve_profil","submit_conduite","submit_conseil_classe","submit_decision_eleve",
       ];
       const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
@@ -6573,6 +6573,7 @@ const NAV_PROVISEUR_GROUPS = [
     {id:"edt",      emoji:"📅", label:"Emploi du temps"},
     {id:"epreuves", emoji:"📋", label:"Épreuves & Évaluations"},
     {id:"bulletins",emoji:"📒", label:"Bulletins de notes"},
+    {id:"conseil-classe",emoji:"🏛️", label:"Conseil de classe"},
     {id:"programme",emoji:"📊", label:"Suivi programme"},
   ]},
   { section:"CYCLE ANNUEL", items:[
@@ -8459,6 +8460,388 @@ function ConduiteClassePage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// CONSEIL DE CLASSE — Module Proviseur / Censeur
+// ════════════════════════════════════════════════════════════════
+function ConseilClassePage() {
+  const {user, data} = useApp();
+  const {isMobile} = useDevice();
+
+  const allClasses = useMemo(()=>{
+    const set=new Set();
+    Object.values(data?.users||{}).forEach(u=>(u.classes||[]).forEach(c=>set.add(c)));
+    return [...set].sort();
+  },[data]);
+
+  const [selClasse, setSelClasse] = useState(allClasses[0]||"");
+  const [selSeq, setSelSeq] = useState(1);
+  const [conseil, setConseil] = useState(null); // conseil_classe record
+  const [decisions, setDecisions] = useState({}); // {eleve_id: decision record}
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [dateConseil, setDateConseil] = useState(new Date().toISOString().split("T")[0]);
+  const [appreciationGen, setAppreciationGen] = useState("");
+
+  const showToast=(msg,ok=true)=>{setToast({msg,ok});setTimeout(()=>setToast(null),3000);};
+
+  const elevesClasse = useMemo(()=>
+    (ELEVES_DB[selClasse]||[]).map(e=>({id:e.id, nom:e.nom||e.n||"", sexe:e.sexe||e.g||"M"}))
+  ,[selClasse]);
+
+  // Calculer moyennes depuis notes
+  const moyennes = useMemo(()=>{
+    const coefs = getCoefsForClasse(selClasse);
+    return elevesClasse.map(e=>{
+      let tp=0,tc=0;
+      coefs.forEach(({matiere,coef})=>{
+        const k=`${selClasse}||${matiere}-S${selSeq}`;
+        const n=(data?.notes?.[k]||{})[e.id];
+        if(n!==undefined&&n!==null&&n!==""){tp+=+n*coef;tc+=coef;}
+      });
+      const moy=tc>0?Math.round(tp/tc*100)/100:null;
+      return {...e,moy};
+    }).sort((a,b)=>(b.moy??-1)-(a.moy??-1));
+  },[selClasse,selSeq,data,elevesClasse]);
+
+  const rangs = useMemo(()=>{
+    const r={};
+    moyennes.filter(e=>e.moy!==null).forEach((e,i)=>{r[e.id]=i+1;});
+    return r;
+  },[moyennes]);
+
+  // Charger conseil existant
+  const loadConseil = async () => {
+    setLoading(true);
+    const rows = await sb.get("conseil_classe",
+      `?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`);
+    const c = (rows||[])[0]||null;
+    setConseil(c);
+    if(c?.appreciation_generale) setAppreciationGen(c.appreciation_generale);
+    if(c?.date_conseil) setDateConseil(c.date_conseil);
+    if(c?.id){
+      const decs = await sb.get("conseil_decisions",`?conseil_id=eq.${c.id}`);
+      const map={};
+      (decs||[]).forEach(d=>{map[d.eleve_id]={appreciation:d.appreciation||"",decision:d.decision||"",observations:d.observations||""};});
+      setDecisions(map);
+    } else {
+      setDecisions({});
+    }
+    setLoading(false);
+  };
+
+  useEffect(()=>{loadConseil();},[selClasse,selSeq]);
+
+  const getD=(eleveId,field,def="")=>decisions[eleveId]?.[field]??def;
+  const setD=(eleveId,field,val)=>setDecisions(p=>({...p,[eleveId]:{...(p[eleveId]||{}),[field]:val}}));
+
+  // Sauvegarder le conseil + toutes les décisions
+  const handleSave = async (statut="brouillon") => {
+    setSaving(true);
+    // 1. Sauvegarder le conseil
+    const res = await sb.rpc("submit_conseil_classe",{
+      p_token:window.__svtSessionToken,
+      p_classe:selClasse, p_sequence:selSeq,
+      p_date_conseil:dateConseil||null,
+      p_appreciation_generale:appreciationGen||null,
+      p_statut:statut
+    });
+    if(!res?.ok){setSaving(false);showToast("Erreur: "+(res?.error||"inconnue"),false);return;}
+    const conseilId = res.id || (await sb.get("conseil_classe",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`))?.[0]?.id;
+    if(!conseilId){setSaving(false);showToast("Erreur: conseil introuvable",false);return;}
+
+    // 2. Sauvegarder les décisions
+    const saves = moyennes.map(e=>{
+      const d=decisions[e.id]||{};
+      if(!d.decision&&!d.appreciation&&!d.observations) return Promise.resolve();
+      return sb.rpc("submit_decision_eleve",{
+        p_token:window.__svtSessionToken,
+        p_conseil_id:conseilId, p_eleve_id:e.id, p_classe:selClasse,
+        p_moyenne:e.moy, p_rang:rangs[e.id]||null,
+        p_appreciation:d.appreciation||null,
+        p_decision:d.decision||"",
+        p_mention:e.moy!==null?(e.moy>=16?"Bien":e.moy>=14?"Assez Bien":e.moy>=10?"Passable":"Insuffisant"):null,
+        p_observations:d.observations||null
+      });
+    });
+    await Promise.all(saves);
+    setSaving(false);
+    showToast(statut==="valide"?"✓ Conseil validé":"✓ Brouillon sauvegardé");
+    await loadConseil();
+  };
+
+  // Génération PV
+  const handlePV = () => {
+    const seq=selSeq; const trim=seq<=2?1:seq<=4?2:3;
+    const now=new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+    const rows = moyennes.map(e=>{
+      const d=decisions[e.id]||{};
+      const dec=d.decision||"—";
+      const moy=e.moy!==null?e.moy.toFixed(2):"—";
+      const decCol=dec==="Passage"?"#16a34a":dec==="Redoublement"?"#dc2626":dec==="Félicitations"?"#2563eb":"#d97706";
+      return `<tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:5px 8px;font-weight:600;">${e.nom}</td>
+        <td style="text-align:center;padding:5px 8px;font-weight:700;color:${e.moy!==null&&e.moy>=10?"#16a34a":"#dc2626"}">${moy}</td>
+        <td style="text-align:center;padding:5px 8px;">${rangs[e.id]||"—"}</td>
+        <td style="padding:5px 8px;font-size:10px;font-style:italic;">${d.appreciation||"—"}</td>
+        <td style="text-align:center;padding:5px 8px;font-weight:700;color:${decCol};">${dec}</td>
+      </tr>`;
+    }).join("");
+
+    const passed = moyennes.filter(e=>(decisions[e.id]?.decision||"").includes("Passage")).length;
+    const redoub = moyennes.filter(e=>decisions[e.id]?.decision==="Redoublement").length;
+
+    const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:11px;color:#1f2937;padding:15mm;}
+.header{text-align:center;border-bottom:3px solid #0B4D2C;padding-bottom:10px;margin-bottom:14px;}
+.title{font-size:16px;font-weight:900;color:#0B4D2C;text-transform:uppercase;letter-spacing:1px;}
+.subtitle{font-size:12px;color:#374151;margin-top:4px;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.info-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;}
+.info-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;}
+.info-val{font-size:13px;font-weight:700;color:#0B4D2C;margin-top:2px;}
+table{width:100%;border-collapse:collapse;margin-bottom:14px;}
+th{background:#0B4D2C;color:#fff;padding:6px 8px;font-size:10px;font-weight:700;text-align:center;}
+th:first-child{text-align:left;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.stat-box{text-align:center;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px;}
+.stat-num{font-size:20px;font-weight:900;color:#0B4D2C;}
+.stat-lbl{font-size:9px;color:#6b7280;text-transform:uppercase;}
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px;}
+.sig-box{text-align:center;border-top:1px solid #d1d5db;padding-top:8px;font-size:10px;}
+@media print{@page{margin:12mm;size:A4;}}
+</style>
+<script>window.onload=()=>window.print();</script>
+</head><body>
+<div class="header">
+  <div style="font-size:10px;color:#6b7280;margin-bottom:4px;">LYCÉE DE KAKATARE-MAROUA — Année scolaire 2025-2026</div>
+  <div class="title">Procès-Verbal du Conseil de Classe</div>
+  <div class="subtitle">Séquence ${seq} — Trimestre ${trim} · ${selClasse}</div>
+  <div style="font-size:10px;color:#6b7280;margin-top:4px;">Tenu le ${dateConseil?new Date(dateConseil).toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}):now}</div>
+</div>
+
+<div class="info-grid">
+  <div class="info-box"><div class="info-label">Classe</div><div class="info-val">${selClasse}</div></div>
+  <div class="info-box"><div class="info-label">Effectif</div><div class="info-val">${elevesClasse.length} élèves</div></div>
+  <div class="info-box"><div class="info-label">Président</div><div class="info-val">Le Proviseur</div></div>
+  <div class="info-box"><div class="info-label">Date</div><div class="info-val">${dateConseil||"—"}</div></div>
+</div>
+
+<div class="stats">
+  <div class="stat-box"><div class="stat-num">${elevesClasse.length}</div><div class="stat-lbl">Effectif</div></div>
+  <div class="stat-box"><div class="stat-num">${moyennes.filter(e=>e.moy!==null&&e.moy>=10).length}</div><div class="stat-lbl">≥ 10/20</div></div>
+  <div class="stat-box"><div class="stat-num" style="color:#16a34a">${passed}</div><div class="stat-lbl">Admis</div></div>
+  <div class="stat-box"><div class="stat-num" style="color:#dc2626">${redoub}</div><div class="stat-lbl">Redoublants</div></div>
+</div>
+
+<table>
+  <thead><tr>
+    <th style="width:30%;text-align:left;">Élève</th>
+    <th>Moyenne</th><th>Rang</th>
+    <th style="width:28%;">Appréciation</th>
+    <th>Décision</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:700;color:#0B4D2C;margin-bottom:4px;">APPRÉCIATION GÉNÉRALE DU CONSEIL</div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:10px;font-size:11px;font-style:italic;">${appreciationGen}</div></div>`:""}
+
+<div class="sig-grid">
+  <div class="sig-box"><div style="height:40px;"></div>Le Proviseur</div>
+  <div class="sig-box"><div style="height:40px;"></div>Le Censeur</div>
+</div>
+</body></html>`;
+    setPreviewHtml(stripAutoPrint(html));
+  };
+
+  const DECISIONS=["","Passage","Redoublement","Passage conditionnel","Félicitations",
+    "Encouragements","Tableau d'honneur","Avertissement travail","Avertissement conduite"];
+  const DEC_COLORS={"Passage":"#16a34a","Félicitations":"#2563eb","Encouragements":"#7c3aed",
+    "Tableau d'honneur":"#d97706","Redoublement":"#dc2626","Passage conditionnel":"#d97706",
+    "Avertissement travail":"#dc2626","Avertissement conduite":"#dc2626"};
+
+  const isValide = conseil?.statut==="valide";
+  const inp={border:"1.5px solid #e5e7eb",borderRadius:6,padding:"4px 6px",fontSize:11,
+    fontFamily:"inherit",outline:"none",width:"100%"};
+
+  return (
+    <div style={{padding:isMobile?"10px":"20px",maxWidth:1200,margin:"0 auto"}}>
+      {/* En-tête */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🏛️ Conseil de Classe</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>
+            {conseil?.statut==="valide"?
+              <span style={{color:"#16a34a",fontWeight:700}}>✓ Validé</span>:
+              <span style={{color:"#d97706"}}>Brouillon</span>}
+          </div>
+        </div>
+        {toast&&<div style={{padding:"8px 14px",borderRadius:8,fontSize:12,fontWeight:700,
+          background:toast.ok?"#f0fdf4":"#fef2f2",color:toast.ok?"#16a34a":"#dc2626",
+          border:`1px solid ${toast.ok?"#bbf7d0":"#fecaca"}`}}>{toast.msg}</div>}
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={handlePV}
+            style={{padding:"8px 16px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",
+              color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            📄 PV
+          </button>
+          {!isValide&&<button onClick={()=>handleSave("brouillon")} disabled={saving}
+            style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#e5e7eb",
+              color:"#374151",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:saving?.6:1}}>
+            {saving?"...":"💾 Sauvegarder"}
+          </button>}
+          {!isValide&&<button onClick={()=>window.confirm("Valider définitivement ce conseil ?")&&handleSave("valide")}
+            style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#0B4D2C",
+              color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            ✓ Valider
+          </button>}
+        </div>
+      </div>
+
+      {/* Filtres */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Classe</div>
+          <select value={selClasse} onChange={e=>{setSelClasse(e.target.value);}}
+            style={{...inp,padding:"8px 12px",fontSize:13}}>
+            {allClasses.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Séquence</div>
+          <select value={selSeq} onChange={e=>setSelSeq(+e.target.value)}
+            style={{...inp,padding:"8px 12px",fontSize:13}}>
+            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>S{s} — Trimestre {s<=2?1:s<=4?2:3}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Date du conseil</div>
+          <input type="date" value={dateConseil} onChange={e=>setDateConseil(e.target.value)}
+            disabled={isValide} style={{...inp,padding:"8px 12px",fontSize:13}}/>
+        </div>
+      </div>
+
+      {/* Appréciation générale */}
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>
+          Appréciation générale du conseil
+        </div>
+        <textarea value={appreciationGen} onChange={e=>setAppreciationGen(e.target.value)}
+          disabled={isValide} rows={2}
+          style={{...inp,padding:"8px 12px",fontSize:13,resize:"vertical",width:"100%"}}
+          placeholder="Observations générales sur la classe..."/>
+      </div>
+
+      {/* Statistiques rapides */}
+      {!loading&&elevesClasse.length>0&&(()=>{
+        const avecMoy=moyennes.filter(e=>e.moy!==null);
+        const moy10=avecMoy.filter(e=>e.moy>=10).length;
+        const passed=moyennes.filter(e=>(decisions[e.id]?.decision||"").includes("Passage")).length;
+        const redoub=moyennes.filter(e=>decisions[e.id]?.decision==="Redoublement").length;
+        const moyClass=avecMoy.length?Math.round(avecMoy.reduce((a,e)=>a+e.moy,0)/avecMoy.length*100)/100:null;
+        return (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:14}}>
+            {[
+              {n:elevesClasse.length,l:"Effectif",c:"#0B4D2C"},
+              {n:moyClass!==null?moyClass.toFixed(2):"-",l:"Moy. classe",c:"#2563eb"},
+              {n:moy10,l:"≥ 10/20",c:"#16a34a"},
+              {n:passed,l:"Admis",c:"#16a34a"},
+              {n:redoub,l:"Redoublants",c:"#dc2626"},
+            ].map(({n,l,c})=>(
+              <div key={l} style={{textAlign:"center",background:"#f8fafc",border:"1px solid #e5e7eb",
+                borderRadius:8,padding:"10px 6px"}}>
+                <div style={{fontSize:20,fontWeight:900,color:c}}>{n}</div>
+                <div style={{fontSize:9,color:"#6b7280",textTransform:"uppercase",marginTop:2}}>{l}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* Tableau des élèves */}
+      {loading?<div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargement…</div>:(
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <thead>
+              <tr style={{background:"#0B4D2C",color:"#fff"}}>
+                <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Rang</th>
+                <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Élève</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Moy.</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:160}}>Appréciation</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:150}}>Décision</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>Observations</th>
+              </tr>
+            </thead>
+            <tbody>
+              {moyennes.map((e,i)=>{
+                const moy=e.moy;
+                const rang=rangs[e.id]||"—";
+                const moyCol=moy===null?"#9ca3af":moy>=10?"#16a34a":"#dc2626";
+                const dec=getD(e.id,"decision","");
+                const decCol=DEC_COLORS[dec]||"#374151";
+                return (
+                  <tr key={e.id} style={{background:i%2===0?"#fff":"#f9fafb",borderBottom:"1px solid #f0f0f0"}}>
+                    <td style={{padding:"6px 10px",textAlign:"center",fontWeight:700,color:"#6b7280"}}>
+                      {moy!==null?rang:"—"}
+                    </td>
+                    <td style={{padding:"6px 10px",fontWeight:600}}>{e.nom}</td>
+                    <td style={{padding:"6px 6px",textAlign:"center",fontWeight:900,fontSize:13,color:moyCol}}>
+                      {moy!==null?moy.toFixed(2):"—"}
+                    </td>
+                    <td style={{padding:"4px 6px"}}>
+                      <input value={getD(e.id,"appreciation","")} disabled={isValide}
+                        onChange={ev=>setD(e.id,"appreciation",ev.target.value)}
+                        style={{...inp,fontSize:11}} placeholder="Appréciation…"/>
+                    </td>
+                    <td style={{padding:"4px 6px"}}>
+                      <select value={dec} disabled={isValide}
+                        onChange={ev=>setD(e.id,"decision",ev.target.value)}
+                        style={{...inp,color:decCol,fontWeight:dec?700:400}}>
+                        {DECISIONS.map(d=><option key={d} value={d}
+                          style={{color:DEC_COLORS[d]||"#374151"}}>
+                          {d||"— Décision —"}
+                        </option>)}
+                      </select>
+                    </td>
+                    <td style={{padding:"4px 6px"}}>
+                      <input value={getD(e.id,"observations","")} disabled={isValide}
+                        onChange={ev=>setD(e.id,"observations",ev.target.value)}
+                        style={{...inp,fontSize:11}} placeholder="Obs."/>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Aperçu PV */}
+      {previewHtml&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
+          <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
+            <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📄 PV — {selClasse} · S{selSeq}</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>imprimerHTML(previewHtml)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Imprimer</button>
+                <button onClick={()=>setPreviewHtml(null)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Fermer</button>
+              </div>
+            </div>
+            <div style={{flex:1,overflow:"hidden",background:"#e5e7eb",padding:12}}>
+              <iframe srcDoc={previewHtml} title="pv-conseil" style={{width:"100%",height:"100%",border:"none",borderRadius:8,background:"#fff"}}/>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -12385,6 +12768,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
+    if(page==="conseil-classe")      return <W><ConseilClassePage/></W>
     if(page==="babillard")          return <W><BabillardPage/></W>
     if(page==="conduite")           return <W><ConduiteClassePage/></W>
     if(page==="bulletins")          return <W><BulletinsPage/></W>
