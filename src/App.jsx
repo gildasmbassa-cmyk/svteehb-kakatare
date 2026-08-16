@@ -797,8 +797,7 @@ function MesClassesPage() {
   const mesClasses = useMemo(()=>(user?.classes||[]).filter(Boolean), [user]);
   const [selClasse, setSelClasse] = useState(()=> (user?.classes||[]).filter(Boolean)[0] || null);
   const [search,    setSearch]    = useState("");
-  const [filtreG,   setFiltreG]   = useState("all"); // all|M|F
-  const [onglet,    setOnglet]    = useState("liste"); // liste | notes
+  const [filtreG,   setFiltreG]   = useState("all"); // all|M|F  const [onglet,    setOnglet]    = useState("liste"); // liste | notes
   const [showAddEleve, setShowAddEleve] = useState(false);
   const [newEleveNom,  setNewEleveNom]  = useState("");
   const [newEleveGenre,setNewEleveGenre]= useState("M");
@@ -1311,9 +1310,6 @@ function CahierDeTextePage() {
         })}
       </div>
     </div>
-      {ficheEleveSG&&user?.role==="surveillant_general"&&(
-        <FicheEleveSG eleve={ficheEleveSG} data={data} onClose={()=>setFicheEleveSG(null)}/>
-      )}
     </div>
   );
 }
