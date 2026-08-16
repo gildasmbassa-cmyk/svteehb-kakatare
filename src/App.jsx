@@ -1055,26 +1055,33 @@ function MesClassesPage() {
             </div>
           </div>
 
-          {/* Sélecteur matière */}
+          {/* Sélecteur matière — menu déroulant */}
           {selClasse && (()=>{
             const matieres = getCoefsForClasse(selClasse).map(c=>c.matiere);
             return matieres.length>0 ? (
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",flexShrink:0}}>
-                {matieres.map(m=>(
-                  <button key={m} onClick={()=>setSelMatiere(m)}
-                    style={{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,
-                      fontFamily:"inherit",cursor:"pointer",border:`1.5px solid ${selMatiere===m?"#7c3aed":"#cbd5e1"}`,
-                      background:selMatiere===m?"#f5f3ff":"#f8fafc",
-                      color:selMatiere===m?"#7c3aed":"#475569"}}>
-                    {m}
-                  </button>
-                ))}
+              <div style={{flexShrink:0}}>
+                <select value={selMatiere} onChange={e=>setSelMatiere(e.target.value)}
+                  style={{width:"100%",border:`1.5px solid ${selMatiere?"#7c3aed":"#e5e7eb"}`,
+                    borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"inherit",
+                    outline:"none",background:selMatiere?"#f5f3ff":"#fff",
+                    color:selMatiere?"#7c3aed":"#6b7280",fontWeight:selMatiere?700:400}}>
+                  <option value="">— Choisir une matière —</option>
+                  {matieres.map(m=><option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
             ) : null;
           })()}
 
+          {/* Message si matière non sélectionnée */}
+          {!selMatiere && (
+            <div style={{background:"#fef9c3",border:"1.5px solid #fbbf24",borderRadius:8,padding:"10px 14px",
+              fontSize:12,fontWeight:700,color:"#b45309",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+              ⚠️ Sélectionnez une matière ci-dessus avant de saisir les notes
+            </div>
+          )}
+
           {/* Liste notes */}
-          <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0}}>
+          <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0, opacity:selMatiere?1:0.4, pointerEvents:selMatiere?"auto":"none"}}>
             {eleves.length===0 ? (
               <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun élève dans cette classe</div>
             ) : eleves.map((e,i)=>{
