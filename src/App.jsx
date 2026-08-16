@@ -96,7 +96,7 @@ const sb = {
         "admin_delete_all_epreuves","admin_delete_edt_slots_by_teacher","admin_delete_epreuves_by_teacher",
         "admin_delete_prog_by_classe","admin_delete_prog_by_teacher","admin_delete_teacher",
         "admin_set_edt_slots","admin_set_password","admin_upsert_teacher",
-        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection","submit_babillard","delete_babillard","update_eleve_profil",
+        "submit_absence","submit_note","submit_prog","submit_epreuve","submit_eleves_import","submit_vie_scolaire","submit_fiche_inspection","submit_babillard","delete_babillard","update_eleve_profil","submit_conduite",
       ];
       const body = PROTECTED_RPCS.includes(fn) ? {...params, p_token: window.__svtSessionToken||null} : params;
       const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
@@ -6567,6 +6567,7 @@ const NAV_CENSEUR_GROUPS = [
     {id:"programme",emoji:"📊", label:"Suivi programme"},
   ]},
   { section:"DISCIPLINE & VIE SCOLAIRE", items:[
+    {id:"conduite",  emoji:"🛡️", label:"Conduite & Discipline"},
     {id:"sanctions",emoji:"⚠️", label:"Sanctions"},
     {id:"rapports", emoji:"📊", label:"Rapports disciplinaires"},
   ]},
@@ -6587,7 +6588,7 @@ const NAV_ANIMATEUR_GROUPS = [
     {id:"edt-teacher",emoji:"📅",label:"Mon emploi du temps"},
   ]},
 ];
-const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"}];
+const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"},{id:"conduite",emoji:"🛡️",label:"Conduite & Discipline"}];
 
 const PAGE_TITLES = {
   departements:"Départements",
@@ -8234,6 +8235,209 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
   );
 }
 
+// ════════════════════════════════════════════════════════════════
+// CONDUITE & DISCIPLINE — Saisie par SG / Censeur
+// ════════════════════════════════════════════════════════════════
+function ConduiteClassePage() {
+  const {user, data} = useApp();
+  const {isMobile} = useDevice();
+  const isSG = (user?.role||"").startsWith("sg_");
+  const isCenseur = (user?.role||"").startsWith("censeur");
+  const isProviseur = user?.role === "proviseur";
+
+  // Classes accessibles selon rôle
+  const sgClasses = isSG ? (user?.classes||[]) : null;
+  const allClasses = Object.keys(ELEVES_DB).sort();
+  const classes = sgClasses || allClasses;
+
+  const [selClasse, setSelClasse] = useState(classes[0]||"");
+  const [selSeq, setSelSeq] = useState(1);
+  const [conduites, setConduites] = useState({}); // {eleve_id: {note_conduite,retards,...}}
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(null); // eleve_id en cours
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),2800); };
+
+  const elevesClasse = (ELEVES_DB[selClasse]||[]);
+
+  // Charger les conduites existantes
+  useEffect(()=>{
+    if(!selClasse) return;
+    setLoading(true);
+    sb.get("conduite_eleve",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`)
+      .then(rows=>{
+        const map={};
+        (rows||[]).forEach(r=>{ map[r.eleve_id]={
+          note_conduite:r.note_conduite||"", retards:r.retards||0,
+          exclusions_heures:r.exclusions_heures||0, exclusions_jours:r.exclusions_jours||0,
+          consignes_heures:r.consignes_heures||0, consignes_jours:r.consignes_jours||0,
+          blame_travail:r.blame_travail||"Aucun", blame_conduite:r.blame_conduite||"Aucun"
+        };});
+        setConduites(map);
+        setLoading(false);
+      }).catch(()=>setLoading(false));
+  },[selClasse, selSeq]);
+
+  const getVal = (eleveId, field, def="") => conduites[eleveId]?.[field] ?? def;
+  const setVal = (eleveId, field, val) => {
+    setConduites(p=>({...p,[eleveId]:{...(p[eleveId]||{}), [field]:val}}));
+  };
+
+  const handleSave = async (eleve) => {
+    setSaving(eleve.id);
+    const c = conduites[eleve.id]||{};
+    const res = await sb.rpc("submit_conduite",{
+      p_token: window.__svtSessionToken,
+      p_eleve_id: String(eleve.id),
+      p_classe: selClasse,
+      p_sequence: selSeq,
+      p_annee_scolaire: "2025-2026",
+      p_note_conduite: c.note_conduite!==""?+c.note_conduite:null,
+      p_retards: +c.retards||0,
+      p_exclusions_heures: +c.exclusions_heures||0,
+      p_exclusions_jours: +c.exclusions_jours||0,
+      p_consignes_heures: +c.consignes_heures||0,
+      p_consignes_jours: +c.consignes_jours||0,
+      p_blame_travail: c.blame_travail||"Aucun",
+      p_blame_conduite: c.blame_conduite||"Aucun"
+    });
+    setSaving(null);
+    if(res?.ok) showToast(`✓ ${eleve.nom} — conduite S${selSeq} enregistrée`);
+    else showToast("Erreur: "+(res?.error||"inconnue"), false);
+  };
+
+  const inp = (w="60px")=>({width:w,border:"1.5px solid #e5e7eb",borderRadius:6,padding:"4px 6px",
+    fontSize:12,fontFamily:"inherit",textAlign:"center",outline:"none"});
+  const BLAMES = ["Aucun","Avertissement","Blâme simple","Blâme avec mise en garde","Exclusion temporaire"];
+
+  return (
+    <div style={{padding:isMobile?"10px":"20px",maxWidth:1100,margin:"0 auto"}}>
+      {/* En-tête */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🛡️ Conduite & Discipline</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Saisie par séquence</div>
+        </div>
+        {toast && (
+          <div style={{padding:"8px 14px",borderRadius:8,fontSize:12,fontWeight:700,
+            background:toast.ok?"#f0fdf4":"#fef2f2",color:toast.ok?"#16a34a":"#dc2626",
+            border:`1px solid ${toast.ok?"#bbf7d0":"#fecaca"}`}}>{toast.msg}</div>
+        )}
+      </div>
+
+      {/* Filtres */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:16}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Classe</div>
+          <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
+            style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+            {classes.map(c=><option key={c} value={c}>{c} ({(ELEVES_DB[c]||[]).length} élèves)</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Séquence</div>
+          <select value={selSeq} onChange={e=>setSelSeq(+e.target.value)}
+            style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>S{s} — Trimestre {s<=2?1:s<=4?2:3}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Tableau */}
+      {loading ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargement…</div> :
+      elevesClasse.length===0 ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Aucun élève dans cette classe</div> : (
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <thead>
+              <tr style={{background:"#0B4D2C",color:"#fff"}}>
+                <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Élève</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Note /20</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Retards</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Excl. h</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Excl. j</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Cons. h</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Cons. j</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>Blâme travail</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>Blâme conduite</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {elevesClasse.map((e,i)=>{
+                const isSav = saving===e.id;
+                const note = getVal(e.id,"note_conduite","");
+                const noteNum = note!==""?+note:null;
+                const noteCol = noteNum===null?"#374151":noteNum>=14?"#16a34a":noteNum>=10?"#d97706":"#dc2626";
+                return (
+                  <tr key={e.id} style={{background:i%2===0?"#fff":"#f9fafb",borderBottom:"1px solid #f0f0f0"}}>
+                    <td style={{padding:"8px 10px",fontWeight:600}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{width:22,height:22,borderRadius:"50%",background:"#0B4D2C",color:"#fff",
+                          display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:900,flexShrink:0}}>
+                          {(e.nom||"?")[0]}
+                        </span>
+                        {e.nom}
+                      </div>
+                    </td>
+                    <td style={{padding:"4px 6px",textAlign:"center"}}>
+                      <input type="number" min="0" max="20" step="0.5" value={note}
+                        onChange={ev=>setVal(e.id,"note_conduite",ev.target.value)}
+                        style={{...inp("56px"),color:noteCol,fontWeight:700}}/>
+                    </td>
+                    <td style={{padding:"4px 6px",textAlign:"center"}}>
+                      <input type="number" min="0" value={getVal(e.id,"retards",0)}
+                        onChange={ev=>setVal(e.id,"retards",ev.target.value)} style={inp("44px")}/>
+                    </td>
+                    <td style={{padding:"4px 6px",textAlign:"center"}}>
+                      <input type="number" min="0" value={getVal(e.id,"exclusions_heures",0)}
+                        onChange={ev=>setVal(e.id,"exclusions_heures",ev.target.value)} style={inp("44px")}/>
+                    </td>
+                    <td style={{padding:"4px 6px",textAlign:"center"}}>
+                      <input type="number" min="0" value={getVal(e.id,"exclusions_jours",0)}
+                        onChange={ev=>setVal(e.id,"exclusions_jours",ev.target.value)} style={inp("44px")}/>
+                    </td>
+                    <td style={{padding:"4px 6px",textAlign:"center"}}>
+                      <input type="number" min="0" value={getVal(e.id,"consignes_heures",0)}
+                        onChange={ev=>setVal(e.id,"consignes_heures",ev.target.value)} style={inp("44px")}/>
+                    </td>
+                    <td style={{padding:"4px 6px",textAlign:"center"}}>
+                      <input type="number" min="0" value={getVal(e.id,"consignes_jours",0)}
+                        onChange={ev=>setVal(e.id,"consignes_jours",ev.target.value)} style={inp("44px")}/>
+                    </td>
+                    <td style={{padding:"4px 6px"}}>
+                      <select value={getVal(e.id,"blame_travail","Aucun")}
+                        onChange={ev=>setVal(e.id,"blame_travail",ev.target.value)}
+                        style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:6,padding:"4px 6px",fontSize:11,fontFamily:"inherit",outline:"none"}}>
+                        {BLAMES.map(b=><option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </td>
+                    <td style={{padding:"4px 6px"}}>
+                      <select value={getVal(e.id,"blame_conduite","Aucun")}
+                        onChange={ev=>setVal(e.id,"blame_conduite",ev.target.value)}
+                        style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:6,padding:"4px 6px",fontSize:11,fontFamily:"inherit",outline:"none"}}>
+                        {BLAMES.map(b=><option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </td>
+                    <td style={{padding:"4px 6px",textAlign:"center"}}>
+                      <button onClick={()=>handleSave(e)} disabled={isSav}
+                        style={{padding:"5px 10px",borderRadius:6,border:"none",background:"#0B4D2C",
+                          color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                          opacity:isSav?.6:1,whiteSpace:"nowrap"}}>
+                        {isSav?"…":"💾 Sauv."}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BulletinsPage() {
   const {user,data} = useApp();
   const {isMobile} = useDevice();
@@ -8272,11 +8476,30 @@ function BulletinsPage() {
     return calcRangsClasse(selClasse,selSeq,data.notes||{},elevesClasse);
   },[selClasse,selSeq,data,elevesClasse]);
 
+  const [conduiteIndex, setConduiteIndex] = useState({}); // {eleve_id: conduite}
+
+  // Charger les conduites quand classe/seq change
+  useEffect(()=>{
+    if(!selClasse) return;
+    sb.get("conduite_eleve",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`)
+      .then(rows=>{ const m={}; (rows||[]).forEach(r=>{m[r.eleve_id]=r;}); setConduiteIndex(m); })
+      .catch(()=>{});
+  },[selClasse, selSeq]);
+
   const handlePreview = (eleve) => {
+    const c = conduiteIndex[String(eleve.id)]||{};
     const html = genBulletin({
       eleve, classe:selClasse, sequence:selSeq,
       notesIndex:data?.notes||{}, absencesIndex:data?.absences||{},
-      elevesClasse
+      elevesClasse,
+      conduite: c.note_conduite!=null?+c.note_conduite:null,
+      retards: c.retards||0,
+      exclusionsH: c.exclusions_heures||0,
+      exclusionsJ: c.exclusions_jours||0,
+      consignesH: c.consignes_heures||0,
+      consignesJ: c.consignes_jours||0,
+      blameTravail: c.blame_travail||"Aucun",
+      blameConduite: c.blame_conduite||"Aucun"
     });
     setPreviewHtml(stripAutoPrint(html));
     setSelEleve(eleve);
@@ -8284,11 +8507,18 @@ function BulletinsPage() {
 
   const handlePrintAll = () => {
     if(!filteredEleves.length) return;
-    const htmls = filteredEleves.map(e=>genBulletin({
-      eleve:e, classe:selClasse, sequence:selSeq,
-      notesIndex:data?.notes||{}, absencesIndex:data?.absences||{},
-      elevesClasse
-    })).join('<div style="page-break-after:always;"></div>');
+    const htmls = filteredEleves.map(e=>{
+      const c = conduiteIndex[String(e.id)]||{};
+      return genBulletin({
+        eleve:e, classe:selClasse, sequence:selSeq,
+        notesIndex:data?.notes||{}, absencesIndex:data?.absences||{},
+        elevesClasse,
+        conduite: c.note_conduite!=null?+c.note_conduite:null,
+        retards: c.retards||0,
+        exclusionsH: c.exclusions_heures||0,
+        exclusionsJ: c.exclusions_jours||0,
+      });
+    }).join('<div style="page-break-after:always;"></div>');
     imprimerHTML(htmls);
   };
 
@@ -12129,6 +12359,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
     if(page==="babillard")          return <W><BabillardPage/></W>
+    if(page==="conduite")           return <W><ConduiteClassePage/></W>
     if(page==="bulletins")          return <W><BulletinsPage/></W>
     if(page==="suivi-prog-dept")    return <W><SuiviProgrammePage/></W>
     if(page==="fiche-inspection")   return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<FicheInspectionPage/>:null}</W>
