@@ -6742,11 +6742,428 @@ function DashboardAdmin() {
 // ─── Dashboard Proviseur (vue tous départements) ───────────────────
 
 function DashboardProviseur() {
-  const {rawData:data,refreshData} = useApp();
-  const {isMobile} = useDevice();
+  const {rawData:data, refreshData, setPage} = useApp();
+  const {isMobile, device} = useDevice();
   const [loading,setLoading] = useState(true);
   const [refreshing,setRefreshing] = useState(false);
   const [stats,setStats] = useState({nbEns:0,nbClasses:0,nbEleves:0,tauxMoyen:0,parDept:[],niveaux:[],evolution:[],absencesParDept:[]});
+
+  useEffect(()=>{
+    if(!data)return;
+    const ens=Object.values(data.users||{}).filter(u=>u.role!=="proviseur");
+    const nbEleves=CLASSES_REELLES.reduce((s,c)=>s+c.effectif,0);
+    const deptOf={}; ens.forEach(e=>{deptOf[e.id]=e.departement_id||1;});
+
+    const tauxParEns=ens.map(e=>{
+      let tf=0,tr=0;
+      (e.classes||[]).forEach(cl=>{const k=`${e.id}||${cl}`;const f=((data.prog||{})[k]||[]).length;const code=resolveProgCode(cl);const meta=code?PROG_META[code]:null;if(meta){tf+=f;tr+=meta.lpRef;}});
+      return{id:e.id,departement_id:e.departement_id||1,taux:tr>0?Math.min(100,Math.round(tf/tr*100)):0};
+    });
+
+    const parDept = DEPARTEMENTS_LIST.map(d=>{
+      const teachers = tauxParEns.filter(e=>e.departement_id===d.id);
+      const taux = teachers.length ? Math.round(teachers.reduce((s,e)=>s+e.taux,0)/teachers.length) : null;
+      const nbAlerte = teachers.filter(e=>e.taux<50).length;
+      return {...d, nbEns:teachers.length, taux, nbAlerte};
+    });
+
+    const tauxMoyen = tauxParEns.length ? Math.round(tauxParEns.reduce((s,e)=>s+e.taux,0)/tauxParEns.length) : 0;
+
+    const groupNiveau = n => n && n.startsWith("2nde") ? "2nde" : n && n.startsWith("1ère") ? "1ère" : n && n.startsWith("Terminale") ? "Terminale" : n;
+    const niveauMap = {};
+    CLASSES_REELLES.forEach(c=>{
+      const niv = groupNiveau(getNiveau(c.code)) || "Autre";
+      niveauMap[niv] = (niveauMap[niv]||0) + c.effectif;
+    });
+    const ordreNiveaux = ["6ème","5ème","4ème","3ème","2nde","1ère","Terminale","Autre"];
+    const niveauxColors = {"6ème":C.blue,"5ème":C.teal,"4ème":C.amber,"3ème":C.purple,"2nde":C.orange,"1ère":C.pink,"Terminale":C.green,"Autre":"#94a3b8"};
+    const niveaux = ordreNiveaux.filter(n=>niveauMap[n]).map(n=>({label:n,value:niveauMap[n],color:niveauxColors[n]}));
+
+    const evolution = ["T1","T2","T3","ANN"].map(trim=>{
+      let totalFait=0, totalRef=0;
+      ens.forEach(e=>{
+        (e.classes||[]).forEach(cl=>{
+          const code=resolveProgCode(cl);
+          const meta=code?PROG_META[code]:null;
+          if(!meta) return;
+          const prog=(data.prog||{})[`${e.id}||${cl}`]||[];
+          let lp=meta.lpRef, lf=prog.length;
+          if(trim!=="ANN"){
+            const range=getTrimRange(code,trim);
+            if(range){
+              lp=LECONS_DATA[code]?.filter(l=>l.n>=range[0]&&l.n<=range[1]).length||lp;
+              lf=prog.filter(n=>n>=range[0]&&n<=range[1]).length;
+            }
+          }
+          totalFait+=lf; totalRef+=lp;
+        });
+      });
+      return {label:trim==="ANN"?"Annuel":trim, value: totalRef>0?Math.min(100,Math.round(totalFait/totalRef*100)):null};
+    });
+
+    const absParDept = {};
+    Object.entries(data.absences||{}).forEach(([k,absents])=>{
+      const ensId = k.split("||")[0];
+      const dId = deptOf[ensId]||1;
+      absParDept[dId] = (absParDept[dId]||0) + (absents?absents.length:0);
+    });
+    const absencesParDept = DEPARTEMENTS_LIST
+      .map(d=>({...d, total: absParDept[d.id]||0}))
+      .filter(d=>d.total>0)
+      .sort((a,b)=>b.total-a.total);
+
+    setStats({nbEns:ens.length,nbClasses:CLASSES_REELLES.length,nbEleves,tauxMoyen,parDept,niveaux,evolution,absencesParDept});
+    setLoading(false);
+  },[data]);
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  const tauCol = t => t===null?"#94a3b8":t>=75?"#16a34a":t>=50?"#d97706":"#dc2626";
+  const tauBg  = t => t===null?"#f1f5f9":t>=75?"#f0fdf4":t>=50?"#fffbeb":"#fef2f2";
+  const tauLabel = t => t===null?"—":t>=75?"Correct":t>=50?"Attention":"Critique";
+  const tauDot = t => t===null?"⚪":t>=75?"🟢":t>=50?"🟠":"🔴";
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const dateCapitalized = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
+
+  // Priorités calculées
+  const priorites = !loading ? [
+    ...stats.parDept.filter(d=>d.taux!==null&&d.taux<50&&d.nbEns>0).map(d=>({
+      level:"critique", icon:"🔴",
+      titre:`Couverture critique — ${d.nom}`,
+      detail:`${d.nbEns} enseignant${d.nbEns>1?"s":""} · ${d.taux}% de couverture`,
+      action:()=>setPage("programme")
+    })),
+    ...stats.parDept.filter(d=>d.taux!==null&&d.taux>=50&&d.taux<75&&d.nbEns>0).map(d=>({
+      level:"attention", icon:"🟠",
+      titre:`Couverture à surveiller — ${d.nom}`,
+      detail:`${d.nbEns} enseignant${d.nbEns>1?"s":""} · ${d.taux}% de couverture`,
+      action:()=>setPage("programme")
+    })),
+    ...stats.absencesParDept.slice(0,2).map(d=>({
+      level:"attention", icon:"🟠",
+      titre:`Absences signalées — ${d.nom}`,
+      detail:`${d.total} séance${d.total>1?"s":""} d'absence enregistrée${d.total>1?"s":""}`,
+      action:()=>setPage("eleves")
+    })),
+    ...(stats.tauxMoyen>=75?[{level:"ok",icon:"🟢",titre:"Couverture globale satisfaisante",detail:`${stats.tauxMoyen}% · Objectif 75% atteint`,action:()=>setPage("programme")}]:[]),
+  ] : [];
+
+  // ── Skeleton ──────────────────────────────────────────────────────
+  const Sk = ({w="100%",h=20,br=6}) => (
+    <div style={{width:w,height:h,borderRadius:br,background:"linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
+  );
+
+  // ── Composant KPI premium ─────────────────────────────────────────
+  const KPI = ({label, value, sub, subColor, accent, onClick, loading:ld}) => (
+    <div onClick={onClick}
+      style={{background:"#fff",borderRadius:12,padding:"18px 20px",flex:1,minWidth:140,
+        border:"1px solid #e2e8f0",cursor:onClick?"pointer":"default",
+        borderTop:`3px solid ${accent||"#0B4D2C"}`,
+        transition:"box-shadow .15s",
+        boxShadow:"0 1px 3px rgba(0,0,0,.06)"}}
+      onMouseEnter={e=>{if(onClick)e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.1)";}}
+      onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,.06)";}}>
+      <div style={{fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:10}}>{label}</div>
+      {ld ? <Sk h={28} br={4}/> : <div style={{fontSize:30,fontWeight:900,color:"#0f172a",lineHeight:1}}>{value??<span style={{color:"#94a3b8"}}>—</span>}</div>}
+      {sub && !ld && <div style={{fontSize:11,marginTop:6,color:subColor||"#64748b",fontWeight:500}}>{sub}</div>}
+    </div>
+  );
+
+  // ── Jauge couverture ──────────────────────────────────────────────
+  const Jauge = ({value, objectif=75}) => {
+    const col = tauCol(value);
+    const pct = value!==null ? Math.min(100,value) : 0;
+    return (
+      <div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
+          <span style={{fontSize:28,fontWeight:900,color:col}}>{value!==null?`${value}%`:"—"}</span>
+          <span style={{fontSize:11,color:"#64748b"}}>Objectif : {objectif}%</span>
+        </div>
+        <div style={{height:8,background:"#e2e8f0",borderRadius:8,overflow:"hidden",marginBottom:4}}>
+          <div style={{width:`${pct}%`,height:"100%",background:col,borderRadius:8,transition:"width .6s ease"}}/>
+        </div>
+        {objectif && (
+          <div style={{position:"relative",height:12}}>
+            <div style={{position:"absolute",left:`${objectif}%`,top:0,width:2,height:10,background:"#94a3b8",borderRadius:1}}/>
+            <div style={{position:"absolute",left:`${objectif}%`,top:12,fontSize:9,color:"#94a3b8",transform:"translateX(-50%)"}}>▲ {objectif}%</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{padding:isMobile?"14px 14px 40px":"24px 28px 48px",display:"flex",flexDirection:"column",gap:22,background:"#f8fafc",minHeight:"100%"}}>
+
+      {/* ══ EN-TÊTE ══ */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+        <div>
+          <h1 style={{fontSize:isMobile?18:22,fontWeight:800,color:"#0f172a",margin:0,letterSpacing:"-.3px"}}>
+            Bonjour, Monsieur le Proviseur
+          </h1>
+          <p style={{color:"#64748b",margin:"4px 0 0",fontSize:12.5,fontWeight:400}}>
+            {dateCapitalized} · Lycée de Kakatare-Maroua
+          </p>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>2025–2026</div>
+            <div style={{fontSize:10.5,color:"#64748b"}}>
+              {refreshing ? "Synchronisation…" : `Sync ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`}
+            </div>
+          </div>
+          <button onClick={async()=>{ setRefreshing(true); await refreshData(); setRefreshing(false); }}
+            disabled={refreshing}
+            style={{padding:"8px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",
+              color:"#374151",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+              display:"flex",alignItems:"center",gap:6,boxShadow:"0 1px 2px rgba(0,0,0,.06)"}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{animation:refreshing?"spin .7s linear infinite":"none"}}>
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+            </svg>
+            {!isMobile&&"Actualiser"}
+          </button>
+        </div>
+      </div>
+
+      {/* ══ KPIs PRINCIPAUX ══ */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:12}}>
+        <KPI label="Enseignants" value={loading?"":stats.nbEns} sub="Tous départements"
+          accent="#0B4D2C" onClick={()=>setPage("enseignants")} loading={loading}/>
+        <KPI label="Classes" value={loading?"":stats.nbClasses} sub="Toutes séries"
+          accent="#2563eb" subColor="#2563eb" onClick={()=>setPage("eleves")} loading={loading}/>
+        <KPI label="Élèves" value={loading?"":stats.nbEleves.toLocaleString("fr-FR")} sub="Effectif total"
+          accent="#d97706" subColor="#d97706" onClick={()=>setPage("eleves")} loading={loading}/>
+        <KPI label="Couverture" value={loading?"":stats.tauxMoyen>0?`${stats.tauxMoyen}%`:null}
+          sub={loading?"":stats.tauxMoyen>0?(stats.tauxMoyen>=75?"✓ Objectif atteint":"⚠ Sous objectif 75%"):"Non renseigné"}
+          subColor={loading?"":tauCol(stats.tauxMoyen)} accent={loading?"#0B4D2C":tauCol(stats.tauxMoyen)}
+          onClick={()=>setPage("programme")} loading={loading}/>
+      </div>
+
+      {/* ══ LIGNE CENTRALE : Couverture + Graphique + Priorités ══ */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":device==="tablet"?"1fr 1fr":"1fr 1.6fr 1fr",gap:16}}>
+
+        {/* Situation couverture */}
+        <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"18px 20px",
+          boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:14}}>
+            Couverture pédagogique
+          </div>
+          {loading ? <><Sk h={28} br={4}/><div style={{height:12}}/><Sk h={8} br={4}/></> : (
+            <Jauge value={stats.tauxMoyen>0?stats.tauxMoyen:null}/>
+          )}
+          <div style={{marginTop:18,borderTop:"1px solid #f1f5f9",paddingTop:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".5px",marginBottom:10}}>
+              Par trimestre
+            </div>
+            {loading ? <Sk h={60} br={6}/> : (
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {stats.evolution.map(e=>(
+                  <div key={e.label} style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:10.5,color:"#64748b",width:42,flexShrink:0}}>{e.label}</span>
+                    <div style={{flex:1,height:5,background:"#f1f5f9",borderRadius:5,overflow:"hidden"}}>
+                      {e.value!==null&&<div style={{width:`${e.value}%`,height:"100%",background:tauCol(e.value),borderRadius:5}}/>}
+                    </div>
+                    <span style={{fontSize:10.5,fontWeight:700,color:tauCol(e.value),width:32,textAlign:"right"}}>
+                      {e.value!==null?`${e.value}%`:"—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Graphique évolution */}
+        <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"18px 20px",
+          boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px"}}>
+                Évolution de la couverture
+              </div>
+              <div style={{fontSize:10.5,color:"#94a3b8",marginTop:2}}>La couverture progresse-t-elle ?</div>
+            </div>
+            {!loading&&stats.tauxMoyen>0&&(
+              <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                background:tauBg(stats.tauxMoyen),color:tauCol(stats.tauxMoyen)}}>
+                {tauDot(stats.tauxMoyen)} {tauLabel(stats.tauxMoyen)}
+              </span>
+            )}
+          </div>
+          {loading ? <Sk h={160} br={8}/> : <EvolutionChartLarge series={stats.evolution} height={160}/>}
+        </div>
+
+        {/* Absences par département */}
+        <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"18px 20px",
+          boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:14}}>
+            Absences signalées
+          </div>
+          {loading ? <Sk h={120} br={6}/> : stats.absencesParDept.length>0 ? (
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {stats.absencesParDept.slice(0,6).map(d=>{
+                const max = stats.absencesParDept[0]?.total||1;
+                return (
+                  <div key={d.id}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                      <span style={{fontSize:11,color:"#374151",fontWeight:600}}>{d.nom}</span>
+                      <span style={{fontSize:11,fontWeight:800,color:d.total>10?"#dc2626":"#d97706"}}>{d.total}</span>
+                    </div>
+                    <div style={{height:4,background:"#f1f5f9",borderRadius:4,overflow:"hidden"}}>
+                      <div style={{width:`${(d.total/max)*100}%`,height:"100%",
+                        background:d.total>10?"#dc2626":"#d97706",borderRadius:4}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{fontSize:12,color:"#94a3b8",textAlign:"center",padding:"30px 0"}}>
+              <div style={{fontSize:24,marginBottom:8}}>✓</div>
+              Aucune absence enregistrée
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ══ TABLEAU DÉPARTEMENTS ══ */}
+      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",
+        boxShadow:"0 1px 3px rgba(0,0,0,.05)",overflow:"hidden"}}>
+        <div style={{padding:"16px 20px",borderBottom:"1px solid #f1f5f9",display:"flex",
+          justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>Vue par département</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:1}}>Couverture, effectifs et statut</div>
+          </div>
+          <button onClick={()=>setPage("programme")}
+            style={{fontSize:11,fontWeight:600,color:"#0B4D2C",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
+            Suivi détaillé →
+          </button>
+        </div>
+        {loading ? (
+          <div style={{padding:16,display:"flex",flexDirection:"column",gap:8}}>
+            {[1,2,3,4].map(i=><Sk key={i} h={36} br={6}/>)}
+          </div>
+        ) : (
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead>
+                <tr style={{background:"#f8fafc"}}>
+                  <th style={{padding:"10px 20px",textAlign:"left",fontWeight:600,color:"#64748b",fontSize:11}}>DÉPARTEMENT</th>
+                  <th style={{padding:"10px 12px",textAlign:"center",fontWeight:600,color:"#64748b",fontSize:11}}>ENS.</th>
+                  <th style={{padding:"10px 12px",textAlign:"center",fontWeight:600,color:"#64748b",fontSize:11}}>COUVERTURE</th>
+                  <th style={{padding:"10px 20px",textAlign:"center",fontWeight:600,color:"#64748b",fontSize:11}}>STATUT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.parDept.filter(d=>d.nbEns>0).map((d,i)=>(
+                  <tr key={d.id} onClick={()=>setPage("programme")}
+                    style={{borderTop:"1px solid #f1f5f9",cursor:"pointer",
+                      background:i%2===0?"#fff":"#fafafa"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#f0fdf4"}
+                    onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#fafafa"}>
+                    <td style={{padding:"12px 20px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:16}}>{d.emoji}</span>
+                        <span style={{fontWeight:600,color:"#0f172a"}}>{d.nom}</span>
+                      </div>
+                    </td>
+                    <td style={{padding:"12px",textAlign:"center",color:"#374151",fontWeight:500}}>
+                      {d.nbEns}
+                    </td>
+                    <td style={{padding:"12px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{flex:1,height:5,background:"#e2e8f0",borderRadius:5,overflow:"hidden"}}>
+                          <div style={{width:`${d.taux??0}%`,height:"100%",background:tauCol(d.taux),borderRadius:5}}/>
+                        </div>
+                        <span style={{fontSize:11,fontWeight:700,color:tauCol(d.taux),width:36,textAlign:"right"}}>
+                          {d.taux!==null?`${d.taux}%`:"—"}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{padding:"12px 20px",textAlign:"center"}}>
+                      <span style={{fontSize:10.5,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                        background:tauBg(d.taux),color:tauCol(d.taux)}}>
+                        {tauDot(d.taux)} {tauLabel(d.taux)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {stats.parDept.filter(d=>d.nbEns===0).length>0&&(
+                  <tr style={{borderTop:"1px solid #f1f5f9"}}>
+                    <td colSpan={4} style={{padding:"10px 20px",fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>
+                      {stats.parDept.filter(d=>d.nbEns===0).length} département(s) sans enseignant rattaché
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ══ PRIORITÉS ══ */}
+      {!loading&&priorites.length>0&&(
+        <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",
+          boxShadow:"0 1px 3px rgba(0,0,0,.05)",overflow:"hidden"}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid #f1f5f9"}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>Priorités du moment</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:1}}>Points nécessitant votre attention</div>
+          </div>
+          <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
+            {priorites.slice(0,5).map((p,i)=>(
+              <div key={i} onClick={p.action}
+                style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:8,
+                  cursor:"pointer",background:p.level==="critique"?"#fef2f2":p.level==="attention"?"#fffbeb":"#f0fdf4",
+                  border:`1px solid ${p.level==="critique"?"#fecaca":p.level==="attention"?"#fed7aa":"#bbf7d0"}`}}
+                onMouseEnter={e=>e.currentTarget.style.opacity=".85"}
+                onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                <span style={{fontSize:15,flexShrink:0}}>{p.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>{p.titre}</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:1}}>{p.detail}</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ══ ACTIONS RAPIDES ══ */}
+      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 20px",
+        boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",
+          letterSpacing:".6px",marginBottom:14}}>Actions rapides</div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:8}}>
+          {[
+            {label:"Absences",icon:"📋",page:"eleves"},
+            {label:"Enseignants",icon:"👥",page:"enseignants"},
+            {label:"Couverture",icon:"📊",page:"programme"},
+            {label:"Bulletins",icon:"📒",page:"bulletins"},
+            {label:"Secrétariat",icon:"🗂️",page:"secretariat"},
+          ].map(a=>(
+            <button key={a.page} onClick={()=>setPage(a.page)}
+              style={{padding:"10px 8px",borderRadius:8,border:"1px solid #e2e8f0",background:"#f8fafc",
+                color:"#374151",fontSize:11.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+                display:"flex",flexDirection:"column",alignItems:"center",gap:5,
+                transition:"all .15s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="#0B4D2C";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="#0B4D2C";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.color="#374151";e.currentTarget.style.borderColor="#e2e8f0";}}>
+              <span style={{fontSize:18}}>{a.icon}</span>
+              {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}
 
   useEffect(()=>{
     if(!data)return;
