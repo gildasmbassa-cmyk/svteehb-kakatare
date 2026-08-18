@@ -6574,6 +6574,7 @@ const NAV_PROVISEUR_GROUPS = [
     {id:"epreuves", emoji:"📋", label:"Épreuves & Évaluations"},
     {id:"bulletins",emoji:"📒", label:"Bulletins de notes"},
     {id:"conseil-classe",emoji:"🏛️", label:"Conseil de classe"},
+    {id:"secretariat",emoji:"🗂️", label:"Secrétariat"},
     {id:"programme",emoji:"📊", label:"Suivi programme"},
   ]},
   { section:"CYCLE ANNUEL", items:[
@@ -9116,6 +9117,334 @@ function BulletinsPage() {
 // ════════════════════════════════════════════════════════════════
 // BABILLARD NUMÉRIQUE — Tableau d'affichage de l'établissement
 // ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// SECRÉTARIAT — Documents administratifs officiels
+// ════════════════════════════════════════════════════════════════
+function SecretariatPage() {
+  const {user, data} = useApp();
+  const {isMobile} = useDevice();
+
+  const [selClasse, setSelClasse] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selEleve, setSelEleve] = useState(null);
+  const [docType, setDocType] = useState("attestation");
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [motif, setMotif] = useState("");
+  const [annee, setAnnee] = useState("2025-2026");
+
+  const classes = Object.keys(ELEVES_DB).sort();
+  const elevesClasse = selClasse ? (ELEVES_DB[selClasse]||[]) : [];
+  const filteredEleves = searchTerm
+    ? Object.values(ELEVES_DB).flat().filter(e=>(e.nom||e.n||"").toLowerCase().includes(searchTerm.toLowerCase()))
+    : elevesClasse;
+
+  const logoUrl = "https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/logo_lycee_kakatare.jpg/logo_lycee_kakatare.jpg";
+
+  const headerHtml = `
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:3px solid #0B4D2C;padding-bottom:10px;margin-bottom:14px;">
+      <div style="font-size:9px;line-height:1.8;color:#1f2937;">
+        <strong>REPUBLIC OF CAMEROON</strong><br>Peace – Work – Fatherland<br>
+        Ministry of Secondary Education<br>Far North Region · Diamaré Division
+      </div>
+      <div style="text-align:center;">
+        <img src="${logoUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #D4AF37;" onerror="this.style.display='none'"/>
+        <div style="font-size:14px;font-weight:900;color:#0B4D2C;margin-top:4px;text-transform:uppercase;">LYCÉE DE KAKATARE-MAROUA</div>
+        <div style="font-size:9px;color:#6b7280;">BP 162 Maroua – Tél. 222 29 21 63 – Mle 0CJ1GSF8111231106</div>
+      </div>
+      <div style="text-align:right;font-size:9px;line-height:1.8;color:#1f2937;">
+        <strong>RÉPUBLIQUE DU CAMEROUN</strong><br>Paix – Travail – Patrie<br>
+        Ministère des Enseignements Secondaires<br>Région Extrême-Nord · Dép. du Diamaré
+      </div>
+    </div>`;
+
+  const genAttestation = (eleve) => {
+    const nom = eleve.nom||eleve.n||"";
+    const classe = selClasse||eleve.classe||"";
+    const sexe = eleve.sexe||eleve.g||"M";
+    const isFemme = sexe==="F";
+    const dateDoc = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+    const ref = `N°${Date.now().toString().slice(-6)}/ATT/LYKAMA/${new Date().getFullYear()}`;
+
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:12px;color:#1f2937;padding:20mm;}
+.title{font-size:16px;font-weight:900;text-align:center;color:#0B4D2C;text-transform:uppercase;
+  letter-spacing:2px;margin:14px 0;text-decoration:underline;}
+.ref{text-align:right;font-size:10px;color:#6b7280;margin-bottom:20px;}
+.body{text-align:justify;line-height:2;font-size:13px;margin:20px 0;}
+.blank{display:inline-block;min-width:200px;border-bottom:1px solid #1f2937;text-align:center;font-weight:700;}
+.sig{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;}
+.sig-box{border-top:1px solid #d1d5db;padding-top:8px;font-size:11px;}
+@media print{body{padding:12mm;}@page{margin:10mm;size:A4;}}
+</style>
+<script>window.onload=()=>window.print();</script>
+</head><body>
+${headerHtml}
+<div class="ref">Réf : ${ref} · Maroua, le ${dateDoc}</div>
+<div class="title">Attestation de Scolarité</div>
+<div class="body">
+Je soussigné, <strong>MARTIN PAUL</strong>, Proviseur du Lycée de Kakatare-Maroua,
+atteste que <strong>${nom}</strong> est ${isFemme?"inscrite":"inscrit"} dans notre établissement
+pour le compte de l'année scolaire <strong>${annee}</strong>, en classe de <strong>${classe}</strong>.
+<br><br>
+Cette attestation est délivrée à ${isFemme?"l'intéressée":"l'intéressé"} pour servir et valoir
+ce que de droit${motif?" (motif : "+motif+")":" notamment pour présentation aux autorités compétentes"}.
+</div>
+${motif?'<div style="margin:10px 0;"><strong>Motif :</strong> '+motif+'</div>':""}
+<div class="sig">
+  <div class="sig-box"><div style="height:50px;"></div>LE SECRÉTAIRE<br><strong>HASSAN</strong></div>
+  <div class="sig-box"><div style="height:50px;"></div>LE PROVISEUR<br><strong>MARTIN PAUL</strong><br><small>PLEG – Hors Échelle</small></div>
+</div>
+</body></html>`;
+  };
+
+  const genCertificat = (eleve) => {
+    const nom = eleve.nom||eleve.n||"";
+    const classe = selClasse||eleve.classe||"";
+    const sexe = eleve.sexe||eleve.g||"M";
+    const isFemme = sexe==="F";
+    const dateDoc = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+    const ref = `N°${Date.now().toString().slice(-6)}/CERT/LYKAMA/${new Date().getFullYear()}`;
+
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:12px;color:#1f2937;padding:20mm;}
+.title{font-size:16px;font-weight:900;text-align:center;color:#0B4D2C;text-transform:uppercase;
+  letter-spacing:2px;margin:14px 0;text-decoration:underline;}
+.ref{text-align:right;font-size:10px;color:#6b7280;margin-bottom:20px;}
+.body{text-align:justify;line-height:2;font-size:13px;margin:20px 0;}
+.sig{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;}
+.sig-box{border-top:1px solid #d1d5db;padding-top:8px;font-size:11px;}
+@media print{body{padding:12mm;}@page{margin:10mm;size:A4;}}
+</style>
+<script>window.onload=()=>window.print();</script>
+</head><body>
+${headerHtml}
+<div class="ref">Réf : ${ref} · Maroua, le ${dateDoc}</div>
+<div class="title">Certificat de Fréquentation Scolaire</div>
+<div class="body">
+Je soussigné, <strong>MARTIN PAUL</strong>, Proviseur du Lycée de Kakatare-Maroua,
+certifie que <strong>${nom}</strong> fréquente régulièrement notre établissement
+pour l'année scolaire <strong>${annee}</strong>, en classe de <strong>${classe}</strong>.
+<br><br>
+${isFemme?"L'élève est":"L'élève est"} ${isFemme?"connue":"connu"} pour son sérieux et sa régularité.
+<br><br>
+Le présent certificat est établi à la demande de ${isFemme?"l'intéressée":"l'intéressé"} pour
+servir et valoir ce que de droit${motif?" (motif : "+motif+")":" notamment pour toutes démarches administratives"}.
+</div>
+<div class="sig">
+  <div class="sig-box"><div style="height:50px;"></div>LE SECRÉTAIRE<br><strong>HASSAN</strong></div>
+  <div class="sig-box"><div style="height:50px;"></div>LE PROVISEUR<br><strong>MARTIN PAUL</strong><br><small>PLEG – Hors Échelle</small></div>
+</div>
+</body></html>`;
+  };
+
+  const genFicheInscription = (eleve) => {
+    const nom = eleve.nom||eleve.n||"";
+    const classe = selClasse||eleve.classe||"";
+    const sexe = eleve.sexe||eleve.g||"M";
+    const dateDoc = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:11px;color:#1f2937;padding:15mm;}
+.title{font-size:15px;font-weight:900;text-align:center;color:#0B4D2C;text-transform:uppercase;
+  letter-spacing:1px;margin:12px 0;}
+table{width:100%;border-collapse:collapse;margin:10px 0;}
+td{border:1px solid #d1d5db;padding:8px 10px;font-size:11px;}
+.label{font-weight:700;background:#f0fdf4;width:40%;}
+.photo-box{width:90px;height:110px;border:1px solid #9ca3af;float:right;margin:0 0 10px 10px;
+  display:flex;align-items:center;justify-content:center;font-size:24px;color:#9ca3af;border-radius:4px;}
+@media print{body{padding:10mm;}@page{margin:8mm;size:A4;}}
+</style>
+</head><body>
+${headerHtml}
+<div class="title">Fiche d'Inscription — Année scolaire ${annee}</div>
+<div class="photo-box">📷<div style="font-size:9px;margin-top:4px;color:#9ca3af;">Photo</div></div>
+<table>
+  <tr><td class="label">Nom et Prénoms</td><td><strong>${nom}</strong></td></tr>
+  <tr><td class="label">Matricule</td><td>${eleve.numero||eleve.num||"—"}</td></tr>
+  <tr><td class="label">Sexe</td><td>${sexe==="F"?"Féminin":"Masculin"}</td></tr>
+  <tr><td class="label">Date de naissance</td><td>—</td></tr>
+  <tr><td class="label">Lieu de naissance</td><td>—</td></tr>
+  <tr><td class="label">Classe</td><td>${classe}</td></tr>
+  <tr><td class="label">Année scolaire</td><td>${annee}</td></tr>
+  <tr><td class="label">Statut</td><td>Nouveau / Redoublant</td></tr>
+  <tr><td class="label">Nom du père/tuteur</td><td>&nbsp;</td></tr>
+  <tr><td class="label">Nom de la mère</td><td>&nbsp;</td></tr>
+  <tr><td class="label">Adresse des parents</td><td>&nbsp;</td></tr>
+  <tr><td class="label">Téléphone</td><td>&nbsp;</td></tr>
+</table>
+<div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;font-size:10px;">
+  <div style="border-top:1px solid #d1d5db;padding-top:8px;">Signature du parent/tuteur</div>
+  <div style="border-top:1px solid #d1d5db;padding-top:8px;">Le Proviseur<br><strong>MARTIN PAUL</strong></div>
+</div>
+</body></html>`;
+  };
+
+  const handleGenerate = (eleve) => {
+    let html;
+    if(docType==="attestation") html=genAttestation(eleve);
+    else if(docType==="certificat") html=genCertificat(eleve);
+    else html=genFicheInscription(eleve);
+    setPreviewHtml(stripAutoPrint(html));
+  };
+
+  const DOCS = [
+    {id:"attestation", label:"📋 Attestation de scolarité"},
+    {id:"certificat",  label:"📜 Certificat de fréquentation"},
+    {id:"inscription", label:"📝 Fiche d'inscription"},
+  ];
+
+  const inp={border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",
+    fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff"};
+
+  return (
+    <div style={{padding:isMobile?"12px":"24px",maxWidth:900,margin:"0 auto"}}>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🗂️ Secrétariat</div>
+        <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Documents administratifs officiels</div>
+      </div>
+
+      {/* Config */}
+      <div style={{background:"#f8fafc",borderRadius:12,border:"1px solid #e5e7eb",
+        padding:16,marginBottom:20,display:"flex",flexDirection:"column",gap:14}}>
+
+        {/* Type de document */}
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,
+            textTransform:"uppercase",letterSpacing:".5px"}}>Type de document</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {DOCS.map(d=>(
+              <button key={d.id} onClick={()=>setDocType(d.id)}
+                style={{padding:"8px 16px",borderRadius:8,fontSize:13,fontWeight:700,
+                  fontFamily:"inherit",cursor:"pointer",
+                  border:`1.5px solid ${docType===d.id?"#0B4D2C":"#e5e7eb"}`,
+                  background:docType===d.id?"#0B4D2C":"#fff",
+                  color:docType===d.id?"#fff":"#374151"}}>
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Motif (pour attestation et certificat) */}
+        {docType!=="inscription"&&(
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
+              textTransform:"uppercase",letterSpacing:".5px"}}>
+              Motif <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel)</span>
+            </div>
+            <input value={motif} onChange={e=>setMotif(e.target.value)} style={{...inp,width:"100%"}}
+              placeholder="Ex: Demande de bourse, dossier administratif..."/>
+          </div>
+        )}
+
+        {/* Année scolaire */}
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
+            textTransform:"uppercase",letterSpacing:".5px"}}>Année scolaire</div>
+          <select value={annee} onChange={e=>setAnnee(e.target.value)} style={{...inp}}>
+            <option value="2025-2026">2025–2026</option>
+            <option value="2024-2025">2024–2025</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Recherche élève */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:16}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
+            textTransform:"uppercase",letterSpacing:".5px"}}>Classe</div>
+          <select value={selClasse} onChange={e=>{setSelClasse(e.target.value);setSearchTerm("");}}
+            style={{...inp,width:"100%"}}>
+            <option value="">— Toutes les classes —</option>
+            {classes.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
+            textTransform:"uppercase",letterSpacing:".5px"}}>Rechercher un élève</div>
+          <input value={searchTerm} onChange={e=>{setSearchTerm(e.target.value);setSelClasse("");}}
+            style={{...inp,width:"100%"}} placeholder="Nom de l'élève..."/>
+        </div>
+      </div>
+
+      {/* Liste élèves */}
+      {filteredEleves.length===0?(
+        <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>
+          <div style={{fontSize:40,marginBottom:12}}>🔍</div>
+          <div style={{fontSize:14,fontWeight:700}}>
+            {searchTerm||selClasse?"Aucun élève trouvé":"Choisissez une classe ou recherchez un élève"}
+          </div>
+        </div>
+      ):(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {filteredEleves.slice(0,50).map((e,i)=>(
+            <div key={e.id||i} style={{background:"#fff",borderRadius:10,
+              border:"1px solid #e5e7eb",padding:"12px 16px",
+              display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <div style={{width:36,height:36,borderRadius:"50%",background:"#0B4D2C",
+                color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",
+                fontWeight:900,fontSize:14,flexShrink:0}}>
+                {(e.nom||e.n||"?")[0]}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#1f2937"}}>{e.nom||e.n}</div>
+                <div style={{fontSize:11,color:"#6b7280"}}>{selClasse||e.classe||"—"}</div>
+              </div>
+              <button onClick={()=>handleGenerate(e)}
+                style={{padding:"7px 16px",borderRadius:8,border:"none",
+                  background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,
+                  cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                📄 Générer
+              </button>
+            </div>
+          ))}
+          {filteredEleves.length>50&&(
+            <div style={{textAlign:"center",fontSize:12,color:"#9ca3af",padding:8}}>
+              {filteredEleves.length-50} élèves supplémentaires — affinez la recherche
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Aperçu document */}
+      {previewHtml&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,
+          display:"flex",flexDirection:"column",padding:16}}>
+          <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",
+            flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
+            <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",
+              display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>
+                {DOCS.find(d=>d.id===docType)?.label}
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>imprimerHTML(previewHtml)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"none",
+                    background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,
+                    cursor:"pointer",fontFamily:"inherit"}}>Imprimer</button>
+                <button onClick={()=>setPreviewHtml(null)}
+                  style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e5e7eb",
+                    background:"#f9fafb",fontSize:12,fontWeight:700,
+                    cursor:"pointer",fontFamily:"inherit"}}>Fermer</button>
+              </div>
+            </div>
+            <div style={{flex:1,overflow:"hidden",background:"#e5e7eb",padding:12}}>
+              <iframe srcDoc={previewHtml} title="document"
+                style={{width:"100%",height:"100%",border:"none",borderRadius:8}}/>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BabillardPage() {
   const {user, data} = useApp();
   const {isMobile} = useDevice();
@@ -11185,6 +11514,11 @@ const Sidebar = ({collapsed, setCollapsed}) => {
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
     : (data?.epreuves||[]).filter(e=>e.ens_id===user?.id&&e.statut==="attente").length;
 
+  if (user?.role === "secretaire") return <SidebarGrouped groups={[
+    {section:"",items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"}]},
+    {section:"DOCUMENTS",items:[{id:"secretariat",emoji:"🗂️",label:"Secrétariat"}]},
+    {section:"COMMUNICATION",items:[{id:"babillard",emoji:"📌",label:"Babillard"}]},
+  ]} role="secretaire" roleLabel="Secrétariat" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={0}/>;
   if (user?.role === "proviseur") return <SidebarGrouped groups={NAV_PROVISEUR_GROUPS} role="proviseur" roleLabel="Proviseur" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
   if (user?.role === "censeur")   return <SidebarGrouped groups={NAV_CENSEUR_GROUPS}   role="censeur"   roleLabel="Censeur"   collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
   if (user?.role === "animateur"||user?.role === "animatrice") return <SidebarGrouped groups={NAV_ANIMATEUR_GROUPS} role={user?.role} roleLabel="Animateur Pédagogique" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
@@ -12841,6 +13175,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
     if(page==="conseil-classe")      return <W><ConseilClassePage/></W>
     if(page==="babillard")          return <W><BabillardPage/></W>
+    if(page==="secretariat")         return <W><SecretariatPage/></W>
     if(page==="conduite")           return <W><ConduiteClassePage/></W>
     if(page==="bulletins")          return <W><BulletinsPage/></W>
     if(page==="suivi-prog-dept")    return <W><SuiviProgrammePage/></W>
