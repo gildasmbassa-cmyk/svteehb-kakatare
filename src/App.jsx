@@ -8694,6 +8694,29 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
               color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
             📄 PV
           </button>
+          <button onClick={()=>{
+            const rows = moyennes.map(e=>{
+              const d=decisions[e.id]||{};
+              return {
+                "Rang": rangs[e.id]||"—",
+                "Nom": e.nom,
+                "Sexe": e.sexe==="G"||e.sexe==="M"?"M":"F",
+                "Moyenne": e.moy!==null?e.moy:"",
+                "Appréciation": d.appreciation||"",
+                "Décision": d.decision||"",
+                "Observations": d.observations||""
+              };
+            });
+            exportToExcel(
+              `Conseil_${selClasse.replace(/\s+/g,"_")}_S${selSeq}_2025-2026`,
+              `Conseil S${selSeq}`,
+              rows
+            );
+          }}
+            style={{padding:"8px 16px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",
+              color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            📊 Export Excel
+          </button>
           {!isValide&&<button onClick={()=>handleSave("brouillon")} disabled={saving}
             style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#e5e7eb",
               color:"#374151",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:saving?.6:1}}>
@@ -8932,6 +8955,48 @@ function BulletinsPage() {
     imprimerHTML(htmls);
   };
 
+  const handleExportExcel = () => {
+    if(!selClasse||!filteredEleves.length) return;
+    const coefs = getCoefsForClasse(selClasse);
+    const {rangs} = calcRangsClasse(selClasse, selSeq, data?.notes||{}, elevesClasse);
+
+    // En-têtes dynamiques par matière
+    const rows = filteredEleves.map(e=>{
+      const row = {
+        "N°": filteredEleves.indexOf(e)+1,
+        "Nom": e.nom,
+        "Sexe": e.sexe==="G"||e.sexe==="M"?"M":"F",
+      };
+      // Notes par matière
+      let totalPts=0, totalCoef=0;
+      coefs.forEach(({matiere,coef})=>{
+        const k=`${selClasse}||${matiere}-S${selSeq}`;
+        const n=(data?.notes?.[k]||{})[e.id];
+        const val=(n!==undefined&&n!==null&&n!=="")?+n:null;
+        row[`${matiere} (coef ${coef})`]=val!==null?val:"";
+        if(val!==null){totalPts+=val*coef;totalCoef+=coef;}
+      });
+      row["Moyenne"] = totalCoef>0?Math.round(totalPts/totalCoef*100)/100:"";
+      row["Rang"] = rangs[e.id]||"";
+      row["Effectif"] = elevesClasse.length;
+      const c=conduiteIndex[String(e.id)]||{};
+      row["Conduite /20"] = c.note_conduite!=null?+c.note_conduite:"";
+      return row;
+    });
+
+    // Ligne statistiques classe
+    const statsRow = {"N°":"", "Nom":"MOYENNES CLASSE", "Sexe":""};
+    coefs.forEach(({matiere,coef})=>{
+      const moyC = calcMoyClasse(selClasse, selSeq, matiere, data?.notes||{}, elevesClasse);
+      statsRow[`${matiere} (coef ${coef})`] = moyC!==null?moyC:"";
+    });
+    rows.push(statsRow);
+
+    const filename = `Notes_${selClasse.replace(/\s+/g,"_")}_S${selSeq}_2025-2026`;
+    const ok = exportToExcel(filename, `S${selSeq}`, rows);
+    if(!ok) alert("Erreur lors de l'export Excel");
+  };
+
   const inp={border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff",width:"100%",boxSizing:"border-box"};
 
   return (
@@ -8943,10 +9008,16 @@ function BulletinsPage() {
           <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Génération · Séquences S1 à S6</div>
         </div>
         {selClasse && filteredEleves.length>0 && (
-          <button onClick={handlePrintAll}
-            style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-            🖨 Imprimer tout ({filteredEleves.length})
-          </button>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={handleExportExcel}
+              style={{padding:"10px 18px",borderRadius:10,border:"1.5px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+              📊 Export Excel
+            </button>
+            <button onClick={handlePrintAll}
+              style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+              🖨 Imprimer tout ({filteredEleves.length})
+            </button>
+          </div>
         )}
       </div>
 
