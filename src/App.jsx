@@ -330,6 +330,7 @@ async function loadAllData(departementId = null) {
     sb.get("edt_exceptions","?select=ens_id,slot,lbl"),
     sb.get("notes","?select=classe,evaluation,eleve_id,note"),
     sb.get("absences", departementId ? `?select=ens_id,classe,seance,absents&departement_id=eq.${departementId}` : "?select=ens_id,classe,seance,absents"),
+    sb.get("edt_base","?select=ens_id,slot,lbl"),
   ]);
   const progIndex={};
   (prog||[]).forEach(r=>{progIndex[`${r.ens_id}||${r.classe}`]=Array.isArray(r.faites)?r.faites:[];});
