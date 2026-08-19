@@ -13487,6 +13487,7 @@ function LoginPage({onLogin}){
     {key:"censeur",    label:"Censeur",               sub:"Organisation pédagogique", desc:"Classes, notes, suivi discipline",  emoji:"📚",  role:"censeur",            needsDept:false},
     {key:"sg",         label:"Surveillance Générale", sub:"Vie scolaire & discipline", desc:"Absences, retards, incidents",    emoji:"🛡️", role:"surveillant_general", needsDept:false},
     {key:"animateur",  label:"Animateur Pédagogique", sub:"Suivi pédagogique",     desc:"Supervision du département & programmes", emoji:"📋", role:"animateur", needsDept:false},
+    {key:"secretaire", label:"Secrétariat",            sub:"Administration",          desc:"Documents, attestations & listes élèves", emoji:"🗂️", role:"secretaire",  needsDept:false},
     {key:"enseignant", label:"Enseignant",            sub:"Corps professoral",      desc:"Cours, cahier de textes, évaluations", emoji:"👨🏾‍🏫", role:"enseignant",   needsDept:true},
     {key:"eleve",      label:"Élève",                 sub:"Espace apprenant",       desc:"Résultats, emploi du temps",         emoji:"🎓",  role:null, soon:true},
     {key:"parent",     label:"Parent",                sub:"Suivi scolaire",         desc:"Suivi scolaire de l'élève",          emoji:"👪",  role:null, soon:true},
