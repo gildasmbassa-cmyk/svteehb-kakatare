@@ -6642,6 +6642,53 @@ const KpiCard = ({label,value,sub,iconEmoji,bg,subColor}) => (
 function displayCl(cl){ return CLASS_DISPLAY[cl]||cl; }
 
 // ─── Dashboard Admin ────────────────────────────────────────────────
+function DashboardSecretaire() {
+  const {setPage} = useApp();
+  const {isMobile} = useDevice();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const dateCapitalized = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
+  const actions = [
+    {label:"Attestations",icon:"📜",page:"secretariat"},
+    {label:"Certificats",icon:"📋",page:"secretariat"},
+    {label:"Fiches élèves",icon:"🗂️",page:"secretariat"},
+    {label:"Listes classes",icon:"🎓",page:"eleves"},
+    {label:"Babillard",icon:"📌",page:"babillard"},
+  ];
+  return (
+    <div style={{padding:isMobile?"14px 14px 40px":"24px 28px 48px",display:"flex",flexDirection:"column",gap:22,background:"#f8fafc",minHeight:"100%"}}>
+      <div>
+        <h1 style={{fontSize:isMobile?18:22,fontWeight:800,color:"#0f172a",margin:0,letterSpacing:"-.3px"}}>
+          Bonjour, Monsieur le Secrétaire
+        </h1>
+        <p style={{color:"#64748b",margin:"4px 0 0",fontSize:12.5}}>
+          {dateCapitalized} · Lycée de Kakatare-Maroua
+        </p>
+      </div>
+      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"20px",boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:14}}>Accès rapide</div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:10}}>
+          {actions.map(a=>(
+            <button key={a.label} onClick={()=>setPage(a.page)}
+              style={{padding:"14px 8px",borderRadius:10,border:"1px solid #e2e8f0",background:"#f8fafc",
+                color:"#374151",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+                display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"all .15s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="#0B4D2C";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="#0B4D2C";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.color="#374151";e.currentTarget.style.borderColor="#e2e8f0";}}>
+              <span style={{fontSize:22}}>{a.icon}</span>
+              {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{background:"#f0fdf4",borderRadius:12,border:"1px solid #bbf7d0",padding:"16px 20px"}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#166534",marginBottom:4}}>ℹ️ Accès Secrétariat</div>
+        <div style={{fontSize:12,color:"#166534"}}>Vous avez accès aux documents officiels, aux listes d'élèves (lecture seule) et au babillard.</div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardAdmin() {
   const {data,user,setPage,setPendingFicheEns,refreshData} = useApp();
   const {isMobile} = useDevice();
@@ -11679,6 +11726,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
   if (user?.role === "secretaire") return <SidebarGrouped groups={[
     {section:"",items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"}]},
     {section:"DOCUMENTS",items:[{id:"secretariat",emoji:"🗂️",label:"Secrétariat"}]},
+    {section:"ÉLÈVES",items:[{id:"eleves",emoji:"🎓",label:"Élèves"}]},
     {section:"COMMUNICATION",items:[{id:"babillard",emoji:"📌",label:"Babillard"}]},
   ]} role="secretaire" roleLabel="Secrétariat" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={0}/>;
   if (user?.role === "proviseur") return <SidebarGrouped groups={NAV_PROVISEUR_GROUPS} role="proviseur" roleLabel="Proviseur" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
@@ -13320,14 +13368,14 @@ const AppLayout = ({onLogout}) => {
     if(page==="mes-classes") return <MesClassesPage/>
     if(page==="cahier")      return <CahierDeTextePage/>
     if(page==="documents")   return isAdmin?<DocumentsPage/>:null
-    if(page==="eleves")      return (isAdmin||user?.role==="censeur")?<ElevesPage/>:<MesClassesPage/>
+    if(page==="eleves")      return (isAdmin||user?.role==="censeur"||user?.role==="secretaire")?<ElevesPage/>:<MesClassesPage/>
     // ── Pages SIMPLES — enveloppées dans un scroller ───────────────────
     const W = ({children}) => (
       <div style={{flex:1, minHeight:0, overflowY:"auto"}}>
         {children}
       </div>
     );
-    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:user?.role==="surveillant_general"?<DashboardSurveillance/>:user?.role==="censeur"?<DashboardCenseur/>:(user?.role==="animateur"||user?.role==="animatrice")?<DashboardAnimateur/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
+    if(page==="dashboard")         return <W>{user?.role==="proviseur"?<DashboardProviseur/>:user?.role==="surveillant_general"?<DashboardSurveillance/>:user?.role==="censeur"?<DashboardCenseur/>:(user?.role==="animateur"||user?.role==="animatrice")?<DashboardAnimateur/>:user?.role==="secretaire"?<DashboardSecretaire/>:isAdmin?<DashboardAdmin/>:<DashboardTeacher/>}</W>
     if(page==="programme")         return <W>{(isAdmin||user?.role==="censeur")?<SuiviProgrammePage/>:<MonProgrammePage/>}</W>
     if(page==="epreuves")          return <W><EpreuvesPage/></W>
     if(page==="edt-teacher")       return <W><MonEdtPage/></W>
