@@ -1601,11 +1601,11 @@ function ElevesPage() {
                     </button>
                   ))}
                 </div>
-                {/* Bouton Ajouter */}
-                <button onClick={()=>{setModal("ajout");setNewNom("");setNewGenre("M");}}
+                {/* Bouton Ajouter — Proviseur uniquement */}
+                {isProviseur && <button onClick={()=>{setModal("ajout");setNewNom("");setNewGenre("M");}}
                   style={{padding:"7px 14px",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
                   ➕ Ajouter un élève
-                </button>
+                </button>}
                 {/* Impression */}
                 <button onClick={()=>imprimerListeClasse(selClasse, eleves)}
                   style={{padding:"7px 14px",background:C.white,color:C.txt,border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
