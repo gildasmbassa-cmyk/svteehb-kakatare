@@ -1,14 +1,3 @@
-# ============================================================
-# CI/CD — EduPilot Cameroun
-# Déploie automatiquement sur Vercel à chaque git push main
-#
-# Setup (une seule fois) :
-#   GitHub → Settings → Secrets → Actions → New secret :
-#   - VERCEL_TOKEN        (vercel.com → Account Settings → Tokens)
-#   - VERCEL_ORG_ID       (vercel.com → Settings → General)
-#   - VERCEL_PROJECT_ID   (vercel.com → Project → Settings → General)
-# ============================================================
-
 name: Deploy EduPilot
 
 on:
@@ -37,10 +26,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
       - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
+        run: vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
