@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
@@ -6,11 +6,11 @@ import EDT_REEL from "./data/edt_reel.json";
 import * as XLSX from "xlsx";
 import { RealtimeClient } from "@supabase/realtime-js";
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SVTEEHB â€” Application PÃ©dagogique UnifiÃ©e
-// LycÃ©e de Kakatare Â· Maroua Â· Cameroun Â· 2025â€“2026
-// Version : React SaaS v1.0 â€” Toutes pages intÃ©grÃ©es
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════
+// SVTEEHB — Application Pédagogique Unifiée
+// Lycée de Kakatare · Maroua · Cameroun · 2025–2026
+// Version : React SaaS v1.0 — Toutes pages intégrées
+// ════════════════════════════════════════════════════════════════════
 
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -19,10 +19,10 @@ if (!SB_URL || !SB_KEY) {
   console.error("Variables d'environnement Supabase manquantes (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).");
 }
 const REALTIME_URL = SB_URL.replace("https://", "wss://") + "/realtime/v1";
-// Tables surveillÃ©es pour la synchronisation multi-sessions (Realtime)
+// Tables surveillées pour la synchronisation multi-sessions (Realtime)
 const REALTIME_TABLES = ["notes","absences","prog_suivi","epreuves","edt_exceptions","edt_base","utilisateurs","classes"];
 
-// â”€â”€ API Supabase (fetch lÃ©ger, pas de SDK) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── API Supabase (fetch léger, pas de SDK) ────────────────────────
 const sb = {
   h: () => ({ apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, "Content-Type":"application/json" }),
   async get(t, q="") {
@@ -37,7 +37,7 @@ const sb = {
       });
       if (r.ok||r.status===204) return true;
       const errBody = await r.text().catch(()=>"");
-      console.error(`sb.patchRow(${t}) â†’ ${r.status}: ${errBody}`);
+      console.error(`sb.patchRow(${t}) → ${r.status}: ${errBody}`);
       sb.lastError = errBody;
       return false;
     } catch (e) { sb.lastError = e?.message||String(e); return false; }
@@ -50,7 +50,7 @@ const sb = {
       });
       if (r.ok||r.status===201||r.status===204) return true;
       const errBody = await r.text().catch(()=>"");
-      console.error(`sb.upsert(${t}) â†’ ${r.status}: ${errBody}`);
+      console.error(`sb.upsert(${t}) → ${r.status}: ${errBody}`);
       sb.lastError = errBody;
       return false;
     } catch (e) { sb.lastError = e?.message||String(e); return false; }
@@ -106,7 +106,7 @@ const sb = {
       });
       if(!r.ok) {
         const errBody = await r.text().catch(()=>"");
-        console.error(`sb.rpc(${fn}) â†’ ${r.status}: ${errBody}`);
+        console.error(`sb.rpc(${fn}) → ${r.status}: ${errBody}`);
         sb.lastError = errBody;
         return null;
       }
@@ -116,26 +116,26 @@ const sb = {
   },
 };
 
-// â”€â”€ DonnÃ©es mÃ©tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const PROG_MAP = {"6Ã¨me 1":"SIX","6Ã¨me 2":"SIX","6Ã¨me 3":"SIX","6e II":"SIX","5Ã¨me 1":"CINQ","5Ã¨me 2":"CINQ","5Ã¨me 3":"CINQ","5e II":"CINQ","4Ã¨me 1 ALL/CHI":"QUATRE","4Ã¨me 2 ARA/ITA":"QUATRE","4Ã¨me 3 ESP":"QUATRE","4e II":"QUATRE","3Ã¨me 1 ALL/CHI":"TROIS","3Ã¨me 2 ARA/ITA":"TROIS","3Ã¨me 3 ESP":"TROIS","3e II":"TROIS","2nde C":"SEC_C","2nde L1 ALL/ARA/CHI":"SEC_A","2nde L2 ESP/ITA":"SEC_A","1e C":"PREM_CTI","1e Ti":"PREM_CTI","P C":"PREM_CTI","P Ã¨re Ti":"PREM_CTI","1Ã¨re S2 C/TI":"PREM_CTI","1e D":"PREM_D","1Ã¨re S1 D":"PREM_D","1e A":"PREM_A","1Ã¨re L1 ALL/ARA/CHI":"PREM_A","1Ã¨re L1 ALL/CHI":"PREM_A","1Ã¨re L2 ARA/ITA/ESP":"PREM_A","1Ã¨re L3 ESP 1":"PREM_A","1Ã¨re L3 ESP":"PREM_A","Tle D":"TERM_D","Tle S1 D":"TERM_D","Tle S2 C/TI":"TERM_CTI","Tle Ti":"TERM_CTI","Tle L1 ALL/ARA/CHI":"TERM_A","TLE Esp":"TERM_A","TLE Ita":"TERM_A","Tle L2 ESP/ITA":"TERM_A","1Ã¨re L2 ARA/ITA/ESP 2":"PREM_A","4Ã¨me ALL":"QUATRE","4Ã¨me ARB":"QUATRE","4Ã¨me CHN":"QUATRE","4Ã¨me ITA":"QUATRE","4Ã¨me ESP":"QUATRE","3Ã¨me ALL":"TROIS","3Ã¨me ARB":"TROIS","3Ã¨me CHN":"TROIS","3Ã¨me ESP":"TROIS","3Ã¨me ITA":"TROIS","2nde ALL":"SEC_A","2nde ARB":"SEC_A","2nde CHN":"SEC_A","2nde ITA":"SEC_A","2nde ESP":"SEC_A","1Ã¨re A4 ALL":"PREM_A","1Ã¨re A4 ARB":"PREM_A","1Ã¨re A4 ESP":"PREM_A","1Ã¨re CHN":"PREM_A","1Ã¨re ITA":"PREM_A","1Ã¨re C":"PREM_CTI","1Ã¨re Ti":"PREM_CTI","1Ã¨re D":"PREM_D","Tle A4 ALL":"TERM_A","Tle A4 ARB":"TERM_A","Tle A4 CHN":"TERM_A","Tle A4 ITA":"TERM_A","Tle A4 ESP":"TERM_A","Tle C":"TERM_CTI","1Ã¨re C/Ti":"PREM_CTI","Tle C/Ti":"TERM_CTI","Tle A4 ESP/ITA":"TERM_A"};
+// ── Données métier ─────────────────────────────────────────────────
+const PROG_MAP = {"6ème 1":"SIX","6ème 2":"SIX","6ème 3":"SIX","6e II":"SIX","5ème 1":"CINQ","5ème 2":"CINQ","5ème 3":"CINQ","5e II":"CINQ","4ème 1 ALL/CHI":"QUATRE","4ème 2 ARA/ITA":"QUATRE","4ème 3 ESP":"QUATRE","4e II":"QUATRE","3ème 1 ALL/CHI":"TROIS","3ème 2 ARA/ITA":"TROIS","3ème 3 ESP":"TROIS","3e II":"TROIS","2nde C":"SEC_C","2nde L1 ALL/ARA/CHI":"SEC_A","2nde L2 ESP/ITA":"SEC_A","1e C":"PREM_CTI","1e Ti":"PREM_CTI","P C":"PREM_CTI","P ère Ti":"PREM_CTI","1ère S2 C/TI":"PREM_CTI","1e D":"PREM_D","1ère S1 D":"PREM_D","1e A":"PREM_A","1ère L1 ALL/ARA/CHI":"PREM_A","1ère L1 ALL/CHI":"PREM_A","1ère L2 ARA/ITA/ESP":"PREM_A","1ère L3 ESP 1":"PREM_A","1ère L3 ESP":"PREM_A","Tle D":"TERM_D","Tle S1 D":"TERM_D","Tle S2 C/TI":"TERM_CTI","Tle Ti":"TERM_CTI","Tle L1 ALL/ARA/CHI":"TERM_A","TLE Esp":"TERM_A","TLE Ita":"TERM_A","Tle L2 ESP/ITA":"TERM_A","1ère L2 ARA/ITA/ESP 2":"PREM_A","4ème ALL":"QUATRE","4ème ARB":"QUATRE","4ème CHN":"QUATRE","4ème ITA":"QUATRE","4ème ESP":"QUATRE","3ème ALL":"TROIS","3ème ARB":"TROIS","3ème CHN":"TROIS","3ème ESP":"TROIS","3ème ITA":"TROIS","2nde ALL":"SEC_A","2nde ARB":"SEC_A","2nde CHN":"SEC_A","2nde ITA":"SEC_A","2nde ESP":"SEC_A","1ère A4 ALL":"PREM_A","1ère A4 ARB":"PREM_A","1ère A4 ESP":"PREM_A","1ère CHN":"PREM_A","1ère ITA":"PREM_A","1ère C":"PREM_CTI","1ère Ti":"PREM_CTI","1ère D":"PREM_D","Tle A4 ALL":"TERM_A","Tle A4 ARB":"TERM_A","Tle A4 CHN":"TERM_A","Tle A4 ITA":"TERM_A","Tle A4 ESP":"TERM_A","Tle C":"TERM_CTI","1ère C/Ti":"PREM_CTI","Tle C/Ti":"TERM_CTI","Tle A4 ESP/ITA":"TERM_A"};
 const PROG_META = {"SIX":{vh:2,hd:50,lpRef:33,tp:[2,3,4,9,10,11,14,15,16,21,22]},"CINQ":{vh:2,hd:50,lpRef:33,tp:[6,7,10,13,15,29,33]},"QUATRE":{vh:2,hd:50,lpRef:36,tp:[1,3,4,9,17,21,32]},"TROIS":{vh:2,hd:62,lpRef:45,tp:[4,5,7,9,13,25,28,32,43]},"SEC_C":{vh:2,hd:50,lpRef:29,tp:[1,12]},"SEC_A":{vh:1,hd:25,lpRef:20,tp:[]},"PREM_A":{vh:1,hd:25,lpRef:26,tp:[]},"PREM_CTI":{vh:2,hd:52,lpRef:41,tp:[]},"PREM_D":{vh:6,hd:168,lpRef:75,tp:[1,4,8,9,10,17,18,19,21,25,27,31,53]},"TERM_D":{vh:6,hd:186,lpRef:84,tp:[1,2,3,9,10,11,24,31,32,36,37,49,50,55,67,69,74,75,76,79,80,81,88,92,94,96]},"TERM_A":{vh:1,hd:31,lpRef:28,tp:[3,5,16,34,37,38]},"TERM_C":{vh:2,hd:50,lpRef:36,tp:[]},"TERM_CTI":{vh:2,hd:62,lpRef:36,tp:[1,3,6,8,15,17,18,21,24,25,30,32,37,38,39,40,41,42]}};
 const PROGRAMMES_LABELS = {
-  SIX:"6Ã¨me", CINQ:"5Ã¨me", QUATRE:"4Ã¨me", TROIS:"3Ã¨me",
+  SIX:"6ème", CINQ:"5ème", QUATRE:"4ème", TROIS:"3ème",
   SEC_C:"2nde C", SEC_A:"2nde A (L1/L2)",
-  PREM_A:"1Ã¨re A", PREM_CTI:"1Ã¨re C/Ti", PREM_D:"1Ã¨re D",
-  TERM_D:"Tle D", TERM_A:"Tle A4", TERM_CTI:"Tle C/Ti", TERM_C:"Tle LittÃ©raire",
+  PREM_A:"1ère A", PREM_CTI:"1ère C/Ti", PREM_D:"1ère D",
+  TERM_D:"Tle D", TERM_A:"Tle A4", TERM_CTI:"Tle C/Ti", TERM_C:"Tle Littéraire",
 };
 const PROG_TRIM = {"SIX":[19,40],"QUATRE":[15,33],"TROIS":[17,33],"TERM_A":[13,30],"CINQ":[19,39],"SEC_A":[12,19],"SEC_C":[11,24],"PREM_A":[9,15],"PREM_CTI":[13,29],"PREM_D":[30,62],"TERM_D":[35,73],"TERM_C":[13,30],"TERM_CTI":[17,34]};
-const TRIM_LABELS = {T1:"Trimestre 1 Â· Octâ€“DÃ©c",T2:"Trimestre 2 Â· Janâ€“Mars",T3:"Trimestre 3 Â· Avrâ€“Juin",ANN:"AnnÃ©e complÃ¨te"};
-const EP_SLOTS = [{trim:"T1",ep:"E1",label:"T1 Â· Ã‰preuve 1"},{trim:"T1",ep:"E2",label:"T1 Â· Ã‰preuve 2"},{trim:"T2",ep:"E1",label:"T2 Â· Ã‰preuve 1"},{trim:"T2",ep:"E2",label:"T2 Â· Ã‰preuve 2"},{trim:"T3",ep:"E1",label:"T3 Â· Ã‰preuve 1"},{trim:"T3",ep:"E2",label:"T3 Â· Ã‰preuve 2"}];
+const TRIM_LABELS = {T1:"Trimestre 1 · Oct–Déc",T2:"Trimestre 2 · Jan–Mars",T3:"Trimestre 3 · Avr–Juin",ANN:"Année complète"};
+const EP_SLOTS = [{trim:"T1",ep:"E1",label:"T1 · Épreuve 1"},{trim:"T1",ep:"E2",label:"T1 · Épreuve 2"},{trim:"T2",ep:"E1",label:"T2 · Épreuve 1"},{trim:"T2",ep:"E2",label:"T2 · Épreuve 2"},{trim:"T3",ep:"E1",label:"T3 · Épreuve 1"},{trim:"T3",ep:"E2",label:"T3 · Épreuve 2"}];
 const TRIM_COLORS = {T1:"#1a6b3c",T2:"#e67e22",T3:"#8e44ad"};
 const HEURES = ["07:30-08:25","08:25-09:20","09:20-10:15","10:30-11:25","11:25-12:20","12:50-13:45","13:45-14:40","14:40-15:35"];
 const JOURS  = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 const JKEYS  = ["L","Ma","Me","J","V"];
 const PLAGES_DEC = [[7.5,8.417],[8.417,9.333],[9.333,10.25],[10.5,11.417],[11.417,12.333],[12.833,13.75],[13.75,14.667],[14.667,15.583]];
-// EDT_REEL importÃ© depuis ./data/edt_reel.json (9 enseignants, base rÃ©elle)
+// EDT_REEL importé depuis ./data/edt_reel.json (9 enseignants, base réelle)
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────
 const LOGO_LYCEE_B64 = "data:image/webp;base64,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";
 const LOGIN_BG_B64 = "data:image/webp;base64,UklGRqiLAABXRUJQVlA4IJyLAABw+ASdASqAA7AEPlEoj0WjrakopnPpkbAKCWduUHWpG5vPh/8/wqv+/p+Xp6L6gg8v92xT6X/wLzAPTj5b/D3B34J9kP/c5Ze0P2Zy/ef/5nw3/vPD79Y/2fsCfrv6V+MdQS8zz+l5wfth1Dv/Z6ZH7F/0OixyobxMXi/PTL419+f8P7X1pv//qP8T3pn9Xl79kH8e3u1Ji3wr8I/9vpW+J/53j3+Mftv+zz6to/wP/t4u/7l/79MfHf8d/y/MW4q+W/9P6PuBk1jb/1h5Vb438AnYCZG83i/XRYWrkVclKHCsTAxfeHnpZFkbJqZSaMRwx7nC+SfH41vIa3iHvqt0ZkxrEZa5qJzfCdIltYm8KMVIOjX1QKMdvexj+RVtsjz+WcMiXsUMEuKUe7ggQ2UZkaeC9q8P5Vvm/teKcYuNf/xU7iu1WE0NO2FKGlCKTGX29j75qlsktlWKc1mNX9XZBD4TQ6htuRBgP/wUVqHtuSTbB+OF8mBanxG2aoYVzUz6P084gJSkCY/VGLOLrstV8CbkgQvMHO6rN4p/0eOspFtdq/hIDZyus4anNpjF4KZGHwnJk72yN0fcR7OuDumrr57y1t86nMr/jalxAAkXydN2YW8Rbj6/BuUO8cLs4ddQMLoWOwU6SBrgJZbpLvHeCkOSaIFkiM3EZIPZLIpfXVROM7mZFhlJrwx+aL8i8jx4zR5jNdjWQ0SwSN9CLfvX+fR0PGgms2OC34lwvGuI3JE2c84+LcHTmOlrKgGSxbY07UWxvQC+W77qMlq7xDtCDipNCebijsEDOff/DEvzEAF8sCoZV3wMpVxM2Qaa75hvqazoWR7tmuCikFZmddhbXOyUs+QfBUfah1FaRcSLITiEOkkxxLirytAWOvfIzisU+UYNquQFMeg5pnaNU3Fgal07AU4N78+IOUPTv7GmwiQbUiDuDneZbyrkWG1G2RR5h+SR6UqTSL6U5hWFm5JLwAEvThDyKPO/2MYnUf4qYBT5/rISzzPcj9yIT44YJYnAOXTXgQHvLWpxN0nKKPhD3zEtxApoJIXS6SzvthrS43vk2pRh3KpGQCRbpBXLLRQzh0xPsyWFBci3vtYNvES0S0MErVIJ4NWyGBKu7afKLYlxlrU3qFljPDP7tFiXv/h6GnoTf+5O0S+sDvnSeXRdgXVwpBjHcY0dL5R+Wz0pEZ5XJPmeDJnTBW2/joBPGjvvwOFXBALJsh2BW7yn/ZTCi6PZWAqaL/C4a+LUL+Q7Y7IPOZwlO7X6UJKC0jxSC31qDon/pHo8leR1chbyyaeCFjXv8ema2lvHmojnO6vCRY3eSSa7W3hXqEkpg1DGPpvbYlH2E8+Yu8+1a2qXhIhnKpAw06ncuf5l0xw5qWLbdBmo70/J38T+7f495N6uyeFSTjwpddI5WH9C4YYOlW1084wU4bb1wC6pNmqHE3m+XAEql/qpZDQP9u+fxN+mO3gP8Wizu8WjYPJnL2M51su8IZkftJ8+ZYbGBAgyE+9Dm8iRZEe/Pqq0I4Ic0ND5D3odbQB5obtdV8jtT255YFLX2ALzy9c97JlKqTmYC+kNlUGPRyD/FaJQvXemaXNbrdzsRqeCs8gYOYU3jFE6nr1E2dR5BZlgTP2VzwSQs42ID1p8kyBMrkb4LFYTR9ml5LBstXp+mFndz7Rq2fvEMCkhQXq2QUe23eTSJ05v+8Kc+iKHIbXBY7iqxmGIzfQsiIrTiMmJpBuLuuoBSDmndYyAToUIgyWeGQkOFKKc2MZ/DVGTEkPXxpGPMQWaneV0Q4J40FJqzN2dMLZbUIbL9BHN+qWiOGwM7zdJopUSY7xJId+QyZe6FitPVva4QNiuJaEoTfdvejDFyiL2Tse2X3DWRanhVEu2wh6ZkzL7XzbazlRdM3IJ+85y/EGSnsQz21s0gFM1wLEAYgfgalXB/j6ZlH8QhUWdGg5NOFd3FvQxlu7+FZTX7BS85F60mJTKr6NaDkoqeG289RVuyG+ZTNclB3Nqxo8AgwGNd8eJecdzSu2t/qE9FX1zjP2s+nvBNR+RJ218L2VnWBw4xFGzNE0MVpFdsnohk4ypH6g5zQY5lgyf7WE5/8d9diU5X/6IJBkYp8AS1mmySAWzuHy5FzjJXeQDQUHtJ33E+nqYiP1AgZhVyNrQGXZ58z4TzfAbH4dTqAUG6OAVLpMbj6ViKq3y8WkFqvhqJk10o7O7QgzvuqZ5PlYUquP7Nv+uV7bXaM6suEwUbHP/EnZPvVpzXk7vMpl6y0nQZFzYSPd2YsjEIOGdWpX29uv41t2HJYMZYCH0iEpxnbUwRwmW3XWxXiRT+4zmp9zVu/ZDJa+K1esiUEQ1/IjxoiRJW6p3edG64l/6FU12mljTKZrNlo1kT2JXD8xs/sb4bLNcHnLYXko4ZRmWYvFNaSMImkZhxdJb1o5uS+mvDed9oC1VNqLESQNQgjLxC1sjMeg0B6GhHO2kulSorfQ7ejN05Qzr4p9wJ/eKZXzYoVIjt/sYGvG2hU2J7a9beiEyE+rgVMfHMS2maT4h1+fGtUNg8sIh3Rfb1HhYpJsQhlYWUKRpkMypKBDbHgKncdzIj+EeDhUdZwZjKPzbbmyUdhn1p7rpfVfIligR5RqsxImqVmmAM6MLaIGTPWvcCyDYMPzQWrKQyxpFuGr4y0VljrfAgTEiAkPec8vcPzqy2QB/hMLMz8gJPuO0lOWYkBtOtDVtzavaA9h7qxFHfo5+00dA9ZQDICHt6xc0TbCbvQnAfLzkDl5F4f0TlHKjHFhKOOCQfjq/9DFY9PA7rmRM5MjIrGp/sm8O+sXs4Lc5w3RYdotxo6wQPnjQllxFHj267nhhkAo+HQEtOEhUr2+LMteq9XlsJgZP4+C6bhTltEv7c+TuUyFDtxnI26e5wTIj2R9bSWwMOQR0vT/pt5tbBfhwr3OT9dz9lqI3ofd1i8lQbOsdFqNoS2qmgI1QzQAEkeicIEMvNkaqvEn1elAmlLZcaVFKeMjlhGAdyZwdhPAXeKipVA9jAMB3d/rnNyUAvoP75Cu8jvZpVWTPpbRtkIpjNHtC5T+X1//oNftiBlRozO6HAZ5FiVgVJTFQSiTRM7f9MrgX3D4QUxAOGxmhHLGH6aSe/9Bdy3gyNNUAX3yQSybtDejQb1Oe9jHjYoACZoRhel6Vn6FyQ3Ai/kAR7zVwtWSdOq5D3YUJ7UCDJme2QLADBP7hqfH0ZTRDA/B5tA1BDKR6YJ15ly0FqmRyDGe/zHqYJUYAkY41u9byPtd+MIE0WlIwvxJXCEjPtLp94P3Tc1U2qpAF8ndYc9gUrVZ08SjKoVtX+kfOEaELHqmFvOJzZQtXunw4QhrO2epAZYhVJh2hpYaFaDHf4JscYbd3wtNQ5SvbatHyQr0yut5XNyP/9k386q60qtytfDR5qpp3DhuakY/5dTmZv/2z3GbIv3+nmv//sb3wKfLVK9Y/xFAQZobQIWw6ico8/rBOM+RHRoAguWgFb9sHYDyvVoghOW3DswroWKjK6lmGk2WxgPh184DCfQWfxSiRoRyJMLnvaWbSucUOREygQGl1Ph/xbD4RxQjNq00mLDUJ2byfj75KGKbFgeB0Bec1uyML//VHEZyOsFuUgZbiSco87ZrRSOLTXB7L//ccgq3V/2/QIuuv6lBqgTsEeGjVpQisgHzaYOIobFzhsYPy7N4IPwqQMCvYiAfGK6O9ZnqdPcon+YNPm6tbloIb47spN8tXGRGo2MrSoj3CvbSyxQVPSKqD2FYuaPCOu1jph0xeghxYirfKfIoHgPu/wD/uOfa3uE+MmHV5Dd4Ccu2HldxXM5AZPKt2aK7YM/+TYJjY5Knn/oHh2VxLOQqRyN/DLIZRoLRym6YNp//xI3+p/UHbqz//J52wr58p9G0m17lecpC+HETJwfMxGZduUkY7FrisHkf9dmE9XAREQO0Ud6aBFerVfUozkXZUG53U0zlvh4JJPT253larDY5pM/N4x42Gx2fX/CGpXkLPJVGPj2h6u1dy6S6/Vmgrc42KpNQL82rbaKcra+UUdbJ++vinZ32HB7ESQEwQg+SHALKWSRz/8mJff/hxwLeTkfErkYgwjU+PLBuj76jAxKSJ7nYOpjfQ32J2mEaKE8r+67jrGQ4eBYAO9hXH+lUjhJtD3d+RaHIwCtBWo46k95ss/4Px/XbxpRRvc55JT95qw2zAP/6h58/d4jaQPAOSvH17MyzzlJw5xmoEC5nxu4j1zvoiNF1RRuyFI2D0wvNJs3s0FVcxCXL/hG/XEp5YohKnVX9AqdW/cw60pgPGAVkeEv63yTfK1awYfzEN/YvRXf6LFG7cCHDnMDWTv/QTukJs+ymfMSCmPZA1W6P7Fn/A68gtvSBqCKUuquWaJx/AhodYxnIGCXYjrexl9QZZYhAeThc2arvYVurQb1uvH7dyH4gyLlRIUThPIZZBl1AR86+oxt/dX6rdy42ToRjeV2CLOpWOTEGpJRInCyn3e/Q1DGiDzNNOoitBs45/JNV6xT4qW4f88r0nS0/69OShmTT4TtJzd8f3EjwZqN+Gs3khTZL2jkXTCa+WMZRzxAtA0m/jsrt8eQvNuQ9x2H4qLCaw5btiD9cFV2PqVSydUzAbxUIMHWXzxFfCfiMtKJ4J2iSrAddQjJcQZIPZK5VpUDQWKCXzaCXQAdzBYttnqCy3Evn9kWNkUGqZZ5pFoex5qwc9xYDeT57V8xCEskJ3+PZvTqDDB3mD5/KPRyTr4riB9urC8UQJu1oRMdie1zuZXFpFr/R1iWqHKNBVEWjfcGxgG31g/59uFcRAcTXjPdzeVsvkLa9NLru74pt9All2flrO1iU9jy5Tf3RUgTnbGNfO92zmUexSptpdOn0TC3ME7lb5LSHOf5xobeNwZpJPqVHN2QNszyFtQuVWC4zTv7xuCH08remYrETXcDoZk4fie+KnTepMNDojoSUF02rwg1ou/we3hacXBZOu+YVtrYis/zTqFIDgkJ3gUcHmSLBrNtIlCVO6eUjC4+MR16N8tDkU6eHhJR6I3/hxqBThsZAf2rEPGL/86udzX8605kybdBHzBwXx/g95t18bsr2Atp0qmYwfiPkEJ1g6hwtNZb8xkPH/w1+OGNsZwbCHQy210yO5Pn/8IK++MDithL2Th83uDqrd40LEJrHszkAWW7n4jNKHljPtjFQJQFruzK0kaXRqxd9U6ec3Eiuqornkm7xUEtzr52a7bpKze66OITB7POQjTU9dpLwjySEm+Ik/Lzi32XyFcDfcMg10lTagoN1f90YklwpepnLis4v9rJl4zrPOylTZR7ni5dqNEXsdOUwZeocufZ7JGxLgSCPnHbKHiDBdDdYUgIToliLBW8ut9Wj4tow1vcrryT3XbZ0+KfYuFHwwav+KJ3JhPZwOeC2TMGMjsi6GMacO3vSdqvFge044mnWm6b/uWI+v4wbmmKUOyFpl96X6XObGGWy/DtvAHBEEgp2t6loMOmO5lp3sZxfyQJVW9K1iYUI/uxspelGJqM+dxeEoL2Z3/B4bC0esI9TvsXdNMWtMI7hQuEZENYqJEEqS+J5UdfTcico/0HPOjL0pegCz0n5EmSzhs+KBV12zmeUOggbwEXDaDBJr/yZg4iYqtvyfLly+wJ2qLtT0q+6Ou9FWPQ20HlnujrRStZhpPPeSKvFezacD86yTdADLtxJ3HSDhj+kzhWAO9XyVgWVVA1VZ57qlNvjx1PQMvBwxdYR03wIpNC6EBy+VZ+avnHKIP6d5zWIkciROaJmIIBMus/mbZOa1z2eo6QHZCwY/1v04Wj7iEMDeB0HhufK7l9yl26Eez/rkcyrk7BwsCeFpz14cUgNhQyp36DdFL5RxwOoeplEppTfWy/C3KHV/nMSFxOieyeK6lq9dVL74rq5TOUwGYXIU5xGu90HVLXFnr/9B6zyNDpd+KjeLO5GkMazwx4f2VvU2Ac7yc0zUWA4DYjfJbpYklw0PFma3z3w/RUQjUaHMkHvmICOqCqFqB3s0lUzN/dnFTwmHTiNhEirbu0VLvht6lNpeobqsVQeMCvh1bc3qM8VcBkBA7NByqgLkZmm4RVjwtHdxrRJRxqS3zndGHM5GYdNNQpPc25aG9D4ekTg+U/H11JX4ytm0oK0tFG/mRaO3YKbx2yvqwDIkqC5habTZBgrApTlmKReWbnmCokNav4If1TreJKxZEv9WdGXhc1Xi8ZL15dfayQOjdnT8kjH6lCZaSqjfbOH0hMRa9pWrE1RLF72UBMT/nFpAuGDgUKU/bk2PP3Tg8KMlMrZKBnLRafNann7irgvpc4TU0hnnRHEvy32lRlc0OSbQT75f534p8iSiWds9EnPhsZEjN7H/LVnRQpOfkZwi9N7v/FyE/vxFpHQ7fNDzeAk/KfBVmDNha3zUG7amYpsLV6REhRFkQEQw6UvmYa9iaGuE9d9n36KmvzpUiYpTGz0rmHiu7rF8fC9HkhsnLIuhaucq/tUJWQtPnIlUGM0eiK7NRvC4xAphX4Z4ZOMza5ZcS5abYqzvyFIRjwq2A36wDNPxmitMtPRtk2Ngbjjnpzd31EUIMaTNlMRZPDRhzRm/NCt+AgQVRvySK1IwnQfG4J8pVdLyRQp4bFa/yFVK59yGgicRvadxblskWEu2vDdu0mapCzVRO7jGilefq39Bfa8v8qvYVLV9CSe431z0LajZOjJDc1cb7UgQ/YmTqgh3K9h5sba0d2B2Q6Bn5Og6p+hnco94KECt7gW53otGVUFImxGaiOF3VqUh3wCnCf//ddxXXQptnFTXDpFnVAKEN7h+ihtV5cc3aOpb799KKHCSaY07u46a40hxOGOeIcShjpyKiL8ornYrAhQVpt+4s+Fdk70n0mAxMwSY4cjedYdcFTEjrU+qvj4/uOONMjSzCKtkI0rE9kZ2ymfE/a2QJbqS32GlgOyw2EasbIX95yUdTpwDLNs2UFm1cERTUSZO3rJTub1tKUA1gCwidDrJpLOYoOgdp2OrXMW/KCmJyIBsRvJmTwmclSECyjsaJK/xsW0L8Jh1o8/RuNRA5cSstfHW9JWwD+P1H4OSE2sVpwy7ErySCAiUl4s+LVUNKGBqdTNoWzS886fTvYB67oEztOhAHkINgnXdnKz/3WKEQDJv9p3C4g+DMb86ELRnIywUSt5viYr+qnnNJ5xvaF2bUbmXjIPEIyMTcmeGhSEbuXb1RXsVhdgJ7KzeLJv1KZewtLjPqrNx0vhDCkSYqvw0Plgzt85Yyx3nB13pOjUCpVJJzYjwIGSjHWnX1/AHShiKIQCAXUXrEcj7GYzaP/laXKpeh/oDKGkzS//8BfhT+eeC0F6smVF+N/5lvwQuRZyCK5EdRNKElatrWA3eIoFpXHwkgWsjhvbP0uKJb/mQIWQ3apgRLrHNbVzipGFzmRvKyA42TU55/wjhJBVZTWUIQKgzVaGFRZZ2AlGBaGWeU98iwQNwWytAFzJSumnQ8DVZOgkDyXg6t9xLD//////+QZubqthg8cfMzoPCWXIOCzpZXi0Rb0c2Wfi+LVv+IMPcadDJkLgKxqXWYCAoFQiLSPoKN2VDNFgPcSFwyobow5Zxt9UXr+GZNJyL4nmJDoedxaB77V3WxB4mxWCevxVshOzWJGuIC54PE7VE8kBpclCzcMOVP6FmMqZo7/quMGTRl+2krCIYRAIh/gBnUxkukfATckcsDvSocQ7dkRNzOoUvNb8mSgj5hVuCONOHUy6Abh5kZA5hlNWkhIahWAh7xzqm5CGI6fMlb7Ikrx+YwAz5HEvOX8rlEpCPXqZP+B2PG+vqMe3OIN2UNY6XGoxDkFifzgcMgdZB2ctjYBwbcippSgUsh0V6vtnOGJIPSyIcL7skUd925Gf/AKf7SQ+NoVRA4qV/4ILQR5smxDcd4Rukg6k4LTQf4lESC/svbumBKQ97cIlo5M4vjHq6gjFxf0Zy/HRSazXLF/Wo9lEvIAHZDmWMIBR22e7+ED6iRwJZ15R6v4opoRYJBo4nnTKwM77jTs6+EOLX/1SXxDrSV2ijPKupoBnxPjQkxh03m4u50mFUlv///3GM0EXJTvBWb1l32mTGCKek55ldk6gYYABEZ7UqIMsOhISGkMGdsA8l5dPGsm2onNq9zezCPzK9HypMmSzIHrULTUKhqgOjT7d2d6zFTOTzOJfsrxvJM0GKP0VEncsO40gApnH4Kt4M5hHcUKYfOhTzhW2rsLkZiUXjBKMS9PRJ70pMTPI2ve7L1zOGs8VWk4g7MizT1GbIZZW0/8Myzis8MxRo0DfMr0nDPl1P1oDMSU+OF94G3Qm/9EAXA6eEx6PihVQ1F2pAKrYH7IW1oJgVS8mX7/C392QAz63yv3aIs+AhH+Eg5uN1hdORoHUTyAHXe2zfsRrQlTeRLEDSqwR8jxCsrx5vB3K6BWwdLlKoJYd5avSqxpA/cgHpJTmKmT5la436AFk3TcGUhEr5IQM4vHy67QiL4z05mtpofdlYW/jsMp2f6MXI3z0ZXsxAuEnabv3iZeqdF6O3CNtTA41aNOVHJsORm+UtlHoJl1FgywrUrmNf43SP5P3YV/038RHdD5f43HWd0jTelAVRBwv6vAw0cp4F3/siNR1AITayXHsLX3RO+T3jFDURSVpo6pvyuN8Si8y909dt6pZXYqyFaBAvObKRzNCFxScWxhbDDma40039rqqrZL4Z6gO8DZoe/baONvF8PccXu05hbSjrb/xZT1+TPrpTmhv1PSIoT7p0k2W83J01SXk4Zji9pmncfplF5Qn8vJD2smffN8ZaADGGhe1GbOH77qdky/hv2Y5bNwAnz3URmzgM2/MBt0s6hT6V3m/k0QrrB3x55f1YAFQcz1nsTbeT/7fchdx66nPwvWMz+FPRgI+OXlIjSX76OCb/RKmS47tbwA9CroVMLHzl76L+bs5l0OxivvMbnfOEiKU4RD+4EHxY0AYW4KSAH6lksRp9tILCGLyUPgARagIpbZjsSQABDtrI7lCRmFhr/0rs2RdPF2SjUJQp87TCEkG1XQHoOmSNLjev12H4ZxOj3jGzBxpe2NHzucdeXvIybaDLwc8iMsuPZE62AzYfHy8DZ5ijPmmZl6mByNbSBw5w6BSrXFNVon105vhpk/W630ptwUopTkU3OAMlPyPtX5wkIhft0DYwZYleHMwdJkO113LNwcg8pMfnCZICw1/jGAx+FzxfIRlslIV+XbVA5Ajt7TxrUaakvEruhPiRKDMnGONscCW7InRNMnqUKAjQVpeqQAFrCxTB7Q7+WuCQ3ngtXYLqTomYG0wB/3ywsW1UFLHQZneqnR/Mxnov/XKUgiohvSyL6p9sXEvveZtSevXi+fKlY+CfsOMwMsviX842Zok4+OLJayuB2GQKFdzn4Bpj+wEq46zp5M8XH+1VKmin5qfAa3uH+irRdSVgAaesn6Z9hBUKS//p2J4yD3oA4Bvu4NYGETNnr4Er4kVUizPnZw5Qse5/cBlGjmKhPLyZ4LKXOZ4ZrdOzknav+IxNGHTZUR4Q5XINu0C+zPbSRlJZ1vk3RtXUS2fnoeASsrLmL/hWJ12eK6kXRaKPGqQe1KErjId0a2aX4sP5BOyeUgDxG8HaJIuOK7dy/35zFzZW3Ylfeu3M5qShSxYcAnMnpONEzLAih4Icux9RTFQYajE8R/D0hZeRNAYyVX+d16dYSC59UdY0VkMJIgz53V8NCRXX/Jdy2sjd6hDX2EWfT5NnjBopCmY65zZlI+LMIYIU7mpbtLebCBTJ8uwnfl8r5ZAXD0nj/npnaIRQ5BYEO/fqLK+FmhDJFahJleaFubCdBoHAo89M6IGn7awuAfEz95POR2sQ8cNzL8r4szC4bgRdROqUmDbBg24GqTdG0G7s5BE89Gn4WbkzHYtecNz7o2kZfiCRo6l1sc1nZ3Mvvd/L431F7BIK5lJ//4btwweHxoGc2HTx8TJfry3DqkxPXbLYH4u1FpY8406/Z2SO2tEc7TQaWwPwFmwQCkSby1FvC46CeWQ99JAETJC+Vfri8gyM92WB+wTKLV5ffK9fyq0lbfcsYsHEmgOltJOCKCnPtYtJXaD50L5n9NLOcVnYYhGB38UHLEm4a4NY46J7E8FD01lDxLoImt5z6LfWe1OMTWDu7LYk73kvyVsAOrDVexntJIyOrksiAT8bi2KT7OzzatIia/6v/y+1mJw4RAS3vWWikJ8hJPnpGq+siHz//PmDqOA3F+mJV2v/mWlkGleeICSmupDOAQxnf+Y9X7CCKfOZVu7Wr0arDSHBZbCHGoqSeZyD5pQygNmZe32XUS2/faBfilccOMEjZKBQ4QKGg5tqLXvt+UtAIAnAdngpRh3bO+34im0UzkBxfzfdRQ7Y0Qzc+TxgYXjygAFsaNKH/7IKMWoUC8ntY3zhC3taAp7vNUhyJDCjTkfG/DCZhC+xbLG+g0gm/a2OG5QHSbXLmpNSP+m/tC9fBs6nwY6VEyxZwgHeUFtf20dv28LkOHxl6ltmo/SBjzk0d38BlYtSNGAIY/unUxp3zhYat7Rfecj7h3smo7isC+vFoAN7VYRYQNTNjIuKx7eyYt7qRvo4BSfnIq6mz9qNguXJ+lAiwkfbxskRYQ6vbruRbHJ5vKoWUghQUBt7bdWB5w4NWFqb8OxR7RBUgD6rUSlcnOIv560OUEIDfwXG90FeR6f5ulMpb/KpegIJRpjBjDMo0VPiUmfqiOO+St1ox3DZtC9s5cYlkdN3RFo4Y++IBGfXImQWNv21RDtbeiYJo7ihiVcNsCrcXVGw1JxNjQf5YSAQ+aqSMVr+2ukMgXYXpn79OzBKpceyJMwx/DJOxZgDRiNQCxBkPAyUa+LzGLoINtkv0GGFoF7RYcKvWGUJ4AfRl5ckosmI8K2Jz9T93HRkj+q7GUL12A+UqxMeO2TPQUHA7CV3MfcVazDkyIpxhCkZKW1PA+ziQ0pNTz5cU3cn0x3QUnURrfWKbvKWfZBlwlPydm5EI1P2F9R7cGinQjH9Gq2Q6+gNx7INlytNuHyLM49gajE3OsWryIk8FaBBH2pqm2t5/c1OGm97z/Sw8/TxDyDdflqak8SXWsjLkobs7czNQ9MhZgMtX6HXH//7db1AmXzK4RDBbwADTu+tHM9OTETLOOTgoYUmsB8JrNOQzaqhtSB8GjYz3El2jN8Xg1+nM0Cxzl4p8++iONFgI6rDCR4XieY9/kx5TZd4R1w6aqQuwqaxC/KZjygiLoUfpmj7I2xPhU+ZwEc3iVvf0vYwVhwvr86FYwm+6qBHW6N5VF2Ucvd3c9GZ/yXgGAjiDvlsgRvSyo1AT+BHw617BkyTvpAWxlZNhuXzNcu8BCY3X/2Ap1FYoJ0/wN6qUchKmJc/sIEMcu31OK/0aiYN705PqNz21clEdi7f+WTZUDwEVAtak/yWXRIXNkl3SlW00IdKUdGCjIgWzlx2ouu1QfgIomOL8BEEouodns792qCBadDihZLDtIwaPCdQxsdKkgTocyPiYR0fLYOBASXpGgVDgRwE4XcVLnZelbtOudYilZm3NIN7Jbs7I2yWshVka1kxCGk/WLZtP1uAckpBBzyXTzOZ1ge7nO2CpoDhpbq3kjwrGPDzKoerqFA0MvGmj3OnEnJVl4sbiyHhcI2VqSswqALExyXsmWs+JO/Q25v+gw5IN+CRUX/HEFgRl3NBnTXaqtjdvGxfWYfqHAC3erv1Mbbzv5x+THz/mTuOOy/O2GHMHwPpqmtzy1fMvhRJBbER89T1uwu/ObdCcf0rmcTlKXWLyzKeaqr+QZTly+YagumsKP/YHEhcTST2l45o7KoXLJXFVxnFNaqFa3ypMeaFm9eOukCD6DEe1nj/Lyw5K8jz3+wFcLgZgG0t65VUT8Dv2ZOLrPe6uydhsIx1ygITncxKC/9DdGUqK8OigDwtBWI4ha/3z0BuQawu5hLvpXahqrY6jMyLK89aIiyBnScO33SoDEhR5BLpjxEcXae5Xw3pjaJ0rmqrsF+f00xFtki1j9HAvsKshecV00/Ijb5JSEbLWvq8XqN+2omUiJOM8WPOOCahuXiRRijMIBC4XwwbIUsJwWmsXqV3nRBOCN+2H1rnSrv9WwWtofT46j9ADQ3L8svwN1WuuCkNYAyj9F8z54ePWP3UWsyDoJJrie1jUi+LYfZP4N6eGv7wWv9Lobekzhckf/H6miGt7ikXFLkw48XizOkHTSsnGR4iQ9IllOQkvkhQV7UYDJag1qnNUUcVYaL/UDQP0IWj5UHLVS9xXeP0jC60z/b+i7v2UDWJUzq/oBL7ulcQef2nn3d+ST4ckq/4HP//9JKe+9rut5g9vGWVaD4OhzUZosvZicgXJE0Zv8CwN1d1peDxFJFFRs/OhHyGja+4LBzAEGNzvZU6DdZFWDxebaKrZsWxrXlofsut89tODKNZidfS/zeOConDqilSwpFH0q0Kmea98M5ga9Hk1c3cf3zPOp1lVnSFgsmfKzcC564OsYiBiepAdq/bpL/KFk7vvP+bJSLe51ss2f8IhquKNObuAQ6IMedU5mkDJW7wvUnDIqH3jZN6jYIESXVD1MuPB7OY0cJ4b5igTnMr1FP9TrxbQgT0OmWZLnERNbwmY0l8KUXycj9dQMKZmlM/qM4Q8IiWtHqXq29yenZ19tHcOO1KuQroH2euj+uhH05k1a8WKbAsdAm2DddafRhsv95rPPP+mqsz1la7U4tbSdU6jPUOgIxJlOJaSIs8gMlXEgQdgkB7gBakOzi/hUvgrH6MgfaBPsjBKDj5N2Q1ABMiNe9m4kCQy5Xav/ez1iecS1K3d7enFhDIF69VRbsGHZ1mbgmq/luCpk6EorERlcoGWqrAIRGz4E9jsEyjlE72qo2vuud+HEAm6B+MrHNLYiZb41UmJzUjYFC0WeyWKP+BmAx3oq/CjgfS2wMxvXZKRaMlo8ipjmgHNvcJeUVnBvcFH4Y6YlAXgPeLwdkMZ6UW3TwKX1z1IZ0jAApjDqUy1t/opQ8tV66ruQiqol+oRsYRSHV0oFgqUFhbwLcMOIJlVPxapTxr49GhzFltWrcjrl6COAZg7BvHMmYVAf0LJdhn+mLBd/v5OrUzOwq70aJZXghrf8/hx5CCuMwc+EPEcuO+KZ31rrq812tVUQygCYJw+2/UCLXEzjEj0KOp6EW6glFFnYlFzL7vjJeDTYNcgCd5Jd8QDAXJCi6PX5o7PLHBWzzkwskOgSIRFi1dl2LQGXlXvZspUBDnQoFTwb+hHbwxnMM26YZ1vjiFNcULhiV32BCwF2LTW7nF2YI1MFHXldftEaYdrmkSdKAihlyxqsp3finPAFfjOv6u9vfEeJwrhqrf0+t4MLIXgfP7Sf8QGU6CM/TAGjlmKaejnArcfTJAqoDb17nAU5ZaAswroq5V39FodhliEU14o8+nfeIQwj43A/fgdG5pDmryRxymUZ+81T+6gxB8FXvgA2k7TqvSeFdnDxRWWLZXeSnHqjx0aBkm9CUPH+nXqZgwFakBSy4hCodxy1Rxavm4j6y7AeCRcUmbsbB9QtDWC9DZnGZqmk/vRKAA/uba09f82+HfDs3kazL98Ruw8xt9vuUjmdWPMk9RDMnks2YpIAAB7LEQi5GvoFymCzv/Es9ssOoAozTYFpGuzCJ1RvciVTrHSLzs3ILwZlVZIsvt9ueqoTocDbQZafA/Wp5fliDgiujMb45cmOpe/w0nLbhnmQAvBmmjq5exUjInatbn3ianE44vKwBK/snv3trm3oogD92aEg1BlO7JQ+fCNnek6glnF+vaVLFkhM1WKq0NePMsQFsoUh7fGkLPM9w75ustnLTtBfFLs7G7DZUz5pRupJ2O+sc+SS+QEmo4M+9uoptPaBXcEwZVKcrTxJ99oW9Dy+VQmaVjI9zK3BzEP23vfH0gAQeONqDH1Zlzn3jgg0QsQnyZmjvYGRe+JgcAMREYHvx7IQjy+BA/MLBWug6bynGbCEYWMgcik8HQT+l/j7NieNsq3wxmyu5wFePQQOFnqTuartsPjrJZK7ac0odfk5DKfPGmWScUFPG3GD+SEZnqfyMoozFXWZMHs1OrftV0ZOWBLFk9P22f6I6hREgvD1IfSjXxfsEgp6X6YoGFacE04uxrKt4RlkJlHvRJrpk8O/JLvhwmL2LQdfMxKhtrwyON2Rcjy7FHJj5ES+GUZJkyWtpQCnHYszdYMOklfxjrqQswwBXluAA8MlfXCpRM+MgUKYCyVl0EMLxIcerTQNev0o/KnZe/ah37kFRghKuYYrRkpdYoIUSOKgMpivK2RqM2x5EIYn0NriMbLA3dga3LMvh8IAx82ilKjGw8C1yWL3y4j8wSV62tHkEln0oMdQCY9NyKR77KcXwC9laLSuvUeLelDTa99ovDaHoGTr0kWvzguABXm1LImAUcYZeA8h6pgKY3HBVMN5wA9JUAM4+nZOE4IoYM8svR0GWty0gkeEz0c0hyy1Hmx0dyNkuyVMkLSqq1aKidrkZRXwBnDvzxIOjM5X1r9g+0M6ENaz0wN3shl3vFYhfVjnSCKT03NctQ4ptJtexkPubsIUJOCeF7jrYcK5p86HucktqXBbGL6qxPR/WhraXYc+l1QPSLuP1RnPPulRotP7IReCIaWTTFE6btdf6FiiGnGKtWXdqbVVJp3qZmJD9MY4s4M90IxPoqxUu0ebylQhnMYYgmVPrgGrSnMtPjHkaSLs1lSjcYxVvszeuBY+O4WVgNJF4D8CAAb5Hm2gP67l3Y5vtXZ8D+QNfd21cbnhLux26c2BDSOltwWykKGS71lvN5dgNpGkuqEb4qN/dkAVeQvlnWUr7yPl22wcyWnfpkB3EpOtxAnIzLETCtU/ImWw4gnHOAETiJf/NMyEaI2aKuWLHrdiftIFfZPELfxX7Bp9/VRwuBO28O2eo/oXWirINwYTJHr2Yd/pHd9gXy5+GPpL0IZS8JIgy2yM0HV19CCLE1uziXWgPdu0CMIVTpU56KbsudMh+B5zmZs4V+1PMkA8GKDBXMCQAk8AA4QKPYlWjIIax1ZzzzydN1xCMXYp44Jem12wgNwpD7wr8l5fhbFp3djJEbKIgvCqk98Zfri7MVTmi+2li6WAYIfo7DXc+Iq73stlW9wvVbQAL8FytWgY0vTt+Ea9zaJLdNByFoHPue2n6RkAUpRB4uEpqo/PuxQoX6gQzsx9VnKWcF1ETvOTBdSX04/2+F4o4/OBY5U9Vx26Cjk1zGf7ReiNVqF+TVksCknRd8Ct62AnECXWQnvicODEX4yk+YBBaEt5h/Vrw7MteMGcbLU4QCvlrOwJxms94ilQw/hhboXAHnVfN2VZT4SYQbXhm4o7SRSCwWNSiRmtSHvbPkPPZseuFQpw0MbAtEJtqO68J7CrjW+3/L/WjAYisUFgI/pf/kdjCXQPsXCiBPGpBix1qEqKSEGewNXDnguNpazHhdLq5ObLSpPzZKBGuSAbEYMxEeR0QqNNu7K2R8r7VoM+Mq+1GuYxR71e1oXsTtnNZBoZiaFOAx/Wk19TIHcHJTUSJiBIFmSEc1CjqHf3vOE5g8zDgtPqOKzHxW/5Ah08rUC4z4iqE0ByHW0jGEC5UgUJ7wBR1qKFxa13x7Q2F35u9xkzBBqO8HEAC8oPHjRGt9J6OCsEA/dpNP8tkAohUuMlzY2ezn3T2fhgTnChcB9MGCEMhmp6qywtWIBcb+oaYfsn8Sr4Q7zBRAADMajIvAcqBemXoBLWHqLYa8aA59fXd57YMuDZJCJa0W5aczUbAzbYBGi8Kk8D/MJjelXKIVi7vUP0714O40SyoKVApDjn3tg7QJd9ouIpTeiUAG//G236hC52Z1tj1mNf4KxHih/9icCvBbdK1aXIdIww0WABo1tAbiSXlsu8Mt/2jnkeT77VAnUnHLgEQ6SzK2TYJDrs/7NodQN6534DdezUSK8Pj5DUY+fkcXw1q6cESZba/LN6IgaqzeywVBVbgb5MXC4lce1Z+OoM5gwW/s4nLc+V2y+Z/M//YGgUM/+rPlZXTLMW1fFiWHRzH1wwNQYlQMV9BemkF7ylLQWe+Z9+Sj7ecSAAuygeaYxyGGXUz8KlxAx+X+A3Nlc/wIe6QG3wYuv/xbj/GXF44YjIjbO4YXvVkEkBDSRe3uIs0PEgOUUvs1II69+GHeYBz4qX+1X3i8kTP8GAVAtwFrDyoUevVw7XQq4LoQ8M7lJPkrm/16Bh41+fMwd5uzgfOmWtZm3VZMtQS2y/03GreSdowIeb2htt+RshtCZSKgwJu6elt1jjJzUJasjC0iQtqEFm2jX4F6go38uFgsQJqaD+pQEAr89b5CfBER0ua2kX/LSZstoDzuPv+MeewOlTebjxIfJS47qZd3PyV8nni77vI7PUD8W04lQlrYO+/aldxPz/TUkdLmWhjeSbtQPAc2zLij2jtyf1hUjNkAeafo7YHZoh09QrgeQ5F0S19W5nOWLASK5CDSYoGeMLWGAa9YhWRU8BMgEuStbCQcKB4Ru3qLXGa3NvDs5/LZo9itYWyOgKwjj1AFCkAUKdlN4VOZWQb5AyYfKBPFmZER6Ujf2/7PwPgWFUdIFCdswWaat6AFpBFs/x5F6fkLVjfKhGmPlHtKyEWGatjl92EQ4kLrAq+wdnOmDbk1bSf3Y8ah0o4pAGBCRZMFq3W86p6RaypRBFUFBpQwTPOm9zlJ6ES2mpUstOLuVoGpP5cwlgNHPSNZJLEpSNcU9TxVevkWnHNC4ww6KISSGFBKFFJh31n+3q+JS+ym9Q5VoRkq2et0gZfCCgRqPyzP7yG584XsR7U23bLNpWFmbrFbvBtZtuj78Cdg1NYjj0r5QcqgXKza+gloElmqG3El0dfNSXZNxvB08g7ZdHVpYAFLyVj/wXa2uuV7A4kBIhJvYsCf6diSDUw1SYXRIP1vVCOntrvUISVFaHDyaGDh/4Y1UfiyBXWOR8Ye7u6sxNBI6dGL/H5vRmo/FovmsLNbMGmG2KU9OxA1kxw5nB613vUV6UdxuytdsmJ/a2NnoSjW/od3CaeOlmMMh9eUuk8jE/h/dsSS7JwenHL0TUqmHtyURb/g/CetFEzowxI32qjEM11x21Up0b18PqNgaIyk1kRLe06/XoE3dm3dpfTuLMOV2oS3h4cXJjPrhSNMfN2SEQio1XUcYxIj2xJ0wTdouDpIEAl52DIvYOKmlis+ghUsnSh+hKrjAvyHbLF8BxvYeDOz+4WprTDNFbM5m80AUyDn0Odu1vEZtXdIKiFmIma+AfLyWk/2kdaDkRKIXIuaP5W93azZEvfc1kgoJfcRYue2Et1q5H+xBhoPknkUBYdo/sX3F6X9YW5YdywA7CrubLKSfSiy0I5gcA1SQl7tm7Puf4tvzn85mPM4VOvg7SsnWsmo492x75gkMpI63DgSkVZ9YvdRtTpJDuW/Y2Ug72ALGwLnfaO9cWiswAzf8/3vRQjYB4fogDbvJfRx8DV+7z39XkzEEF24iETN76/qIy9+rES2S6ibmgTyfwNN8Zxgsk8iE6ozhPYdAd17rEq7BXvU1uc3zumZ6VA729lWCKH8JNK7x83eiCn1If5rC+ynLUCrgCK9wxcKhIYNBPh+n0A+4TOvWXs2y9p/4j+HYdYqCJBJG7AccUQmBU82aFf7aDFWp5+uwkFQmdz8gprZgOYvR33eiGQp/T2yWftbayrIQeYPk6HVpN541gmB/kFJ4mYA6IdyOWucN+RtsV8RJfYEi/pinxAN54f+4xd4eFn79AbOIyQXPojmaYy6W8iXTD0vtG9EbXC5UiyYQsrBNtmbfdtrKnrxqzdjJPZWTYQorzx05ZKDasHJk0JpYZ6JXQhXjDyH/X9/XWT17TKBJyQAJzGr1ANWOrFXmT6UgBkOLmnhUk38jYyMh+o810QSA9A0pIBSttkIt/IBl6EIixhmIZREsVkuaPzLfoR5hY9deGta7o2REV8YdqWCBua+ikecQjSn9Lt0MpCIcfcJffSozhoRijLd7uAsdd65/RS9Gvb2iVIZ5J/UEg9OvXFGSLpbbq9qU/NQJejkJU0ecPMgAnliVQhOZI6p8I7vqFCCZmfjWLp2kITlbBNsR6LJOpRCPKa1FKP8l834WwcMqTqqJsC1yBE8M/tqfMr0LjnO4Q+mrjBlAUkNNYFHUfCifhIec8Dhv9Zr4hKU4znittKmvz8jv2oOZZmb5/iAduBCL5TQcJ2MbBKPYuf/3q/ac2MBtthORIaZMWFTj4DxmZcnBGYRUzUVG2p037N1qpLdjqdbbu+633rPooQRP6EUj4yhMl8FXexzEl6FT3PxkjQi/bYAKqsDg4APkK3CTRo2Yg/2iAMehBfQ+7WtNs6fIQl9iKjNuuYIaQ4Fi5fHXG5SP5s7jdGlsqYO5THOnZ/4/v05v3NkNBz61lFTEz3UbIG9fjoryGvrh3CuRlbh5dLbdXELLaMmbe7xYJDkmIz9Hku5WcCWNts8+y7U7qtOttqNmeFWmWVqCwBvlA1R9Ih+aMmz5abcRo3mNbbQdD3BvTaO7r+XJVcrDhUOFyiKOrAzJYhG67gxqKhmwliprYDpLFdkBBe3iLdCTrijXupJWfzhlMG3ovZCCI8+n6PRGaKOfA8b5aTXlcfPIdOZUD+XmAyKQwsLB7gZLjraobQBJUN+6v566wjVEyC7No0j+2GxgAEIZaaCdiJCTtOpGVnk9AtLV0jcMXo7F+ZzZ5jGShMCt+AORDSKmxOC8tLXU59K6BUwAJnLSDEpoN2AWJJsl5mP8JLPsl+qH7t4YgZn9sehDsyu8bbhltq01W9+Kv4cM81SjwyJeUbzQdbmy8IEV/bGCy71Yk3Y057MAH2JgqbWg2urxEBnuidTjnbsrwZanG/ZXVj+LmiPeXJzZ026pwqUJ4sJ6K2QdywNhRGiKvk+p50HVX4QAATR+2u4OvvqLAYUQIoumm9yv7mMXSlDNVbcpR1No9h8jVBLpflOi6Gte5qa1K633jDM+oW4WhGJFQ4bMU2BpL8a3laPj88X0CTVBL4+46Za2dqR28p1DYFP427U6Y4F6iQ8tq7FkdljFR2OoYu40IpVTzOLHE4j1khHaZ7conZ1rIIway7jVBCdvGL0Szag4CS7JWQ16oFiZ4UHIXgKcgpPq+7XkgCSa7P5/jLDpNGWAvg91oD6/XYQTRcmIK32/pINWyDQoKc4/WNyxXGIpGvJGESUdXmttGtHFQDeI6k+Wy4mWaLga8DXES0Pre85yclz7P2ZjOOEaresQesQXYlPc/C3UyHWzMeBHciuOhrxi6Wru8BRsezFm5NYOvM38gBzM8wRMjIDNLdiGScMz06Q6ARZAF4ibkMBU4od7nOXenleI9tt4eVSBSCYvqZW011SGoH18zLsW9bwK0EXhGr9TPWsqZvXoNUxHHtw9oMeDWrs2eE13enZoRU6X7lOzUUodIMLAiKhwzgligxu0Br+UZRUqkH9hPxAASXnj8fnFjnjmFzYFgBoC/E/GZDcZBaBBan18soNeBFZtC9+EGsZ4347jBpT1le89h8rn+Kv1OR8ilXyX/TqVnMHnAArVYzp8/MlDyqbevIZSAjxuZ8lwHl/O8n4bboFu2uqbfCdBLLJf/LMXJ1RZbd5T5xZ/jP5unkSweemDJxkdXRA8NKb4KCcBR2p2UAPbSgMWbVTO08ubH7g7UIi6fZkJMti07fqCJihC6mVoup3XDXcSYPuOMHug2N0FRbkqzuFvCjUx3PLQguyALGzgywFe8DsRaGzGgnoFIDa7m4a+LPaVa53HiJ8aNohMCwhf91fpO02T5qJC6Az34iTlblKkoyI0vBq611mTh3gBU3V3trnoNTxq5ccEWAqQYocF73swx7enhpZQ0WHnyTlPIphwX/cI7n7VKAkOv/vydoNBbxUXYwFK/1ENPuWMWxPqXBogf67oPerWDFW8oHIv0rVkteObPZWtF/dMhPVAl4LmdH6Hk8s93R9G54LEK/BDqnuBHT60oAso3j4t4HciPC/JaVaezEZRw+3AN9J5mDQn8uqz4g0/nPRbvth8xNlmGxH9udbt2Vd7/NABE0P/K+iQxBHwI2Vy9zKUTs/Zvi1Tk+8Jxb8kt6K5uPgN2l4kErrmrS/In3vWTQrXfcftfr4/lOzE6jpeThGBh+lKRLJ/1EU+dCh7TQtXCOSAG2bmajH3mf5JNH9aoGjMztcU8X0SvvRTV1Nj7A6nkf3shZy9z5Z0ZzZ5mdtpvSLYySZK8ivQJHmaehOj+6wTfux2QNIAKTGsi9OlrdJG6MALN3I1bUbDVHOlMIfksyMgKs1PmGuJN5mhpYIUEyyWWrX5K4iwPFMq6uvDIOV1Zabh0gBUKi/sSuoZs9qq8zhxyZ8CfaNSgD5CPYNY3oVNWrorPZXMzvCPyQfogenoGiVOziigYdj+zSNkN7PYVQvHbhVWQCHnOl9karto7yyYL3m9MU3AtEYys4oqYaFIwHjxJ+zSm5BmgMQtpsCUyXlRIABIfrKXjdkmC6iRyHUYoA/Y4JAhrig4TD7jSSg5xvQMf/Ti9O9LNumySPHmMaJjJhKRnpX+cRmc1qkZf5aLJSNl8SETQt4KS+5byMfRc7fIpL/IxkXYkaMpvE0yg2FovNY3mQd1uVM8HLifDL2H6dps36MNM8BweVQYOb3PKGEwWQeNw2irLIfOhLfhUyqkQLhdEjQVce4oGQIDUdnQoAcoIJsGy6IWcc0ekybLLKL3IThGEU2G6O8nq6IUgzLRP0g7PQ18Ip9jBoJaIM6uJSUs+uWfe48A3IL8dowOeS3BaUm77pVzxLDJZlYiNoCNhI3pTPTHDxRq/rz46cDeIJCus1kLfaaWQcJc0eUVMrcZIzj70xQK0U6+fehtlD/YFljQAuHhqrtHHuZgHDQpOliXVXdUdpqSfd6mnX2TrVjgqs2e63rXGsC2W4i3fEpxUw9E6IJhKIwRIPpw0UamaNHGL6WWi033ZcPDM1MfsB1Hu5Hx5WYzyT/SobpV0HHL0GmMEvH3JneILHga6OeX9qwr/1gweCzZPo0vNPm7N811sAFdfXiNaKQFHBRY6IKdWQ1G25hAspvJaKKbYIylCMt3zQybb6fNeQ2GNBbKXz5YaGHWfKod8B6XriI1ne66qpH1KfEcs/KxEfN7+9NScMSgXF0Nry0OU2sl2u4/DnvUm7AXY0DCt1cC9UP3rnQvBfOJ2OQWzoGNE8tdyuTX8mN96YvwGXGDDg0zN5D9vibazVf1iPNwMBwjkoTjHNQvYQDigYq502q/GGDEx+ZyRF4F1Q45/P36kjzTWGLvvDoBDON9Ri26nltVoBRIiUIl3JEaHmuhGPoizS2xjz5zlAQk4wy0AJPqj5OzE/MOZ6Ia3nb7mYRu7vfTzwEgmm7E8sQ0gYOvARxAzOO9EBSiS8YWJ9q8zMKII7CcATTH5+/DrI7WIv+pzcPfh4g+MiwoVKFOFyZv9bkx0QhC0p3lkrmhLo5Sf7A23JpOkTiD8np0c1vCdKVObXNgSlPXxUhu0cvuy8xln1Ks4TfcaslokzMdUcGQrhWzzvAWIJg+4+Xyu+N9Dhb4wpQxV40pk3R6anppJFwOf8CILWwEPgGcqTZfcRp/v0NE7ebTf5aiaeDelS6cK1c7/t8Txvs+AcBq2j0gSBn/P6nRjRuNIIy4M8dGbVCdezmqXZtClyDnm8j+TDzMiC4jLIZoepDKyDs2QeqjPCT5poEu1g0FRzi2VVFfcWNGfo8EwB2Bo6rR762lUGSVc4JCcAvV7Czu43v5gjypaacRjfX0Qxr3U69uoBhQuXwYWHSNeQcIDGt8AG8vYt02az/E8m78L99ruPhVnz+oojQu2tpmUgFuRkwLngYZdPBt939PGHMtP9odyHYdce43xi5IYkZi/I3kaKJ40hDBWjQc5uHqA30mLe0BvQzH9Or7PI6eID3548IrYW7dvOd+2b2y9uyvG1NMemOdxL5fN8YdjrHcsmfc2iArAD7v6TDAwu5lPpL0+C028nidlHSiKJHoCKPC6aZeMstrW9sY1ukilRLyXyQUdCISR4vbCCeGMWbKAhcFTq+aWC98Oqjk+1nQS7td64Z81sOoGsF1BWQCTiX8XVPEcurLyx+L3rr3W9kxZVOy/+Ywz4OjJOMGIyH3JSRqUughndvBgcS4je7mSfOTVtJeHsV21rmC/afiqnJ1GDlZGlBfY1Nx5B/ksAgIuEB0zbVb7gycvSjVmrpMIQvGsyUMF9YtbTkNDsnRuV5qK6oQ+dDDyzEWw99rcXmBGkP1kBHbefT4dnMYmFoH+kiKiTIoNq6LPRvKJuEbyaDlJMohHQru7fBKh52WdQYlr05rIFmNnBRCoukZDpWgu/55vGyifZxzHLuzvuFrv6ezap3dbrD0Prt4obFfT7B2ZGVr5SeqAwoGPuN05yS/+PfCH9zxM2LMG+nq+tQz/fJvkoebwTGJDqM1A5///a/zoiI4Qb362l+1uThynahQt/NmrmNusnOxiHrd50LxgclG3KCZMhYsJKImbD60PoE+7IS8P5ouit0lUf1ET8RUUEFSyvU1z3Gg4jbIpyzexltthqxGsxIcXRvAqHYRbIFJdTJKTzEpDe+9AMkMtFUmrj/67s5C5zNLDEql6Xvr5JJwuRQYHXFU9uAAAge4NBtJRWL8ACj2Pu8uGwGFlLsMeOOkyko+QkP1uzedYuH4sTqeolWhBKWsRTHL9HXgcQ+sWDUMtI7ZrUAOOoHewQ7+BiiDouFFuHFqefQI4LKXWV2CR8cXMBNp9i2i0efmMNdEXCcIiCJ8EnUA5oNavO2vmsbgw581MH+8iEmhr2z7xMR1ZANg1jv9noszePNFZZ+25HURppvJ8awBZN3qIX/feoezp4a3ZRb32DYQkDqMFYN1xNlhEKhzelOsk445wflEcKCZKhpY2VhTwXKRdRBMaoWhmBrg6aEfOeS1T//pFWdfTFUY8Z/kz+HqM5BUPuyQzhc/YAPpa/hG9sPyqLoTg8Rek0KROmUt2T27kfnFRfSgDVPbo8Yc9eMpSvsfC+KbzMr4sxKfDNgYsHEjsvyM8MPqaCyQTTjNI1N+Ql1sGT3tnJnH3Nhf9a70aJ8KYATtBwiGYaV1zxPBuB7+k19cg2UCM2omSjjUIZuxCNEMCt4hPE4qeY2danpyl0lrcAy7Oj56XAh6okkt7Spp7QvcbCHIe/cw50R7Q0/HtbAn41ell3QtdCYgIq0XTT8oUwcdjv7dnq/NNvrvmicguaoozAg+xqv4iZ79FxL7WtvyU5RGomXK0mGTP0bq6UKPVhD6H6Y7pX1+BoDansvs+15kQIPWJ2VQn2cWt6KCQ1ADEyB+0WBU7nSrgch4w6WvhsD9ykIw2780z7ql2BAx5zhR6hBu5U1B/gXTbTeNOJkGMebGxG3QxIYFSk2m5USJLPSrJbv6M1dQCtfwAd8LSX62pmjSopvAr8CT42cCgdIHby0Cz0xvM4VdQ482MTZ1YYawnu5OrOycbUis/wvlZf4GNZ4pEem0yX/i8nisN1Aj9AQf1Q6uyyKcSCHXOaq2XKC4R6mZzHApZmYF0hefFutnU7NKolKO2Ac38aHcImGtNfZ0Ot7E208cUba+BaCNcN2mlzrSVfrSZN3qTsZTp/+wR+v6Bzcbh0wkz5URwZ7FwE6r6WfT13Ov+dDMrE+dXRwvjTnTNF+wtQZVK8rU0LQ+Wh6Z6P/oPYu07fH8q5BJCJqJ1a9QYka3d/fN7ikhhkfd96vwAEf0BeAEDAW78+yr+ECpWiHlnpT1tSAxJyCjhpNPcrfToHIM3klSjX6dJacWAvKVVlS+b+ilZ4PYUrqB867FgzJTR7nnZmxua59bzb/Sv9MMzxJKYyv26Q7VlCDq2c+PmcKgZ9gOzwxTzbNAxV5UXtgpG88Q9E+tRm5h/Di+v1Nx8LWS1U+cqMtwHcm6NoamuNseL78u+dC2WAnoI0qPcH6rfLB+6rSwYga9UrYbSbfcfbEwUyHwDr4Er5MMRfJJvbitghzjavQYP6mPVrShLan7Hxtg+hQer3TqDYWNhQ8qXwVovarmp34jZiOCXPJxJRhNNLU27reAG5Ih0wf6Ye/yCfveZ9szjbnE4yvbDEK8siixCt9MMMmNZyaaSZwYDESEHdu61VVAw1goj0AjiEOc20XyT6ak8U3elk9bYf0GNyQrfc2ZOhOx4Zx867PybpvvkvdyWslDyu1H5HUmqKAz6QQiXRn4rcwRADI3Ineq5rkB2d5+x1q9gw/dce6hGMo1o1nUOc69RKo1Yjt2FLb2BT6PTGlpGnmFj+w4AK9DYxGttZM5n17yXnZa3l7Jt3WV4+sKaeKCQ9XZuBUAHav3/tqvpXEYHBRCaGrnHrCSq5lr353RGSLe6e/NBfd1GunT4b4zi6WCpcwExN4iud4dgl2tBCMW4n2RNk0F0vwrHPfpTBwsAdJdxzRR8agcuN1MYhYW5Q7iTy1PVCuX3ZU8u7uxHzIFMmVeV/FVS3ZMd/TwvjzmUFdmUs4ZVwSABa0UoGn88wzjbKn7M5ucaLp8NflD5dcWdggOmytEcqXvP1qygABp/pYTGErioGvnKLfGcUet0NAv6qA+dSJX8j0/UK9lqhF73LrKtxuZRkPNeqO0GD134EHLChQEFGXPfipngjY3LE9B5wYTXl3gmXENfqdehDmtLfV9UcaYoT5SdnHqWWzPr8TnspbhZKj3L0NH6zR5c6G/WVzRcVDNiY/gcgsutijVvioY98y+ZeimBZ+9qSlbB1ksUfWRF6PUHOXrkEpQNQz+YLeolLmt+KzfOMUuKRsxIbZEXMTyd5P0kMEWq1VPngzqzxMtpuphhrCiGTes8+Wc6gpRJB9Cr90NOs/PSCcHGJjojqiPBZchrN4U5DpYB6wTxZgwaBTXI6PSXHP8lPjStjJMjncbmeyO21GmdrD/BQF9lriBFF+tat+RdMuZkKS5q3on/3MuiGpcrCC77XGLQeRnsUSflFK9vGU8zhDcCu9vMNS0GLl8mBGBRA25i0G+FXpM26m53AxEINi+Fs/GnKfwOcbLpHCGrmHAT6NlsS29df2VdGFgk5ktqrI7TSbxwcGGKSnCeDFECTZl7uXypEnrvIa351xmLpNLaiFLHCJoN1rsctvgxOcNn0WiFOUryfId60WR062Fqjy78Ng7Qy+EhYW7WdS/JP1lHHVL7f6fsn3Laj/uoKIk5Bt2CNbmZmGWMxZGqio9EEz3jrj/8M7Yi8uHB2SMrzWJoi/aShyQnZ3Pldo8a1UHKXAmz87g7UhR2ReZk6hB/YgQ6F/byaN8fpKZ2yrLlsg5tHqnzluF1FnborscgVCU5IMCU5bP+s/jjghgrDd6/1ppB+4WL6Qvcq0yTqmet9jj6a29n5ZjaYjq/ANgARr1pxUr07wAo4VBMxMCtPPUIwRbSFkq+bwwr6rCLyr9FsuCmPdCQ/S8J+XTJ2+c+kzGfSr3PIMnZ9LXGtntX26i3r7N+O3owUXqBaRXbqjV0RON1s6Uw/ouZ/ityE78HED0ZU9H9TVxFn39EQuWpDEhbiQlw4cOnRLWg0fYsbrjag2G8ERVcmZ9qUY4I4Cj/s6jfRAhlereLAqZ+4Jf99CHyU3gFNNXSEcyt6C01tfB/hnbYJ6GK8MrVU099uQasc3Qrb6vYJE5WWUFROduvEriV0QLrO8Qoij6+wgk5g7/h4y0GmAoXKkpDc/lCQMpfwmzDW8S5KKHkAfSY7eJoCHYLgERW5S4ADrJ7OC7ZJXHfrw2BpOHN+u4vhthCWurY9tnC+PclNdqo8fnCYbzleFIUppXVgF6bUz60IJWgnlfvBOpQg26VkC9J/q+bw4tauVN6E2mG6nG39csmgrU0ck/XOnV/3iERYxkwVWwYkqHJSIVNcRyRwUaPUVopV0Z4wFaSbjdxAQ/hX3/iE5cl1pAC641VjzKtslFWxlsGX9onCAZWCmAj9Ka8lGppxXNE0drLHXneKJB52bjqVR+CGQ5CwXIDZcACz9M6ssaThoIL5DQDKz4tuT+OV5R3TDYHiJzeYOmv+YKx5B6I2geOygSLhmBKQgxiHQ2USMKtn1/Op8eFvkPaird8iesGVMncgUm7eZbXsMjVvVCm58dKQqPeSY6h1eObGdPYsvFIHbl5O6bGASr+NteIHxy7FwRxJzpdduMWCvNCQ3KAP39AjGP9MmAnPhT0+y0xRpxPMdNIlXmgn2vE1PNkV9aSF+LKLnN/PREPUw47Jp5yAdtHa9K7UfoT7zCRCgN+KKqnhEN9NKKrxeJt17AjYJ3KfAo6RdMKprW3lwrsEQvo6VDBnqHSMcct6SI941C+siIHj1DD/xDw0ZE4iC5CbyLYBgjoZnCnbN412Tv2hHUzBEQt4uQPmcORsyP3NzV0ijQVOVqyTKCXqwot56dAUsKvKmq/yH/Q4i/7DMYWcb+ZmptZDv15s+exEGNgt5bbqAZ3jH6hHe4uBVhgAu4A1wJdyzU/qrdT2v3MygAny4cVX0kB3ahYmEXZ7Od0GACw6KM/POsiXhqj9FUnEufrRmrFyAv8hwa0VGtJuxfn27I4DIUbDl1iWVHItS3UQ9G3v7n6fz0pbWTjpGsEXNgGkUpkYsMEeXJ3jNEV6WavJ5sDydfHVXQrTj4rxqtMMepdqypavvQXlRjaYGEf9APf0bk0Qi24/LinaNDZck7nDeMDQcmK1TXh/ADiE8b8Z6r2eFvmkxXmY0NDJ3VmaHA7KPKXlmV8NRU1EcIAIUCkstV4QH68N3T7bDF4A/93kByNUz3jy+pJbipDir4uQ9Gn8X7MqFMq+Y6d1hcHtQ5o7rtEhLxee/m35Db2cA18qbg5+OpUIpPoXL1R7+EziAvXw6er2e0J0siXj3kR5/WIKjmQKlV+kaOQZr/T1gAvm3aGfhlg4NgPxtYOP1+yeTKlM6DZtkGei6FkvJrmfMbud6BfXYaBcLsqd96Tep8TUXgfE5qPptswjo+MpHULapYsZZSZf3scIa7tOQUNyIpD4RkhYc9oemkzIJHS1jL8jYQKJgx1AZfD9DHBCvBgioJhrpUZommuAiY0zFiNZIUt8QCo78jjylW7x8D+TveP/1QvWCbJsU6svuNgQhCMsSTZ5q7dYbGimjECE6m5cc2tN13vDH0POEhvGHoQg4u7fL2hsKrMNhrfp7EZYiFefzwyn6PS2R6aZihRCahIQUJ+tEoVuh2kComenX1vfa04O7XaXdcE78P7ZAVg5FN+hC2u5LHqFg9+6j7UL1Up6J8Feji+r2unJJdk8WeUAO0NgTbu7+XAhicyLwbT9ycpPE951RtvefkQsbX1IYQDuk5/ljB76Ihqvwl/zLhIKagm1Ol+ZgM7eLFOGgx0b04y/uUeFVPN1um5fC9cwIRKSP2Xn80viP1Au7A9x0qcsY2f1ECllAdoT+JZdfblz0+Elno+otP4/D5h1X2Lj8xUX7C06u7IUWg0XKxhqZEZhVc5jCJFQp9G4pp6/ZIg9YjnFBpzA4TjprY79BbOml1EKEiuUo+vq8Au3dynf/5YxkQRkiMqvZ30EsyOIuUCiE7A+9cM1qinHAtcj3Wht5rmy3lPQFBHdJ5shtPE6SedR/b/5k29s5qpKgnfSPugOgwaCSpcYLN2e7ZL2D0COTElTaTcrmajCxurc5oItwbFiS2JgkA8pjTdKGKeYl1r3ilUDTsPeguB226tFfxx9bmYxmFKb993hxEghJCDmdEpkzns8JwjT+AdoOBmhCA9eQNlNYOpEGGFh6jamTxU8Lgp4d/DyR3KL1AC1HnQYe1gCdZkPlj0COefQyY2eYxIsH1GvAFw/luWk7MLIxJtLVq+a6a8IxuAYhBSyfxLXVgnHe1SWoyYkQGD6rlQ646HmvggXlyL8cxFq9+wJg3LB64l24fhSvM/qojsH8biKWa/XQrJQDwflwYAsmINo/Sl/gJkJoMBghDcLN+RJH9Al5mKBWZUU8cgFzr/CfzaFba4ytAsX05SSpO3/PqKyijpzPR6A7s3RLC0YkaNcyLOTI4fWyQ6aZv/h55TRjMKgkceK9Teh3Pj3W8eDD5QUBj4FWTvuLYTF2NitY2FIZJgZR3yRZoYLbGFTZGUsANcvmI6FQ4LC1F1N9tox0NWNtLMsM8fI0IWN/PNVMCVBtqSJ/bliuZBcPv/QI3njgOjUkNiGVWkabOmIq4hXGR2G196V3fGEfeZW4rgYLNBuWiDjDylRcMt1dpTeDljlh+qoBylnHkSCf487p0pTCRtDmynDBv9PO7As5sBu6JRoQ38xEwEkRpPpX7Ao6ISw1/3yqre83VFE5rPIsHxZ5MaEKvqp7QUL1oU5+z5K+TxMkoOgbXfkFXOW5cvsvzClQfzsUxSmGvoGc+bSFgVQxADWfDgr/o1reWt5Zr/iuxFmCNwJwHMK3KzZwu3u8iDrmS5i58ir47yqfrThqcdywlqgKaOS9CeUHFbxfO5YndRF8d8V0VJqOj5AoIbwAqSJckmJG/PQ3shk/1I73PiVapbwOYexHndCgjPhbGrE6mgNgFl5udaSYlGivNf4bWtGjBL2cV63VF3I/r/2DDdbLwI7GouBZf8OlCpHiWweYjM1sDl3tPbUyxZW8pbSTblbWxp59GxKGjnsZYoV9ppd5vdzAhajsFAYn6VYkpsmGsgkWasofwvutp69E2qof+4A1z1D0bHmssUZaEcLpev1KQzKYnzI1Amj8pPjXsiDnOuUnJip35wMya85GtNoyK6kSZQd9djXTNGPllG7lpfIxNvsBd/PBtzvdOGZCSn7n5TLuKMz+/YAdQMjnBmTU9sFAiCDGokH3oJo1hsleoXGsUVeCI5t8S4BFw7ULbVcbOvlAQPnxdCD8uJU6MyLdwBx00vT+q7YtUXgNnhWZNGiD7ZJz3wwBJdVwydcsu/WTyNNkJtBiYTxxyMjSRfaIZdLJGPaHIQidO6Ufwo6QiH31C7aDLVJz4pnX3k3OJOmQOUTFKeZfL6mUNa2Qcc70neXQj0vDws24Jh434pkfnxTCixG2PN4JE/zBcv9NeLWf0cjralgNmjolRMUZlii+Z6cfpIXFQQuCS3oDiIbr6VqESgFaljwebq0QejnOL3pNJgaVJhwB3I02WE/8K2M0Y2bRHZ3spwPfM08FJJckDph8OmOoF4XNE/U7lRqZ4Xo/RS9jR8sHGPfJGU4Gg19EvbO5y7PY6BoQkhhL3PIyy0h+KmGqUr5EYbnISB3ugFeUH+mpWbMcaOtlej2PatrQXTpsl0h1PYA28xG786PJEnYE0Akew1HRYZa/JCAd1ZmJkMqzKdtATms1i5WLdFZllw/gDWHcRHwQEQNPd89hitonJQH3pvUw5QzCAgoEn+K9t0mrC43/S2485Vc9vGIEoSXmDxiRQqsegEpXQ3m53A3SDIcT1aFDHHJ3cxbE97p8CgQ3hzvNLOuKltel+QNJXjo1qLhjPlJfa7pPsGDWp2Pgwi3ugyA94EwPQZriP4720vGKcp9aUsWuOW6XJgbqcZhkvPeuQaRPDdFzUMQvmZ7kjzrX3jWbazJyyv3I8PD9HTUUW37B3Ri1p4vg6m8u70KdtaSy/wdI2+tHdT381D615AosVMQR3dpMIcOkoWtw9WNc5Qd9ig32VxbgI1MVNSwIhtRhepDHQPULaUzgKX8rvwWClIgxWwZVsoWvus5MOoJ1y6kx3L+pDzbyuV/S9QaUzdEg0m64XPT/gDYbeu9Fiio+LWAeN6CI1dBPA1KQKgq/pdDo07T+hGh4HpMigUzhTAdZsaB0FsrUZESBpcGFu8i1glhZEbx3xj4mf4n5DnUcwJmXsssoXLKA7vIw21OUXT5RaZOZUTyr0Xz7LnCExR/kJYNo/BSJ6gC11rMKkiRxhKuh3ZHUNazRMZbgQfuIMk7ANSVysChqftiEMYf2R/mpoFwfvN+zAzGgwr4r8j0gu5+ub+pY4sf7Dd5bgCgqqEtEt5KPQmaKOScMpLlibPzsE09pxZPkmLWqABp3dpEHgxmd/rQLk5Ye2nMa75qcmN/5p/3ZLxsda4b35zrVE1vAAs4HKrzAsTBy2muSjUo7cTbsGppXVbmgZD63Us2S8a72RNkAqzarJO8+KkMApOZacl930mJtfJMAjfmA2dBkvl0CGhQWOZrKrvjj8mP0cyroWoqIkiUteSfe5vqVtnChI2KzVlBhiEBDC7xXzVi9f8BnXp9GwvWCdrVZPFvZxXbYIlDLu4KujB4/jmU8pxtzc0kLyAiIpjxPM21m6OdIAm/1qGNDWewTYXOdZ0kQQn99L3iSF8CrmY26qdQ/S8sueXG3z/eM/oSNwwRIP7xuJIZLzkBwemCs2BeTju/qjmDPtyFZhlYLrxPutIZcQs58mK/k7JMIPcXqoZRiyEQZ7HMrx3MVJujWwo60B2y/WbPqEQRPbfO8B2qify0Ksf1WIFm3hfHdTZjzQaJVriz+9LWU2pmCjSZm7ufTy21rQQtGG/y0Ax2kmtigtbv/Bwnp+8Itj3akgM/3TJqprl6vYQFUfRjPPEzFQJJ9w23A2kCtp3OwOARQ4ELvWCQsCGpjunXllZx18fjaVvSoIiKKjDAsm2A/GgTYeMbiR8Jn8GUzlInAMvHJ8vAdZUIGbPFHPD/7IXqADzccgBLOmrjE5A3k/jglS0uuiJnkVatjW5R2YFT69BKTw7owaOnI2K+1z1I2mEylqegVJ24t2czSI910yyxemI26skq4W4POnYIB8YVVpc8X+o4Q07ZKFWycBM/HkupWQBLYr7y/in3mkbwHInMb0CDPjHBjaD5PEMiQ3eOvP922g8iFNR+DazRZ+YiGnHAdZ+xQdw7bSnsSSsskUVP/t1yIw4pNzB6uvELVGiBOrZM9P41yvO5PyFJ6DPUmUXeO6zXN2ma7y0mca4F2JWec+sHGcYk3pUsSJK3DBDzrDxoDs9czIG7rR+s272yQTMZdzE8gyecl57ObeLzAxaEkDq2Rqk2cE26GiJtLGZObDHfuUK+88E+6yVIAQReg9uHGvFUaD+9A5kbdmTIpQQFxBQ1yPTzOZZMCUnG7GleC1nZtlaywGfufsxMifXZNWgn1Xht35etBc9tOOYe5Uy1CTG0ZnWyRuyk60SxQSIBxiEXIMOqnXRdWFtK2a6ALCxc74NecDs9Pn4sHCQOU3SF6FIgG9/R5FIwWaFXYklDcN1bvTPGifPCQ26VEAbWyU704VATgkzclgzVV2k2pQe2qjq/SCMRFqC7g2z23ifLi4hHfSSQs4ZFzZ9dAThZI6EHdojCYR62oAJIf3f0u2Te1XkQufhOdHetDVUgQqAFhfHs1A25LiFPkORfZBtzfK/G0UFsElY985JuX+lIh4PTkOHFaIFRiQ9zcLl0M34MOrLekMrlf6c84upa6W2/mchL9zFNeGgqlUV4fE4oCLYQJYowSSCw3irQuSeZPP0UIdVgLNd+eDvqV3dwJXpYMjN23oqWN5IaySIVI9PvtvlT1/9YlQo8fIKTJbpfuzVp4vg5teg57gFhIh2KQQtl5Q0ibN7gQU/8tWfBRE1lcMPktOFVgCeknWpXlzUA6QoDS6WB1c6DeV6YEGWZYRhxvqZot3rXuT/Hv2jf2jq4Z+rDtOF+AZX433gA55p7HsCzDAQNrXDtg3Es8tAC6ldjuRNDTQBYXcSlRnyqsCj50IDQEzc72yQr+HYzTxoP8qkKDCgfHuh17oZQLDG42YT4TrhbqvRcSCQ94KHRI1sf4zsmCQ52RRR/zgvikbNTTqOvuz8+0x4tFod0wAhC1sJlcUb3BgQr2CScvqcmXgFsM6otzCs8QP0yYMyh4cC7HtMxQsYrHyOPJOZTouS8zrloIwbDlSjLmSGGEyKaYX9OueisTYSUb/+u9Dnw6+7tQEdau2QmGzNZpebd+zbZLCYa9+0W0f0nB+QLAH97KP3xdNJkcBg3lin+u5c+dQBRt3SIvAVN48PR9Ry9QrEC6XScLnAHgYMgUuU1fcijkhqDwxG9Cj+a1GqeqHeUAd5qCXjXCZXnvYSgFUIl3mWWPZIaqIxJrAyoGLnUldEDElBbN/2lNtsfsLUxEuqhidLeH/a3Dxf80JP5ETzNkTbPqiQ4a9Nbk6lp+7r04PjB56IMcMUX6zAiFeRKeGctR0Pvqf7R5vlw1o1HdMFS8aS6IobwgrKjk8zNagAaWjRG9a9rJUHRc5399n3BaX5QKnib4I6rvciS78kiNpnvDnUcy9DwuhvbFHjMj35KcnJ0BSMGCnz6jD66dZlbpRDVEx0IvGS84pXohaGUHprueO51QACfxvroNkMMfQEPPRRBtU+yqscKzrjgV8ahRsHPCB0f51Zwz6a4Gt0aLMFW9Zv/Uz5lS6osPcY+51MSjP7VyR22YCc5eFUYxkGDlzlLo21J9Jm/k165Y24or9SwbpdRVXk8qMJtoAnfPV/acigqRgObWU50IpUvPfTgxS8AUjkJE13JyAoIQZpjDgWuCigMeWFMYlhjaKj8058DgZGOYxjPDjPMJLt+/c56UTGi5aD7zhnlnXmLICG/H/mDIgvo5BuM547QcWl4Nj1ssctmNZlFQuX3LVB0pZXdKghxVK3nD98wTUmSSPu4GJdUHFQpL+h1ofGTHeU/0IJIZnSoHd0zQXpuU8xXYb3PaNXDgw8li32Y2Bkrkty6vc8+JrfQxtBSV6q1i0rEOq76AMBjDmDwsoB2/h9RmwMN0Uk4k4TZgNrWJgqyvmKrlr5IaXiYWH418rKbo1hIVeh5Q065/MIh486Qsl0Jv87mP3fqDQbxAPYmd6fL0xjqdL0jvjoANQk6QYLUtw2UqK+RQHddW0CBlHDMcZRIOLUxE4c0kGeoc9H8ULCzaGimSEFgsc4x7t1Em1e2Ih7YoHwi+sxUPaV/bJJVDzb8BwjOpCu0DqaXte+mB7yP9Jc4kvCTMzGvpx3nsczlc3DQsfqg/ZvPTVrhq968b+LmzJjJuDaiPq5dstGIza9Mt4qQPYZ6LvoxGcvdZxPNwnjXb7UsnCQ4qhofTbZqeLmt6HLA4o+Hj7ZmukZAytTBvq6vaLFp7Yh/VZUVGt8m1L+nBzv6YbLO62x1owd5qK7Ne2/9wLwa7KBVJpHzo6zqAfhu+t8mlStr86AYJ3Uc2iYGjy7zLs2c0B+Ak9m9sn2wOOa4WLrY8Rlq7rA3G5R8tLtG8Cn628poRMiAx3adhW6hYJwu4e4ht6pKFc3QjUOMcD//WrmHhV997Z0SdUe4hMorXTeL1YIe25DtuKXeo6O93r+GrLgVpT6rJYi3rJYtfAD1yx1VPknCwq+d1Sw6XC00/UvFJAoBxjwR5QjZzsGRiz0KXp7wm4oyLnDhY7YfLg0ZzsSDi/l8+0TRbzMWl87sXE7XRJh5HfdoqF2h79XCu8nQ58VZ+UhogjxSFdu/ydCqVmomzYr8FacLJSAqkNuAiz0qgMJ2KlXik8lV6glzG2EdlZUFYInFDE5alVwrlu65mTCjgo8dqLXYkc+/ltC6SUIek0rwQ1iFdDXvW/wPQ8+4r1x0HFJNXKeRV643JSFmEGX/VBJDI40eCJuNjLymlL+wGOV63+LWgQuYWMUO8YGPNBeBY1GwneEd8xCAa1D70lxuEfzc4gL/c9qbIG5hjF89T9C2KZMepbds+uDhALrXtaARKJ6M3DwMw0sLsbPYgiYATYbfVEb0cccTv/ISmbvUuQUsb/tky/3Pqo++L85C+TrhemvkqMmc4yBGJWyMrYEyxIeBwprtsqaHRkcgg6ozXCJah6okrVwR8+ERNhC4GIRz+uuabEiSSaLZIhJat0k9T3ExWWBi8WJxavmRMd6DBvAdV+hvVcj4TciZu0os3JbzMxQygNNKOJBvLBzxP6Ll/+AgNXz39sC5F563wl397vMqC7uH+HlTn5G/Pc9GVnmeGUBdD1/x4REX+EkoFVATt4g/jknrIvEIKuXI6EMmLTKvN6DjQ03xzDEIrd4sTTvXfKKAiZP2TMpakWtFOLQweGy0UoCdOj8lQMu19fzQjb6EA29h6cBeRiMCsUSEu6QUSPWP/mPghR9dQ+aD/ybX1Vur6UwmTLSAfWSlhwEsfqNJolu+JcIMcUWefJzrwttCnMLBEu5RF6FYAjLadtp0merLjInZhkX4TJEgeO+ZyoWSdx6tlTzNaSKqDUEOm/xIeZFVrnO8HFGiuCXFll5Z590lulqBjhI+r9ImziMgfTP/RpxWtTnecwlzKz7kMEUZBU92ROA78hR7N6wvDjfI4QsRpRnI5457dNL11723qPXGkFYfR1MveHri1DK4G7aNIOIJcLaeco1Hz7cHUvQ4D5uZejJGZQ7IwK8FiButjUqLT66w1fj45JQT1bSrmySEI9u9mPGeEfCYYQaI3Mgcihv9YoW5aeCfz+m+oXuhEkHqW7naDifxaFfaYE4rpNYSvTy4JrlfGk6gZjo+hZvo+ZKrvG0oK1TccYkbt+g/7h7iNcnDkn3VSmoNJygyi/VD8E9/fSHrwliUg4xL5NQGqvEku/b9xLU8KJmx6HkxyH+mPmi/Bu6PfO7y0qY58bQChbSwHwgLHRbcFWOw1cc0nTjRDeLNimzd53+JIbletfWTmDbfxKGE45dZTlQE6c6/E095BxWab27Fd5GCiReL4/Ah9JUhYEmAsGJzsrpaEosmllaffPVQ7Dr1gNq/eqpPua28aJBgu1xKpUm2eIRdnACEPTgmMOr97IjYclTYDB2K4VSFfvEIN/x/MmwHuyrcE99SYGMIFjpEbG3U9VO6I0pfpjd+qpFyGOnaWkYYF/hGXv3yZn79ZUH+5lcMEVCcOK8N2pcmV3MCV+TCdX0aydZ3oLFkPoqxKpTOuErIIwrtOuRD0AoB/MYdmx9nnvubJ5IsFcXxchsmQRtcoL97+LxvGsJcbZDuzsTdBi+FTxB4kvVk7/s9y/eHrwIp0r0Gh214i7Qv6TyM9oCIWvOKi5uITSLR74w1Z0RcKdDS0GgmlFnqOlXKQ5FlkIdM43b51FBmKQCmyYNC3i6D9XhGIDkXdhlhPY7qRF3RKF5TEEHsv3/BFFD9EI6FMiOWrPLpZmosWtarMRTgTD1nypsqTiH2pCAHyw4YWfaBdmb7cq160LSfR3mulZqDdjnh4w+1Z5zZ9tuxh6eGH/qkcjALQPeQDwNyDV4mz701pVpHSFyw+owjVu3WrpYk4XwBTGOAGMU5AS4PdydGqbhpYdBIp6fK/w2Shk3mN6P2hMGhr+Vg62Tw17ROuErY/dWVhTf70agxL0pEtNMEnajvDvsBBaeAiQojpciKV7EK3qr0KA+SFOQV62cjBG+ktnIV1Ii6Z2b3+pqkLc8PlgemMvNIgv4NzvWP7GnBaxZKvlXe/CggiuhgqU7ilNL8xqyN7FFqStwHVTVVy63gyr70bkhaDrCGANWfB/Yii+rDEXFlC7IO2l1+Dw7OirRFyZNT4jtx2PT1G6SWRNEut0X0yDN4vvwBiW66v0khJBpEzblrxwVsVCxzORscX3/j0ZfuL51/zTwFezQ1ZwdqB6cdoFeeZbxr6ON//zFd+mdUCTlUiStFc+zcx7hVboYh1CHSK0h0xndAxZIbTUCMsE+2PNtX+IFafEig5DMcqXtb1LSXk/LGos1yucV44IENPqMUcmlbz/nlt/7RYJv0gl5sgDHL62Q8Uv/lSST4voUpq03qvwNWSf3eO1t0HnTOBYAncseaf7UUa7NWr24/G+g+U8az5K17BJVY/8Zk1Fg2UekeFvs6t6cWyY3RflHaYiaeZ1+ZnpKStlx4GUVAHo6vTc30v3Nw4pJcU2QuSmJSV6kX9wfyDkNhnwWSxp89zpzpTG68LnIv60dUwIjwA1xpV77EijMs6FVuARlLCt5GIQsggTar0KSpuPBr0hRLF3AhW0oSnO9y5IO2AiQohuJuVMb/4MVDXC5JAMy939Jpkh8hPHdPi6nt2jzYY52U6DPofJKBwi8SamwXs3vnYOnQSE+/pgJEci0ePwyoeVKIUHxPJi0XlzhqvbilFjlwlQGCnmx4dSrbeMnl/H+U3cw9u+v2DMDVGCHZ/Ps0V4w09XQ7FCF7lSp6chCMNQTI6Rf+O0RWeWT2+zP2/cbUGBwDYH+Llp95DXT1ZJqf7oyWX/eHcFVGGpiOsHe4TaJoQz3aykPSODRvq/d/YbPa0gOGNZ0so10tV7G2xBLZg1ZzImsh8dXv3LdJ6XJYBgyElcNEU51vSW2p9bf//DnxZ1K64LY3HLfw92DRf/17Q9ciQxfByBImeu+syv6bV1QgpbbHlXUZJI1gcH4hCM4QlV8fUYDHss8tYEo3mSTh2Q9Qxj2liQoWZZcI+D8t+g/ADSvCWligfM1pXgp+DRIKYImt6MOK6aHspApA15dICrlirkZBWbAZKZxdVqzZkmcskhEh16igHWopORIh0jFYa4ajLAoE9yS/vv/gRfdXo6unXk/XnfhW0FG286ZhP1Jj2baXgvaPh6bxdevn7/b/hngnlpRGTShFWxdrUJAPXtby9k25g+lMfexwxpCzkvFtkBagEZ8UOYOwFl1zqf4Du8vWhoLcdMkKAeX3RHSKvooJfur3zUjsVop1SB0J/NiqIvGvcq/4pJFUYAXVKFJzARoGl5drHioyK7gmTZRvSa/1bnGzmWY1Vu0w3NvT7wMVzzZc/HeMRtjwupr2X3vg7yLaU/jNLrInEBab8QS+LQUsMx7Qru6geEQEwvFmqdTNn3yi570RbsSjzp4puvXIZykBMj/woCAp8mTDJlY6LuzfSChSTFmr+WVWAWfK85nsuCwcVan5qh2jTRSqRG4DfIwZLv55tJ0vwfUudp6HZqLX85Upy8q5FqAMgODPNGWifOXgwIx12rzx4NTU2GFtUmv9OCDIE9zl6x1ADFlMFd3EO1DxS27YEKgo4TZtq1W6/SRvSXODBofOzaVbZS2T10Ll9Qt3/rP9+uWKNidZ1/fV6QbLije5Oc7j6SZT/GXMGFuQtE0phvY9IOk287IyK5aAPWXMemtt+cCUiNj+m4olXFHIqG5J8Ao8ofeUEjDfy47IO72DW4lq9uEVh14uTw4aMgVa4gs4xbO0pW1rFrzqiH1yYhhwW6kEpjPWakQMOVmBcc6BXpfy5k25DT16p2hH5lNLv2BcU3gFn4r45A2vX4ODCVQSNkIqlIlQwUHCjFOXuInojBsfF23ag6OxmwuWk+/TbjjXOqyVG/gfu9CzwpO2ueLdqLiEESvmVOVrSOaLrTHCNZDPAeazHMdJySGD88Bkt9fpm6mr1i+/yz+O4Ooooo7aPJILUS7CpFclwgLBDC/XU2D4IowY4gpfw0cjKoTtJhl8UXtysf1+vM2GV7jI24NbhZL4pBZuibbB5AjXrizPtpmLo+CSQBJPbuYEmZho2GMtSj62TKnoscU3SBRAqdHcMAq7cHQkdDB+AOrE3CRgJCD37/O8o4hzBPAlr8bw9nJaA6O0H+7QMTQj4qX8qfF0qxqYYDxeNAwBUKjTbhSqsR2P7PmR1FiutisURIfB1vwUmZR3YBbp+l0omI3A4jJDO6HQFK916nqTIdyFSydLHa9zFQ/AFzl3AmdHv/bjCwk+Q8fbWtAULHwuV5D3qtPFvtS6ae1ckKW2/4uEsnM+2yNDK1jDS4TTTgWi5hQbEEurju/RpuAY3FAtBenKwfa+KoabkZ6m84000BnGyUWAVBJ/F+b4jgSwILVQ8eppmCy4+oW5JLUHnthtj3tzlgS8PHxalxo12lLhvOIOuZTTqgNiZdakjS6/QM9t/FwihYIpvBwsjFQORDG2ovWML5Mbvca6+49T+ovp0Ev16klS4teFNj5Vzo9BO2CSlssSwe6m2Xz4BoXMggukBJdppYI0nUGcH9ICR7Lf9wEuT9DzZkKzBi4o3AhcHW2lC3xC5cx1DEKONmWb4P+PnsIw5J++ydOP1sH0QqTYMKsNtZ5H0X3CWkJeUY5klX+r78cc7bp2roJGNMhe4Ol/mhO3T3QumY9d5vlKeuS4wbcWuQHX/1YinxmOXfw/zEPB6VNG6ht2OLfBzsQcHJRlaryugjBT7wibBz2LAtJWeilitVsZb/ZS3GcimkakfgXgxXY58XdbQscD+18pffCpgwS3E3T5nvhG1ySos5zZkPEoueTZw0sp7UKVCjHulUpSn6ETqCm/IgZZ9gEcEqfEZ2xY94WHvSdXw0GzTYraw3di8YkzJhY0aocyIqgn5HgCjQtDYGJyES8tQQQNsmoz6Q+yuulEkLakqqkYxxoXsxVokJNqUEnsN8TAvfw3HtQVT7VeGuiczkUaOtFYUsBP7qGds3GqO2qAtbWlaK1ovQFrIO+D77JDCIHp3AYAd0cilBMj62PRBzbeGhrjeFE2LuceB4WO8RVCNF1KBrnmoAOT4aP/PYAGj0my8V8bIbRMCy7YT1zHSYuI8XSnweyFoml4Fi59yJStOEMBXLN+5sQWDq3aMO9kNg1GrqO/6+cUV0SfzAArCZbgK1qMqiUVdPSNn3ObfSXot/oDtrSB76AOH4AVqetWuF6qZUHxtAUNTLtaTYOC4198ak6OmLdX08loWdXPKayOBmGMONIEDZ13nAK6WKCxgmL5be13zKJqqy8x4tQknkt6dJva6yO2KRqE+rldDx7TzV+TGKV/Tu3Jtm8aJa0CdUgxtrS7L8cuhOPZcqWFh9Q+JePRV7Ce0gvb0919F3fLnNxlcQytFmUWgOx2Hd0ygLTkq0PrRnDxNu5ChyPIT2NIgLb5qaAYi3Zp9wjMSgDt3Tn6TZewijPBY7l1hC0GLLWdvPWFvQTuQN8ZmvXB27hby0atkZZpcPe19uSGgy0SVIH+SG5xF2+Un/jjUoeCzV58cCiAUoJ1lEPy2UB8VCv39TMEFBig+9ATCQsKvp73kFhIpd8cEPBKfl+hfB2dzAUKWZUwCejzhyHUCdiyGpqcQDk7gsQp4wlXCU0FpmydgtI7qRuqis1SaTswhPu4BloQ6Kmv1NTp6gSmKyjljZidgTb8dmeeKj3fyZl2nydqHYYTN4QAGKrUPaR88gvx/ql3WudMKHJ1Dgp/dNbsIyg/buR+r5h40bQiTcoGuUbH1l3NkaoNRFFCCV2qCKMN4Y+meK+bJ2/qmulYzO5K6rlCWlQYZE+IgvDlPsHru0feqxCtwMugZGi1GcaQUuX5annKDhDXrE2lzEpWDv7JPIv0dfgzcWRRpjg80+5mv/BISQYQVOY/3yWo+PDPz7ZQtfcH19AsEthVKgAXEr9sFSr9mGAYbckYnttIO27OicCuMwPATWfRjkgAFJNrEawVT1hzI7B0JnHyvNUzJXakGpnVVaNdM0wdUAiKyg27coZOsbDBWErNJLOGHbreL4Nl5AOT3Kgl8+fL7PAM2PdFR/jkOX0O4sFOrLLucXFVs4eo2isfPyhjVxVpd2QtKhYgKNjQlQA3ggFg1GpH1w5NlSnE5fWK0Jn7dDhlkSfX54Wbgyw9sb0625re6JVyiq0XszWCFUkCV1ZivXeYN1IAScmyeZmW+GYwIndpf15P5Q/rTk3YOYe0MlWS4ZHURCCGNQAbswV/YNRujDDhuJY6E9gS2kgCIcfUvYq73LyQalXf+TDAuOQRPdF3PAZa1Y78AA7wyjDI7Xj7Rq3lub4V5fSWXeWTnPkCUg/hoaawQ8+312a6BgDoTB58YK8vaLjg0IbIyIi+ViGw+Kf7PIWM1RkO51z7Gidd/HovF8H1ZOyS0KYGEBxsUgwAPDt/FwbFEa+UV/QKhNSnWWkoFxemlVIU9j/U6HD67kCfEGLNZYFqMb5Dy+yQcWq4drpBbyFOXIpVqghiK6DyCD32bYGUqmn1OUMFnWz71rSl+EsbRRa2NKzwxD+PikzC5j34ihjVDUGcBsDXLpLojjzf2pEYo9fML1eYeibCo9GLFgB1RtCbmgJUxAKbqLUzX6mMEmKcLjr5YS6bctFSU0JOPxEkwXyhaciZUIXOUmq2Dd78yUf/iPSSV5/nd5UIGmj9Q/zsl8GpHeI7jUPN7xvgFLJC6kja30bM1OeiHOZZWgQ3qmJsZ87WxEhITI67TsHm+F70VApSksca5R2H5lebShrgdzjWMLzXzzte2XgjvE+RMhcxStQvBPp4gbnSqd7QMWc2YgZEBvPVfJF23FV94z+vZXCB0s9YDpHOOFa2phSjSfhQyxNiluA4Rv73v0fZqYPlsN8m/tDgqf35mOEjDfIGJEmvHYNLQCZhqrHWCRQOeuYIIEMpKCqU4o9mwxMsAbYE1WY5RvSzW/0LfHqPuGE/cDfsM4AB5y3UQfot+JAIyg6az76TmQKYQ4OWQ2uwsA23v/ellDtPWEeQ6XI5xKy4wBhr8AzP2q5qleCm/eQeEeXZEmpRqivrQTwQd81LSWfWrKZkxCAiFC+2DTNcqx3e3fev+Iqvd2lxoibk103E2m8SUC7RnekYusQ5P0hXooGfu88cAgelbcnNqiCXCJfQ5oRalbIlJG9JEJYt9dHp+/KH9TnQIaG9j5b2iDSXsz7AboTn/fcMd9uORuixGRWSZaJOECuvY3xwXYyKhHmboM9BnxRbzDDecwokn8kOZlb5yNAEIUAxhB0xUQjD7KVjkJT+wpWlYu0kZXdlPqDZnwgN1owFbwrgZfxk3Jxr48ozIU3w6XW19+QyYaCah0qVlU0+Rs60BlK0251/w4eNi7xqQXxlsMDf4s4+Tfpm3f7zqVhfRBKjCXIYtBDE4vPPSHMwo0aXPF4PyO700bk4gVgRHWJMNI2S1MIX6oyY11JN0/51oZMD2hc/ScoXJ/LEsycKbwnoKgfFrpreANEIP7wwk34ES9mQelxVx8TDnAlGKi9OlkxFPnORO0YYIjp6NUtq86YFtwMckzuqpELYyYHkyYrD1x0/k1dlqDj9/XrZG6XM/ruliyBT3Muhy+8NauixSBd74XPgrlzigM4WvdcJuTZaUgIgt0pHhH1OvsuXnI2inL5C6U11T7epSP2SESbUdeqM4O/W9APCnr9dDXQ3AYgi6UOBzP4Chgn28S3pVra6eBXbIgDEBR7avqEueVWoXeB+7ooii9rJG3sj6OP5cfcOmIqA97kXAO1Pwn19HxAdmwnUd3P+NPDJkywxE74UAwPJHFs3Z4ZJ4q3s0bMUWcRg1ofdzS1v28kFTSnXcKy8rH9D+7vp+drSSpi8lDUBrTlrC4fvsm7ZS8aL0WOy6AbR5zAf0/jBp+NxJqgmAbtxzWXTYsZHzEZuLML+mDK3131c6ZHnv+/IQoYtCde9fxQCkSRE05Cbr7zqXTCOkdW9Uq+JCMwwT+/BNfl+WmJMR7mxoVHFLqil7/ApppAal13EvaKIXNOEWuMTJJ6K9Sk4q64Jo5gEtQEFQaYQ59z7MTbfZsyURCyy0eboS6GrU1Mcvjpm2OwtFZ66f7MNPOV9+QRC1aZyIJFEIeb0ImPN5uaEufLZWaixyLJGRFZcqL11V6kFGHDWbcUTG/nlXuPA1uN8WDmYDPEiufiR+JB05qcEar1G56R+6yIcWFYO5fBTahnoO1XTwAlYadudRBOpl4WKri4Loh4fWxE345IqWip2D2Nvft4YqZESCo0dHDOe4aL2mHrnwSCIKbstzqzbTUysmaMNwzgbUJtk0sARThRFaT/9H+iiFpupq0qILr8qmk9vEygUxhdNFGYoBHbNU4ac0hbgtQ1O9jDyFASZ1rGji3aE7n6ST0njM0HwgiEoRBpjW2hM3iar7Oow/Bouvc35UuxsNFRdHYdjyy9bPqZNnMX56xFknx7k3xp/L6qpwtAEaACVz/omssdsAX8LzbRxdI4oQE7q3xQeF0A5vllb4G+5eRZEF/KKyzGb5fgbYdnSkI5xqyLqgVn6+sRJAGEiVJzBtmfg9jf3QbI4OqppsLOg6i4ZxPQtXdepxnwdsasJLYvAjslRYxg2h077qsE1RCmNeTm85nCCmcthoV1FPaqjWY3tpupCCsZx1lJY9+jEn2TOlGLaW/A25NRRIJ9JF/gWxFZkRDmOM9+zM3745gIivUORfU8JUs9RcVnSeu2meBnP8xSUipQ6yBZAAYnzGErrkl5Kd4xZ5DS9tOOH8YNkwiNfndapNYdoF7zpgPFyAh48CF4Ldl1NImnpEtOfJ3iIFTYgU+0iyHxPxdXxf1MlCG5+4d6uqxsqzbHwFdJBTRDgEwn6Md6Yyd9lCpD7xtlmmEF8N7nwsD7PClWGiyh2xFC9aINQt/Jw0fIIhS0twx7V/YJMfEIeyT0Qdsk9tvKW6cOKcBCoygC5cB+9iRO7TGeiN7zlzSA83t/oq2FeyFhwEnk3+YZbJWtebi7ZDau+GN1Dy6dYzRpmgmwsqVY+ooWODdfZDFHCJY4Hq4JPk4fpcTzvGirr5sgTCftS88EJAhdhju8yVBpAVOtb/wEYKtAiwhK49xNAn3FD4fN/ehw9d4j+xYCx9ZD0gylAvnKK5MLy4LPQi8k3BUKh4AiarxKc9PGpAeyD0P/U3+JEnZXQd8iOUw0owCMAc5wJaO02VhWzqEDJfu5/d2IOpLUz+2yILGC8PCg71l5bfYgEyx0Hjbf5+zGDSKkjV3S9+HVOTRfu85+5yxAgJVcPDElaf3WjiGiXXxfyDYkeRvTwwKt1xoNQ8Hh82PX/7RTrQeS/l8sTysrS1vIrJhlkOeg1HPIcmS0KjEe63kB91GLT/TAizdEpyco6HWoXpHdoU699PmVWbKRo07SKv6PAAkoXJpSf6dstKHOLJ3WbWZEW1nQfNsZHHZH7qAjKWkfVIryWpOtXkNDmx8XihxQoc3i3ZHJGfAMZ29N/8sPpyV/zPY/9yi205DFon0O6C0T+FMwt8iigtsw5GYN9if8a+vq2pJXCefJ2acKnjmb3JPFG4vxGzRrSANfbrUX7jiPa8iDbU4gEvdOgf8SbPi4+AvNWKG0DVwoF58QQ7j3pAQiDfbsm/zEhy4pTVRUxzI1jPaspm4/AXEuFHs3ZaffRcnbl7BCWvhBBA9aleV0fsoR9Nb5JXqMVIURZ8FI8nGZevDq+M8VasnwHuTwgKbP75WOayx0eZqnfAGPh6OzMgQZIvBhGaXN+CXrrdnw/a3pXX04QXA/EqW86RR/gcWCmU52aW5WqBZAgUGFKxJkD4AzZhRHQ4DSPgmHK2zSbqqisuVXC2hr22uUKUJxJovCvK4ZwOiSaIK+yQ/hFCpRrhiIJO3ZP+Rhzis6fWTr4pgtN78EutfrktR7eIvcKz3TrLZCp9H1cjZ/2OVQB4UQDYN1CQJHYaIMwCJHl2pJK3jx21aoFLo7hERq3jxIkKuVBfpza2Q9lF1qMkgX7cGMM1DaGuN4f8+nZipJ2oecPCM5gNP4Q7oUvoYAoecZhPqObIZMoPLOXLmTDXlsZqzh3UthM167plSBAX6jdW22H6lR/nsuTApYALRYH7T9x7BPSW5IeJFEWkcxR5TeFUpnLuNJaja7T4wpAd6kI2cPGItMJ/A353ZwP0LaKTOq6W9IJAZ2OvIULkipWrXR/mlZPF/VDwFf1eNY/3d5XM4kp4uRQBSX/kw06e5dN8DRu/JKm3GGbQxtO/MjVFUx22Ry+6b33qO7DlhZllvWdNPxweZE9N+Kb1IKF7m7wjXRXjBjvW6tFul6CiwI4iqCPpUtafFHsUunhrK9ngpJChlIKR1W+IowM4cGwhPGi56Es/YV+OZq4q5KUoEI9//Cu0yNCWvlC2yIHw4KGMLvdZ1luAay/2991EyH9Xop/85PRwvyjoBvM1lhgdTLhto5eBJvyOQmxcC8kGk0NlaHkLL/jTaRf8FH4biERHuQf++spDYci2ze8ZAYNacpfjDFMqzZPBQxxBX76hdFLaKOSYOx2qA9KSqoxQdeliuM2YNf8xnf/Gj5RZjtrKJJfHX9WSif1z8JLZ+I0ER5rbicDXC47c+JcAiROWt3KM7B7kHBj7JLsytsMa1P/qv6d5bqP5Ujpx56Fw0iq8zDgo3m/6GsfAKsjPrAnmzDcfWyIQ+SHwPdcUFjeM9j9NIGoBmdiiMdkg/r+vhoRCUgh2r/eriCCrRYjsWcRFebSdAYUSJYuJ2wvejCBRLt+QcOixaf33Bkb9PBqfuBnMkdm1DMktet+CL2otPbs2o3veQA2TK9Hv5oEt0IxG3Yyb7gifdcGObd62Ed6kAHFZdIVUnNMRHqp8Bvdp9DyC/FU6i2Uari1dGAF+7ZnjJanXUeJpX0S5a3PPrr5UutzFzbsrQJsU/gCQHVuMkmCquDssg0bsQ+8pwJkaWPgJswRsTBs3FvaYqQFYZa5R7O9GfCNtDM1cW/IWY14HziQrYrH/4eKdgewkZwXDMptnj34mAQJMCQ5WDK4gbrubGFcAwo9Vjt7BsKizlQ6mRH1sAMHzhHBDwF4BwB2WEYRiNlT9bcuJpfgQyIGgyBND9xlLjhqJahq5nUxDCMYnLSBcJdccgTAHIuDjPqttvD75Mfj7HzF5DVupue2SSqUr2S49BSaXMK/XJYmlv89/pZdFwEFf7rOzDIpUOgHWiOhEHdEDK4W3ckR6wdo8gl5Ze3iqhTUviBA2xqXQ3AlGxfooCLzTStu3CMgpD2RDHrLp/VhVKUPRrKmbO6jN/aP0sjWsLymzIli8uXvSSDaIZlPjXtiKzrPoTcVsS4wkJVeDaHqUsJGrTfjGfPfLe10dKaMtThqnRJCKoDeFt8HfNs1SmsauNrq5cSFCjDXCqQt9Il2apHaPCoZaIEo0Dx9eKn31MYlroT7Wvx6dUz5xIwdK+xdV+Ocvoq7E7C7y0CSMRygKPmBh4G2IAeAZAx9Y4+SiI5DCcTAckuqNbjO0TDI4hW4V929jiioE1hNiSJ1rGdtce1aaE2u3dFRMSRBwmNh99b1NwZ3NeVgsoQwRgg+SGADNe9ggVphNr64Ttsvi8WeFKAjeihZbJRIFIJqptgcFTbuqzcP64OXt2n/CB68/IOfrW/qJnAbyiXA/UE42/9t89REuWOZFZQoa9BVv8BMx+IHl1nNjgfixuKH07M4oOI/vmNXkBZzwHc0wCpoxDnuEFUfwU24JGW6AxMd1g2K+bVyP891IA2iNs1BCkth82bmXnsXN3qthPVBch94IjlYekEOItSTnDfwemS0qsFsvQmyKiLyVtHUPkpHUNNq4FdhgRXWcjVkeI0n/uf9bScpqjXjbJ2E55ZF4OcWPv4wXfL0czkKADxTbaDqIhpBDQif0GwHBp53AtrIgE8M7zuwUGHh2g7xF2gXOtSpTIc6pSzZvNNJQNULQ/ZFJPzZSX58qbhuR5GOq9T2I6yU7KhvIS3i9hKfcytR7dOXkOKOnvVZBH87yORXei5eGq2mxa/KNlQVuKnr7p8ZynDFsY/YxpPXVaWPu7McPlBFh78Tt78eYk2GZB6r/RiY+N4TQvECzDTpgSNPT4uZuwl6NWhI/2DCQWegkke1OPTDfaMxQAiisWs/G9DpxFpEygbL7GyyN3RMhTgGvSt0/B+e35l/9iZ1zFxOF85r7wav4G86aT5svAukbyz7UZ+fPLJ1z+hPevNVnPxyqtci4d68SuH6VdgfUJqtc8NXn8tV2Wbm6p2To4N2nvUZqeWg+vu5+G5wZ0Cv13WsAbC9ppnyiDxrQyETsrMiikEkOT3sn7nZV49O0Kxl6WGCWR2nfYhGFwHelM0GnexZDXGvUaRpPCZwD/XLCw6IdyYUudE3eObpunrvAz/rJCqwoLF3OBkx0AyzQ+NydypptTkiCnSUeJk//dyXvMWEZwtMM/My769FlCYKxKQ88sxH+RixjCwOAnaNXueHp01/qH1FQFTSRfPqefUZyg/RoTjbKT1f3JhHeEGNiJsbwXp4Hxa0H3IBbna29+Mf4I0ESOXJMvTnq8dHOVaMzzB/p9qU2R50NNQK9LZkUNRctP/PYAZjRaFxs86JncyRj5vBx33jpMbiFZ9Fk3QVhnwLq3kkqYS0ypM/azmdPA7CHW4f1ohv2FG6+jHirU3AlZK+pSarA9fC+mtoXE3AeaYyV9phiAYjTKL3/oPe8yF29ObkeqXoKuJt9SS6h2rJEek/kRI4gztR5WP5YjhUpVZ6uOQsko69Gp4BVgC53jWGeCKzNeUbMthNXmlWbfgS5qstC9Io61Lr7lecCg6ZzuidcHGbwSQx/l/bxV2lophnfunrGD3sfDIkAHHlIrI88QH9150lkcBG3WeE3R/9U5ScutVuuI7i3CJ1I84mPG4WSZTslvUlw+jNnMOZcTZZ1Yfu1LU6icflLAF+nh7fYD5NAiCSsgkCI6r055wXWoaSgsWkyoUIxhJyizbqiPi4NOax0viXc+XcAwNoOCfWKoMhnKhnxBIDcOfPzH1vXtjuIPxXI7Fk/sq1iwdNvly5VKGYbOqrAJINzNCRrzBWKODseIaP+vyRoodstoPg71JSwojbRx/OwpBp8xR/MryZAM7nW0zY6rxBkR9Zm+9gkebTLbW820DC6Zu3FZMlMsh3G2gPTKwiEcS0KgYQ3CC0dLj4U/2/jYuieg/C7p+bxK8BctGQlDdPriqtOBzVYLNeiPOAKONNu3rCcMBqy80p0TmgYfyav+gi7A256Ao5NofUyh2nTWh2kt0dHWoNRL8sWoCHj6PUh+8/2O0354iPiyh5MP5FEVTb17YYsvkz06x+SWxqhHxLyYi6TuN/8TpTOqxYpoVh5t5cFqH0IvaailhtiZTd9l1NjgDko2KB68gcY3F9QGZA3wV25Y127naUqSj0qCXV+ELblGo052eiC40kPJ+qkozfC/vO+2LQr+HXaiy+VCnn0+dEDotipNsEbjS10MbcMFcGnnQQEKWK7KUT5vEcaSspqfwSr17Z/fxyacJ7fhH6wOu9inIkb/ffX/OeKUdVsZqU50KWnJkEmHPxCzAHKiAVNXfZMXddF1cEPd2qzpbGDt6q88XtKov15O4SQHzkrkgn7a15QwrbwddCEdrsQ5BZIl9JQpEPCMa9BESB+QC3jFpAwQ/TAPMiSDCtZGRZioJbp1ovrY2u2ttFHTlA5ElCZHVAPowFWqg/Tws1Kkdtl3Bg+w4UIK3m+oCbMQud/xGwBchFX5e1ixZTAqPCJeocQ3tfzlfcm8ca/mHpU/5SwdL5USOTD9m5Pmk2Fjfazo64nYHEtWimOCBlhoG7bliBMREXwhmVMjJw2nZzT8TpBmoqGE1w5aIpRJ8oTT/ek1FwrrJpZrJrpUMmNcAejoicimqyzsUXcW5GzmNAEdaIrqeywoDSlU+uNUaqfffkJR/R7cyDShwwv7h9tcGv01yLYPf4QGB92dkjI2BngePDpxejxADLUJIUlNU/Ho6TZzesclSNKwObU2CIz6yKvAGjFRmhMQiSzFPFtjtulsEVAvldxPOC16W/lJ1SzxncFxe8DoUTF8mXIP05n7cRd0JNQtNHHacvHuJF8yQXcQOEUxypM/DZAyojhGPDL1qWiA3db2NTfQpVDor/PM+DCclk0cRiw/Pc1cNgAAAAI7vRDSHysRYLMgCrY8rAVQuqTOSvipJFmlloiRWM4aLQ+zVJU7OTICvX/FvDx76mM8iVi/M3J1ouVr4zfsWIuR4R5u/8rH/deqz7IK/quwQ0zg5FYWTPOvXWLsoZzHcJXsMlsGN+1+hOsfmzFEEl54KCEQDScPSOgoAAA";
 
@@ -155,10 +155,10 @@ const getDureeSVT = (classe) => {
 const getIni   = nom => (nom||"").replace("Mme ","").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
 const getNomCourt = nom => {
   const sansTitre = (nom||"").replace(/^(Mme|M\.)\s+/,"");
-  return sansTitre.split(" ")[0] || sansTitre || "â€”";
+  return sansTitre.split(" ")[0] || sansTitre || "—";
 };
 
-// Redimensionne/compresse une image cÃ´tÃ© client avant upload (connexions lentes)
+// Redimensionne/compresse une image côté client avant upload (connexions lentes)
 function resizeImageFile(file, maxDim = 300, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -172,14 +172,14 @@ function resizeImageFile(file, maxDim = 300, quality = 0.82) {
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
       canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("toBlob a Ã©chouÃ©")), "image/jpeg", quality);
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("toBlob a échoué")), "image/jpeg", quality);
     };
     img.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// Avatar enseignant â€” photo si disponible, sinon initiales colorÃ©es (fallback automatique)
+// Avatar enseignant — photo si disponible, sinon initiales colorées (fallback automatique)
 const Avatar = ({ ens, size = 30, fontSize }) => {
   const [erreur, setErreur] = useState(false);
   const fs = fontSize || Math.round(size*0.34);
@@ -197,7 +197,7 @@ const Avatar = ({ ens, size = 30, fontSize }) => {
   );
 };
 
-// Export Excel gÃ©nÃ©rique â€” un tableau d'objets devient une feuille tÃ©lÃ©chargeable
+// Export Excel générique — un tableau d'objets devient une feuille téléchargeable
 function exportToExcel(filename, sheetName, dataRows) {
   try {
     const ws = XLSX.utils.json_to_sheet(dataRows);
@@ -207,18 +207,18 @@ function exportToExcel(filename, sheetName, dataRows) {
     return true;
   } catch { return false; }
 }
-function normLabel(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[Ì€-Í¯]/g,"").replace(/\b1ere\b|\b1re\b/g,"1e").replace(/\b2nde\b|\b2nd\b/g,"2nde").replace(/\b3eme\b/g,"3e").replace(/\b4eme\b/g,"4e").replace(/\b5eme\b/g,"5e").replace(/\b6eme\b/g,"6e").replace(/\bterminale\b/g,"tle").replace(/\s+/g," ").trim();}
+function normLabel(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\b1ere\b|\b1re\b/g,"1e").replace(/\b2nde\b|\b2nd\b/g,"2nde").replace(/\b3eme\b/g,"3e").replace(/\b4eme\b/g,"4e").replace(/\b5eme\b/g,"5e").replace(/\b6eme\b/g,"6e").replace(/\bterminale\b/g,"tle").replace(/\s+/g," ").trim();}
 const PROG_MAP_NORM=(()=>{const o={};for(const k in PROG_MAP)o[normLabel(k)]=PROG_MAP[k];return o;})();
 function resolveProgCode(cl){return PROG_MAP[cl]||PROG_MAP_NORM[normLabel(cl)]||null;}
 function getTrimRange(code,trim){if(!code)return null;const b=PROG_TRIM[code];if(!b)return null;if(trim==="T1")return[1,b[0]];if(trim==="T2")return[b[0]+1,b[1]];if(trim==="T3")return[b[1]+1,9999];return null;}
 
-// â”€â”€ Coefficient SVTEEHB par classe (officiel MINESEC) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Coefficient SVTEEHB par classe (officiel MINESEC) ──────────────
 function getNowInfo(){const now=new Date();const h=now.getHours()+now.getMinutes()/60;const dIdx=now.getDay();const jk=dIdx>=1&&dIdx<=5?JKEYS[dIdx-1]:null;let hi=-1;PLAGES_DEC.forEach((p,i)=>{if(h>=p[0]&&h<p[1])hi=i;});return{jk,hi,isWeekend:!jk,now};}
 function progDocMeta(classe,trim,progIndex){const code=resolveProgCode(classe);const meta=code?PROG_META[code]:null;if(!code||!meta)return null;const trimRange=trim&&trim!=="ANN"?getTrimRange(code,trim):null;const allFaites=new Set();Object.entries(progIndex).forEach(([key,arr])=>{if(key.endsWith("||"+classe))(arr||[]).forEach(n=>allFaites.add(n));});let lpRef=meta.lpRef;let faites=allFaites.size;if(trimRange){const[tMin,tMax]=trimRange;lpRef=Math.round(meta.lpRef*(tMax-tMin+1)/meta.lpRef)||meta.lpRef;faites=[...allFaites].filter(n=>n>=tMin&&n<=tMax).length;}const taux=lpRef>0?Math.min(100, Math.round(faites/lpRef*100)):0;return{vh:meta.vh,hd:meta.hd,lpRef,lfRef:Math.min(lpRef,faites),taux};}
 const taux2col = t => t >= 75 ? "#16a34a" : t >= 50 ? "#f59e0b" : "#ef4444";
 const fmtDateFr = (v) => {
-  if (!v) return "â€”";
-  // DÃ©jÃ  au format franÃ§ais (ancien data ou saisie directe) â†’ afficher tel quel
+  if (!v) return "—";
+  // Déjà au format français (ancien data ou saisie directe) → afficher tel quel
   if (typeof v === "string" && /^\d{2}\/\d{2}\/\d{4}/.test(v)) return v;
   const d = new Date(v);
   return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});
@@ -227,14 +227,14 @@ const taux2bg  = t => t >= 75 ? "#f0fdf4" : t >= 50 ? "#fffbeb" : "#fef2f2";
 const classColorCache={};let colorIdx=0;
 function getClassColor(cl){if(!cl)return"#94a3b8";if(!classColorCache[cl])classColorCache[cl]=CLASS_COLORS[colorIdx++%CLASS_COLORS.length];return classColorCache[cl];}
 
-// â”€â”€ Comptes dÃ©mo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Comptes démo ──────────────────────────────────────────────────
 // Classes issues de ENSEIGNANTS1.pdf (EDT Lantiv officiel Kakatare)
 // Classes officielles (source : CLASSES.pdf Lantiv Kakatare)
-// ClÃ©s = noms exacts du PDF utilisÃ©s pour PROG_MAP ; display = nom court feuille de calcul
+// Clés = noms exacts du PDF utilisés pour PROG_MAP ; display = nom court feuille de calcul
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CHARGEMENT LAZY DES DONNÃ‰ES STATIQUES (JSON servis par Vercel)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// CHARGEMENT LAZY DES DONNÉES STATIQUES (JSON servis par Vercel)
+// ════════════════════════════════════════════════════════════════
 let _elevesLoaded = false;
 
 function loadElevesDB() {
@@ -245,41 +245,41 @@ function loadElevesDB() {
   TOTAL_GARCONS = getTotalGarcons();
 }
 
-// LECONS_DATA est dÃ©sormais dans le bundle â€” chargement direct
+// LECONS_DATA est désormais dans le bundle — chargement direct
 async function loadStaticData() {
-  await loadElevesDB(); // Seul ELEVES_DB est chargÃ© dynamiquement
+  await loadElevesDB(); // Seul ELEVES_DB est chargé dynamiquement
 }
 
 const ENS_CLASSES_REF = {
-  // LibellÃ©s alignÃ©s sur EDT_REEL harmonisÃ© + RelevÃ© de notes
-  mbassam:    ["5Ã¨me 2","1Ã¨re C","1Ã¨re Ti","Tle A4 ESP","Tle A4 ITA"],  // 1Ã¨re C/Ti Ã©clatÃ©e + Tle ESP/ITA sÃ©parÃ©es  // Tle ESP/ITA (classe mixte)
-  boubam:     ["2nde C","3Ã¨me ARB","4Ã¨me ARB"],
-  douniaroud: ["6Ã¨me 1","Tle A4 ALL","Tle C/Ti"],
-  hayatouh:   ["1Ã¨re D"],
+  // Libellés alignés sur EDT_REEL harmonisé + Relevé de notes
+  mbassam:    ["5ème 2","1ère C","1ère Ti","Tle A4 ESP","Tle A4 ITA"],  // 1ère C/Ti éclatée + Tle ESP/ITA séparées  // Tle ESP/ITA (classe mixte)
+  boubam:     ["2nde C","3ème ARB","4ème ARB"],
+  douniaroud: ["6ème 1","Tle A4 ALL","Tle C/Ti"],
+  hayatouh:   ["1ère D"],
   aissatous:  ["Tle D"],
-  essambas:   ["1Ã¨re A4 ARB","3Ã¨me ALL","4Ã¨me ALL"],
-  koffa:      ["1Ã¨re A4 ESP","5Ã¨me 3","6Ã¨me 3"],
-  mawiyak:    ["2nde ALL","2nde ESP","4Ã¨me ESP","6Ã¨me 2"],
-  sadjot:     ["1Ã¨re A4 ALL","3Ã¨me ESP","5Ã¨me 1"],
+  essambas:   ["1ère A4 ARB","3ème ALL","4ème ALL"],
+  koffa:      ["1ère A4 ESP","5ème 3","6ème 3"],
+  mawiyak:    ["2nde ALL","2nde ESP","4ème ESP","6ème 2"],
+  sadjot:     ["1ère A4 ALL","3ème ESP","5ème 1"],
   sylvie:     [],
 };
 
 // Noms d'affichage courts (feuille de calcul MINESEC)
 const CLASS_DISPLAY = {
-  // Source : RelevÃ© de notes officiel â€” LycÃ©e de Kakatare 2025â€“2026
-  // 38 classes sÃ©parÃ©es + alias EDT
-  "6Ã¨me 1":"6Ã¨me I","6Ã¨me 2":"6Ã¨me II","6Ã¨me 3":"6Ã¨me III",
-  "5Ã¨me 1":"5Ã¨me I","5Ã¨me 2":"5Ã¨me II","5Ã¨me 3":"5Ã¨me III",
-  "4Ã¨me ALL":"4Ã¨me Allemand","4Ã¨me ARB":"4Ã¨me Arabe",
-  "4Ã¨me CHN":"4Ã¨me Chinois","4Ã¨me ITA":"4Ã¨me Italien","4Ã¨me ESP":"4Ã¨me Espagnol",
-  "3Ã¨me ALL":"3Ã¨me Allemand","3Ã¨me ARB":"3Ã¨me Arabe",
-  "3Ã¨me CHN":"3Ã¨me Chinois","3Ã¨me ESP":"3Ã¨me Espagnol","3Ã¨me ITA":"3Ã¨me Italien",
+  // Source : Relevé de notes officiel — Lycée de Kakatare 2025–2026
+  // 38 classes séparées + alias EDT
+  "6ème 1":"6ème I","6ème 2":"6ème II","6ème 3":"6ème III",
+  "5ème 1":"5ème I","5ème 2":"5ème II","5ème 3":"5ème III",
+  "4ème ALL":"4ème Allemand","4ème ARB":"4ème Arabe",
+  "4ème CHN":"4ème Chinois","4ème ITA":"4ème Italien","4ème ESP":"4ème Espagnol",
+  "3ème ALL":"3ème Allemand","3ème ARB":"3ème Arabe",
+  "3ème CHN":"3ème Chinois","3ème ESP":"3ème Espagnol","3ème ITA":"3ème Italien",
   "2nde ALL":"2nde Allemand","2nde ARB":"2nde Arabe","2nde CHN":"2nde Chinois",
   "2nde ITA":"2nde Italien","2nde ESP":"2nde Espagnol","2nde C":"2nde C",
-  "1Ã¨re A4 ALL":"1Ã¨re A4 Allemand","1Ã¨re A4 ARB":"1Ã¨re A4 Arabe",
-  "1Ã¨re A4 ESP":"1Ã¨re A4 Espagnol","1Ã¨re CHN":"1Ã¨re Chinois","1Ã¨re ITA":"1Ã¨re Italien",
-  "1Ã¨re C":"1Ã¨re C","1Ã¨re D":"1Ã¨re D","1Ã¨re Ti":"1Ã¨re Ti",
-  "1Ã¨re C/Ti":"1Ã¨re C & Ti",
+  "1ère A4 ALL":"1ère A4 Allemand","1ère A4 ARB":"1ère A4 Arabe",
+  "1ère A4 ESP":"1ère A4 Espagnol","1ère CHN":"1ère Chinois","1ère ITA":"1ère Italien",
+  "1ère C":"1ère C","1ère D":"1ère D","1ère Ti":"1ère Ti",
+  "1ère C/Ti":"1ère C & Ti",
   "Tle A4 ALL":"Tle A4 Allemand","Tle A4 ARB":"Tle A4 Arabe","Tle A4 CHN":"Tle A4 Chinois",
   "Tle A4 ITA":"Tle A4 Italien","Tle A4 ESP":"Tle A4 Espagnol",
   "Tle C":"Tle C","Tle D":"Tle D","Tle Ti":"Tle Ti",
@@ -288,23 +288,23 @@ const CLASS_DISPLAY = {
 "Tle A4 ESP/ITA":"Tle A4 Espagnol / Italien",};
 
 const DEMO_ACCOUNTS = [
-  // Source : ENSEIGNANTS1.pdf + CLASSES.pdf Lantiv â€” LycÃ©e de Kakatare 2025â€“2026
-  // Mots de passe Ã  personnaliser avant dÃ©ploiement dÃ©finitif
-  {id:"sylvie",nom:"AÃSSATOU SYLVIE",   role:"animatrice", sub:"Animatrice PÃ©dagogique Â· PCEG", classes:[]},
-  {id:"mbassam", nom:"MBASSA AndrÃ© Gildas",role:"enseignant", sub:"5Ã¨me 2 Â· 1Ã¨re C/Ti Â· Tle A4 ESP", classes:["5Ã¨me 2","1Ã¨re C","1Ã¨re Ti","Tle A4 ESP","Tle A4 ITA"]},
-  {id:"boubam", nom:"BOUBA M",            role:"enseignant", sub:"2nde C Â· 3Ã¨me ARB Â· 4Ã¨me ARB",   classes:["2nde C","3Ã¨me ARB","4Ã¨me ARB"]},
-  {id:"douniaroud",nom:"DOUNIAROU D",        role:"enseignant", sub:"6Ã¨me 1 Â· Tle A4 ALL Â· Tle C/Ti", classes:["6Ã¨me 1","Tle A4 ALL","Tle C/Ti"]},
-  {id:"hayatouh", nom:"HAYATOU H",          role:"enseignant", sub:"1Ã¨re D",                         classes:["1Ã¨re D"]},
-  {id:"aissatous", nom:"Mme AÃSSATOU S",     role:"enseignant", sub:"Tle D",                          classes:["Tle D"]},
-  {id:"essambas", nom:"Mme ESSAMBA S",       role:"enseignant", sub:"1Ã¨re A4 ARB Â· 3Ã¨me ALL Â· 4Ã¨me ALL", classes:["1Ã¨re A4 ARB","3Ã¨me ALL","4Ã¨me ALL"]},
-  {id:"koffa", nom:"Mme KOFFA",           role:"enseignant", sub:"1Ã¨re A4 ESP Â· 5Ã¨me 3 Â· 6Ã¨me 3", classes:["1Ã¨re A4 ESP","5Ã¨me 3","6Ã¨me 3"]},
-  {id:"mawiyak", nom:"Mme MAWIYA K",        role:"enseignant", sub:"2nde ALL Â· 2nde ESP Â· 4Ã¨me ESP Â· 6Ã¨me 2", classes:["2nde ALL","2nde ESP","4Ã¨me ESP","6Ã¨me 2"]},
-  {id:"sadjot", nom:"Mme SADJO T",          role:"enseignant", sub:"1Ã¨re A4 ALL Â· 3Ã¨me ESP Â· 5Ã¨me 1", classes:["1Ã¨re A4 ALL","3Ã¨me ESP","5Ã¨me 1"]},
+  // Source : ENSEIGNANTS1.pdf + CLASSES.pdf Lantiv — Lycée de Kakatare 2025–2026
+  // Mots de passe à personnaliser avant déploiement définitif
+  {id:"sylvie",nom:"AÏSSATOU SYLVIE",   role:"animatrice", sub:"Animatrice Pédagogique · PCEG", classes:[]},
+  {id:"mbassam", nom:"MBASSA André Gildas",role:"enseignant", sub:"5ème 2 · 1ère C/Ti · Tle A4 ESP", classes:["5ème 2","1ère C","1ère Ti","Tle A4 ESP","Tle A4 ITA"]},
+  {id:"boubam", nom:"BOUBA M",            role:"enseignant", sub:"2nde C · 3ème ARB · 4ème ARB",   classes:["2nde C","3ème ARB","4ème ARB"]},
+  {id:"douniaroud",nom:"DOUNIAROU D",        role:"enseignant", sub:"6ème 1 · Tle A4 ALL · Tle C/Ti", classes:["6ème 1","Tle A4 ALL","Tle C/Ti"]},
+  {id:"hayatouh", nom:"HAYATOU H",          role:"enseignant", sub:"1ère D",                         classes:["1ère D"]},
+  {id:"aissatous", nom:"Mme AÏSSATOU S",     role:"enseignant", sub:"Tle D",                          classes:["Tle D"]},
+  {id:"essambas", nom:"Mme ESSAMBA S",       role:"enseignant", sub:"1ère A4 ARB · 3ème ALL · 4ème ALL", classes:["1ère A4 ARB","3ème ALL","4ème ALL"]},
+  {id:"koffa", nom:"Mme KOFFA",           role:"enseignant", sub:"1ère A4 ESP · 5ème 3 · 6ème 3", classes:["1ère A4 ESP","5ème 3","6ème 3"]},
+  {id:"mawiyak", nom:"Mme MAWIYA K",        role:"enseignant", sub:"2nde ALL · 2nde ESP · 4ème ESP · 6ème 2", classes:["2nde ALL","2nde ESP","4ème ESP","6ème 2"]},
+  {id:"sadjot", nom:"Mme SADJO T",          role:"enseignant", sub:"1ère A4 ALL · 3ème ESP · 5ème 1", classes:["1ère A4 ALL","3ème ESP","5ème 1"]},
 ];
 
 
-// â”€â”€ Chargement donnÃ©es Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Fusionne les ajouts/modifications d'Ã©lÃ¨ves persistÃ©s (eleves_import) dans ELEVES_DB
+// ── Chargement données Supabase ───────────────────────────────────
+// Fusionne les ajouts/modifications d'élèves persistés (eleves_import) dans ELEVES_DB
 async function syncElevesImport() {
   try {
     const rows = await sb.get("eleves_import", "?select=classe,donnees");
@@ -315,7 +315,7 @@ async function syncElevesImport() {
         ELEVES_DB[r.classe] = arr;
       }
     });
-  } catch { /* Ã©chec silencieux â€” on garde les donnÃ©es par dÃ©faut */ }
+  } catch { /* échec silencieux — on garde les données par défaut */ }
 }
 
 async function loadAllData(departementId = null) {
@@ -353,7 +353,7 @@ async function loadAllData(departementId = null) {
   return{classes:classes||[],users:usersMap,prog:progIndex,epreuves:eps,exceptions:excMap,notes:notesIndex,absences:absIndex,edtBase:edtBaseMap};
 }
 
-// â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Palette ───────────────────────────────────────────────────────
 const C = {
   sidebar:"var(--c-sidebar)",sidebarBorder:"var(--c-sidebarBorder)",sidebarActive:"var(--c-sidebarActive)",sidebarActiveText:"var(--c-sidebarActiveText)",sidebarText:"var(--c-sidebarText)",sidebarHover:"var(--c-sidebarHover)",
   green:"var(--c-green)",greenLight:"var(--c-greenLight)",greenDark:"var(--c-greenDark)",greenPale:"var(--c-greenPale)",greenBorder:"var(--c-greenBorder)",
@@ -367,26 +367,26 @@ const C = {
   purple:"var(--c-purple)",purplePale:"var(--c-purplePale)",
   teal:"var(--c-teal)",tealPale:"var(--c-tealPale)",
   pink:"var(--c-pink)",pinkPale:"var(--c-pinkPale)",
-  // Tokens avec alpha prÃ©-calculÃ© (remplacent les anciennes concatÃ©nations C.xxx+"NN" incompatibles avec var())
+  // Tokens avec alpha pré-calculé (remplacent les anciennes concaténations C.xxx+"NN" incompatibles avec var())
   greenPaleA30:"var(--c-greenPaleA30)",greenPaleA40:"var(--c-greenPaleA40)",greenPaleA60:"var(--c-greenPaleA60)",
   blueA40:"var(--c-blueA40)",pinkA40:"var(--c-pinkA40)",redA30:"var(--c-redA30)",redA40:"var(--c-redA40)",
 };
 
-// â”€â”€ Contexte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Contexte ──────────────────────────────────────────────────────
 const AppCtx = createContext(null);
 const useApp = () => useContext(AppCtx);
 
-// ADMIN_ROLES : rÃ´les qui utilisent filterDataByDept pour le scoping dÃ©partement
-// Censeur volontairement absent (vue globale intentionnelle â€” mÃªme comportement que proviseur)
-// Si on ajoute censeur ici, il faudra aussi gÃ©rer son deptIdRef explicitement
+// ADMIN_ROLES : rôles qui utilisent filterDataByDept pour le scoping département
+// Censeur volontairement absent (vue globale intentionnelle — même comportement que proviseur)
+// Si on ajoute censeur ici, il faudra aussi gérer son deptIdRef explicitement
 const ADMIN_ROLES = ["animatrice", "animateur", "proviseur"];
-// RÃ´les avec vue globale explicite (pas de scoping dÃ©partement)
+// Rôles avec vue globale explicite (pas de scoping département)
 const GLOBAL_ROLES = ["proviseur", "censeur_a", "censeur_b", "censeur_c", "censeur_d", "censeur_e"];
 const isAdminRole = (role) => ADMIN_ROLES.includes(role);
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// HOOK : DÃ©tecteur automatique mobile / tablette / desktop
-// RÃ©actif au resize â€” met Ã  jour en temps rÃ©el
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// HOOK : Détecteur automatique mobile / tablette / desktop
+// Réactif au resize — met à jour en temps réel
+// ══════════════════════════════════════════════════════════════════════
 function useDevice() {
   const getState = () => {
     if (typeof window === "undefined") return {device:"desktop", orientation:"landscape"};
@@ -422,7 +422,7 @@ function useDevice() {
     isSmall:     device !== "desktop",
     isPortrait:  orientation === "portrait",
     isLandscape: orientation === "landscape",
-    // Cas spÃ©cifiques
+    // Cas spécifiques
     mobileLandscape: device === "mobile"  && orientation === "landscape",
     mobilePortrait:  device === "mobile"  && orientation === "portrait",
     tabletLandscape: device === "tablet"  && orientation === "landscape",
@@ -430,9 +430,9 @@ function useDevice() {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 // HOOK MODE SOMBRE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 function useDarkMode() {
   const [dark, setDark] = useState(()=>{
     try { return localStorage.getItem("svteehb-dark")==="1"; } catch{return false;}
@@ -446,8 +446,8 @@ function useDarkMode() {
 
 
 
-// â”€â”€ Composants UI partagÃ©s â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€â”€ Logo officiel SVTEEHB â€” microscope + feuille + globe + bandeau SVT â”€â”€
+// ── Composants UI partagés ────────────────────────────────────────
+// ─── Logo officiel SVTEEHB — microscope + feuille + globe + bandeau SVT ──
 const SVTLogo = ({size=36}) => (
   <svg viewBox="0 0 160 160" width={size} height={size} style={{flexShrink:0}}>
     {/* Fond cercle */}
@@ -497,14 +497,14 @@ const Sk = ({h=14,w="100%",br=6}) => (<div style={{height:h,width:w,borderRadius
 const Pill = ({ch,color=C.green,bg}) => (<span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:bg||color+"18",color,whiteSpace:"nowrap"}}>{ch}</span>);
 const ProgBar = ({value,h=5}) => {const c=value>=75?C.green:value>=50?C.amber:C.red;return(<div style={{height:h,background:"#e2e8f0",borderRadius:h,overflow:"hidden"}}><div style={{width:`${Math.min(100,value||0)}%`,height:"100%",background:c,borderRadius:h,transition:"width .5s"}}/></div>);};
 const Toast = ({msg,ok}) => (<div style={{position:"fixed",bottom:24,right:24,zIndex:9999,display:"flex",alignItems:"center",gap:10,padding:"12px 18px",borderRadius:12,background:ok===false?C.red:C.greenDark,color:"#fff",fontSize:13,fontWeight:600,boxShadow:"0 8px 24px rgba(0,0,0,.25)",animation:"fadeUp .3s ease",maxWidth:360}}>{msg}</div>);
-const STATUT_CFG = {attente:{label:"En attente",emoji:"â³",color:C.orange,bg:C.orangePale,border:C.orangeBorder},validee:{label:"ValidÃ©e",emoji:"âœ…",color:C.green,bg:C.greenPale,border:C.greenBorder},rejetee:{label:"RejetÃ©e",emoji:"âŒ",color:C.red,bg:C.redPale,border:C.redBorder},vide:{label:"Non soumise",emoji:"â—‹",color:C.txtLight,bg:"#f8fafc",border:C.border}};
+const STATUT_CFG = {attente:{label:"En attente",emoji:"⏳",color:C.orange,bg:C.orangePale,border:C.orangeBorder},validee:{label:"Validée",emoji:"✅",color:C.green,bg:C.greenPale,border:C.greenBorder},rejetee:{label:"Rejetée",emoji:"❌",color:C.red,bg:C.redPale,border:C.redBorder},vide:{label:"Non soumise",emoji:"○",color:C.txtLight,bg:"#f8fafc",border:C.border}};
 
-// â”€â”€ CSS Global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── CSS Global ────────────────────────────────────────────────────
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
-  /* â”€â”€ Palette claire (par dÃ©faut) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Palette claire (par défaut) ──────────────────────────────── */
   :root{
     --c-sidebar:#0B3D20;--c-sidebarBorder:rgba(212,175,55,0.15);--c-sidebarActive:rgba(212,175,55,0.14);--c-sidebarActiveText:#D4AF37;--c-sidebarText:rgba(255,255,255,0.60);--c-sidebarHover:rgba(255,255,255,0.06);
     --c-green:#0B4D2C;--c-greenLight:#166534;--c-greenDark:#083D22;--c-greenPale:#f0f7f2;--c-greenBorder:#a7d4b5;
@@ -522,7 +522,7 @@ const GLOBAL_CSS = `
     --c-blueA40:rgba(59,130,246,.4);--c-pinkA40:rgba(236,72,153,.4);--c-redA30:rgba(239,68,68,.3);--c-redA40:rgba(239,68,68,.4);
   }
 
-  /* â”€â”€ Palette sombre â€” activÃ©e via body.dark-mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Palette sombre — activée via body.dark-mode ─────────────── */
   body.dark-mode{
     --c-white:#1a2420;--c-bg:#0f1411;--c-border:#2d3a33;
     --c-txt:#e8f0ea;--c-txtMuted:#94a89e;--c-txtLight:#6b7d73;
@@ -552,32 +552,32 @@ const GLOBAL_CSS = `
 `;
 
 
-// useState, useMemo: importÃ©s en tÃªte de fichier
+// useState, useMemo: importés en tête de fichier
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// BASE NOMINALE COMPLÃˆTE â€” 1163 Ã©lÃ¨ves / 38 classes
+// ═══════════════════════════════════════════════════
+// BASE NOMINALE COMPLÈTE — 1163 élèves / 38 classes
 // Source : Fiche_Suivi_Annuel_Kakatare_2025_2026.xlsx
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ELEVES_DB importÃ© depuis ./data/eleves.json (38 classes, 1166 Ã©lÃ¨ves) // 38 classes, 1166 Ã©lÃ¨ves â€” donnÃ©es inline
+// ═══════════════════════════════════════════════════
+// ELEVES_DB importé depuis ./data/eleves.json (38 classes, 1166 élèves) // 38 classes, 1166 élèves — données inline
 
-// Liste fiable classes+effectifs, dÃ©rivÃ©e d'ELEVES_DB â€” Ã  utiliser PARTOUT
-// au lieu de la table Supabase "classes" (peu fiable : vide ou codes dÃ©synchronisÃ©s)
+// Liste fiable classes+effectifs, dérivée d'ELEVES_DB — à utiliser PARTOUT
+// au lieu de la table Supabase "classes" (peu fiable : vide ou codes désynchronisés)
 const CLASSES_REELLES = Object.keys(ELEVES_DB).sort().map(code => ({
   code, effectif: (ELEVES_DB[code]||[]).length,
 }));
 
 
-// â”€â”€ RÃ©fÃ©rentiel programmes par niveau (avec coefficients) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Référentiel programmes par niveau (avec coefficients) ──────────
 const PROGRAMME_SVTEEHB = {
-  "6Ã¨me":        { lp_t1:19, lp_t2:21, lp_t3:12, tp:12, coeff:2 },
-  "5Ã¨me":        { lp_t1:19, lp_t2:20, lp_t3:5,  tp:9,  coeff:2 },
-  "4Ã¨me":        { lp_t1:15, lp_t2:18, lp_t3:12, tp:8,  coeff:2 },
-  "3Ã¨me":        { lp_t1:17, lp_t2:16, lp_t3:11, tp:10, coeff:2 },
+  "6ème":        { lp_t1:19, lp_t2:21, lp_t3:12, tp:12, coeff:2 },
+  "5ème":        { lp_t1:19, lp_t2:20, lp_t3:5,  tp:9,  coeff:2 },
+  "4ème":        { lp_t1:15, lp_t2:18, lp_t3:12, tp:8,  coeff:2 },
+  "3ème":        { lp_t1:17, lp_t2:16, lp_t3:11, tp:10, coeff:2 },
   "2nde C":      { lp_t1:11, lp_t2:8,  lp_t3:11, tp:4,  coeff:2 },
   "2nde A":      { lp_t1:9,  lp_t2:6,  lp_t3:5,  tp:0,  coeff:1 },
-  "1Ã¨re D":      { lp_t1:30, lp_t2:32, lp_t3:16, tp:21, coeff:6 },
-  "1Ã¨re C/Ti":   { lp_t1:13, lp_t2:16, lp_t3:12, tp:8,  coeff:2 },
-  "1Ã¨re A":      { lp_t1:9,  lp_t2:6,  lp_t3:5,  tp:0,  coeff:1 },
+  "1ère D":      { lp_t1:30, lp_t2:32, lp_t3:16, tp:21, coeff:6 },
+  "1ère C/Ti":   { lp_t1:13, lp_t2:16, lp_t3:12, tp:8,  coeff:2 },
+  "1ère A":      { lp_t1:9,  lp_t2:6,  lp_t3:5,  tp:0,  coeff:1 },
   "Terminale D": { lp_t1:35, lp_t2:38, lp_t3:24, tp:28, coeff:6 },
   "Terminale C": { lp_t1:17, lp_t2:17, lp_t3:9,  tp:20, coeff:2 },
   "Terminale A": { lp_t1:13, lp_t2:12, lp_t3:8,  tp:4,  coeff:1 },
@@ -585,40 +585,40 @@ const PROGRAMME_SVTEEHB = {
 
 function getNiveau(code) {
   const c = code.toLowerCase();
-  if (c.startsWith("6")) return "6Ã¨me";
-  if (c.startsWith("5")) return "5Ã¨me";
-  if (c.startsWith("4")) return "4Ã¨me";
-  if (c.startsWith("3")) return "3Ã¨me";
+  if (c.startsWith("6")) return "6ème";
+  if (c.startsWith("5")) return "5ème";
+  if (c.startsWith("4")) return "4ème";
+  if (c.startsWith("3")) return "3ème";
   if (c.includes("2nde c")) return "2nde C";
   if (c.includes("2nde")) return "2nde A";
-  if (c.includes("1Ã¨re") && (c.includes(" d") || c.includes("s1"))) return "1Ã¨re D";
-  if (c.includes("1Ã¨re") && (c.includes("c") || c.includes("ti"))) return "1Ã¨re C/Ti";
-  if (c.includes("1Ã¨re")) return "1Ã¨re A";
+  if (c.includes("1ère") && (c.includes(" d") || c.includes("s1"))) return "1ère D";
+  if (c.includes("1ère") && (c.includes("c") || c.includes("ti"))) return "1ère C/Ti";
+  if (c.includes("1ère")) return "1ère A";
   if (c.includes("tle") && (c.includes(" d") || c.includes("s1"))) return "Terminale D";
   if (c.includes("tle") && (c.includes("c"))) return "Terminale C";
   if (c.includes("tle") || c.includes("terminale")) return "Terminale A";
   return null;
 }
 
-// â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// const C: dÃ©fini et enrichi globalement (pink, amber ajoutÃ©s)
+// ── Palette ────────────────────────────────────────────────────────
+// const C: défini et enrichi globalement (pink, amber ajoutés)
 
 // Niveaux pour le groupement de navigation
-const NIVEAUX_ORDER = ["6Ã¨me","5Ã¨me","4Ã¨me","3Ã¨me","2nde","1Ã¨re","Terminale"];
-// getNiveauGroupe supprimÃ© â€” utiliser niveauGroupe() (ligne 110)
+const NIVEAUX_ORDER = ["6ème","5ème","4ème","3ème","2nde","1ère","Terminale"];
+// getNiveauGroupe supprimé — utiliser niveauGroupe() (ligne 110)
 
-// Sk: dÃ©fini globalement
+// Sk: défini globalement
 
-// â”€â”€ Stats globales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Stats globales â€” calculÃ©es dynamiquement aprÃ¨s chargement ELEVES_DB
+// ── Stats globales ─────────────────────────────────────────────────
+// Stats globales — calculées dynamiquement après chargement ELEVES_DB
 function getAllClasses() { return Object.keys(ELEVES_DB); }
 function getTotalEleves() { return Object.values(ELEVES_DB).reduce((s,cl)=>s+cl.length,0); }
 function getTotalFilles() { return Object.values(ELEVES_DB).reduce((s,cl)=>s+cl.filter(e=>e.g==="F").length,0); }
 function getTotalGarcons() { return getTotalEleves() - getTotalFilles(); }
-// Aliases statiques (ne pas utiliser dans les composants React â€” utiliser les fonctions ci-dessus)
+// Aliases statiques (ne pas utiliser dans les composants React — utiliser les fonctions ci-dessus)
 let ALL_CLASSES = [], TOTAL_ELEVES = 0, TOTAL_FILLES = 0, TOTAL_GARCONS = 0;
 
-// â”€â”€ Impression liste de classe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Impression liste de classe ──────────────────────────────────────
 let printGuard = false;
 function imprimerListeClasse(code, eleves) {
   if (printGuard) return;
@@ -649,31 +649,31 @@ function imprimerListeClasse(code, eleves) {
 </style></head><body>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;border-bottom:2px solid #16a34a;padding-bottom:8px">
     <div style="text-align:center;font-size:8px;line-height:1.5;width:40%">
-      <strong>REPUBLIQUE DU CAMEROUN</strong><br><em>Paix â€“ Travail â€“ Patrie</em><br>
-      MINISTERE DES ENSEIGNEMENTS SECONDAIRES<br><strong>LYCÃ‰E DE KAKATARE â€” MAROUA</strong>
+      <strong>REPUBLIQUE DU CAMEROUN</strong><br><em>Paix – Travail – Patrie</em><br>
+      MINISTERE DES ENSEIGNEMENTS SECONDAIRES<br><strong>LYCÉE DE KAKATARE — MAROUA</strong>
     </div>
     <div style="text-align:center;width:20%">
       <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#34b06c,#0c3d24);margin:0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px">SV</div>
     </div>
     <div style="text-align:center;font-size:8px;line-height:1.5;width:40%">
-      <strong>REPUBLIC OF CAMEROON</strong><br><em>Peace â€“ Work â€“ Fatherland</em><br>
-      MINISTRY OF SECONDARY EDUCATION<br><strong>LYCÃ‰E DE KAKATARE â€” MAROUA</strong>
+      <strong>REPUBLIC OF CAMEROON</strong><br><em>Peace – Work – Fatherland</em><br>
+      MINISTRY OF SECONDARY EDUCATION<br><strong>LYCÉE DE KAKATARE — MAROUA</strong>
     </div>
   </div>
   <h2 style="text-align:center;font-size:12px;font-weight:900;text-transform:uppercase;border:2px solid #222;padding:6px;margin:8px 0;letter-spacing:.04em">
-    LISTE OFFICIELLE DES Ã‰LÃˆVES â€” CLASSE : ${code}
+    LISTE OFFICIELLE DES ÉLÈVES — CLASSE : ${code}
   </h2>
   <div style="font-size:9px;margin-bottom:8px;display:flex;gap:20px">
-    <span>AnnÃ©e scolaire : <strong>2025â€“2026</strong></span>
+    <span>Année scolaire : <strong>2025–2026</strong></span>
     <span>Effectif total : <strong>${eleves.length}</strong></span>
     <span>Filles : <strong>${filles}</strong></span>
-    <span>GarÃ§ons : <strong>${garcons}</strong></span>
+    <span>Garçons : <strong>${garcons}</strong></span>
     <span>Date : ${date}</span>
   </div>
   <table>
     <thead><tr>
-      <th style="width:40px;text-align:center">NÂ°</th>
-      <th>NOM ET PRÃ‰NOM(S)</th>
+      <th style="width:40px;text-align:center">N°</th>
+      <th>NOM ET PRÉNOM(S)</th>
       <th style="width:50px;text-align:center">GENRE</th>
       <th style="width:100px">SIGNATURE</th>
       <th style="width:120px">OBSERVATIONS</th>
@@ -697,12 +697,12 @@ function imprimerListeClasse(code, eleves) {
   }, 400);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PAGE PRINCIPALE Ã‰LÃˆVES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// MES CLASSES (enseignant) â€” liste Ã©lÃ¨ves + prÃ©sences + notes
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════
+// PAGE PRINCIPALE ÉLÈVES
+// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// MES CLASSES (enseignant) — liste élèves + présences + notes
+// ═══════════════════════════════════════════════════════════════
 
 function genererConvocation(eleve, classe, absH, retards, sanctions) {
   const date = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
@@ -744,18 +744,18 @@ function FicheEleveSG({eleve, data, onClose}) {
   const sanctions=vieSco.filter(v=>v.type==="sanction").length;
   const aC=totalHeures>=15?"#b91c1c":totalHeures>=6?"#d97706":"#15803d";
   const aB=totalHeures>=15?"#fef2f2":totalHeures>=6?"#fffbeb":"#f0fdf4";
-  const aL=totalHeures>=15?"Blame â€” Convocation obligatoire":totalHeures>=6?"Avertissement â€” Convocation recommandee":"Assidu";
+  const aL=totalHeures>=15?"Blame — Convocation obligatoire":totalHeures>=6?"Avertissement — Convocation recommandee":"Assidu";
   const needsConvoc=totalHeures>=6||retards>=3||sanctions>=1;
   return(
     <div style={{position:"fixed",top:0,right:0,bottom:0,width:isMobile?"100vw":380,
       background:"#fff",boxShadow:"-4px 0 32px rgba(0,0,0,.18)",zIndex:1000,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{background:"#0B3D20",padding:"16px 18px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-        <div style={{width:40,height:40,borderRadius:"50%",background:"rgba(212,175,55,.2)",border:"2px solid #D4AF37",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{eleve.g==="F"?"ðŸ‘§":"ðŸ‘¦"}</div>
+        <div style={{width:40,height:40,borderRadius:"50%",background:"rgba(212,175,55,.2)",border:"2px solid #D4AF37",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{eleve.g==="F"?"👧":"👦"}</div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:13,fontWeight:800,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{eleve.nom}</div>
           <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:2}}>{eleve.classe}</div>
         </div>
-        <button onClick={onClose} style={{background:"rgba(255,255,255,.1)",border:"none",color:"#fff",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:16}}>âœ•</button>
+        <button onClick={onClose} style={{background:"rgba(255,255,255,.1)",border:"none",color:"#fff",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:16}}>✕</button>
       </div>
       <div style={{padding:"10px 18px",background:aB,borderBottom:"1px solid #e5e7eb",flexShrink:0}}>
         <span style={{fontSize:11,fontWeight:700,color:aC}}>{aL}</span>
@@ -774,9 +774,9 @@ function FicheEleveSG({eleve, data, onClose}) {
         :vieSco.length===0?<div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:20}}>Aucun evenement</div>
         :vieSco.map((v,i)=>(
           <div key={v.id||i} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:"1px solid #f1f5f9",alignItems:"flex-start"}}>
-            <span style={{fontSize:14,flexShrink:0}}>{v.type==="retard"?"â°":v.type==="sanction"?"âš ï¸":"ðŸš¨"}</span>
+            <span style={{fontSize:14,flexShrink:0}}>{v.type==="retard"?"⏰":v.type==="sanction"?"⚠️":"🚨"}</span>
             <div><div style={{fontSize:11,fontWeight:700,color:"#374151",textTransform:"capitalize"}}>{v.type}</div>
-            <div style={{fontSize:10,color:"#6b7280"}}>{v.date}{v.motif?" Â· "+v.motif:""}</div></div>
+            <div style={{fontSize:10,color:"#6b7280"}}>{v.date}{v.motif?" · "+v.motif:""}</div></div>
           </div>
         ))}
       </div>
@@ -784,7 +784,7 @@ function FicheEleveSG({eleve, data, onClose}) {
         <div style={{padding:"14px 18px",borderTop:"1px solid #e5e7eb",flexShrink:0}}>
           <button onClick={()=>genererConvocation(eleve,eleve.classe,totalHeures,retards,sanctions)}
             style={{width:"100%",padding:"12px 0",background:"#D4AF37",color:"#0B3D20",border:"none",borderRadius:10,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            ðŸ“¨ Generer la convocation parent
+            📨 Generer la convocation parent
           </button>
         </div>
       )}
@@ -804,7 +804,7 @@ function MesClassesPage() {
   const [newEleveNom,  setNewEleveNom]  = useState("");
   const [newEleveGenre,setNewEleveGenre]= useState("M");
 
-  // PrÃ©sences
+  // Présences
   const todayStr = () => new Date().toISOString().slice(0,10);
   const [datePresence, setDatePresence] = useState(todayStr());
 
@@ -812,7 +812,7 @@ function MesClassesPage() {
   const [selTrim,   setSelTrim]   = useState("T1");
   const [selEval,   setSelEval]   = useState("E1");
   const [selMatiere, setSelMatiere] = useState("");
-  // Correspondance Trimestre+Eval â†’ SÃ©quence (format bulletin)
+  // Correspondance Trimestre+Eval → Séquence (format bulletin)
   const TRIM_EVAL_TO_SEQ = {"T1-E1":1,"T1-E2":2,"T2-E1":3,"T2-E2":4,"T3-E1":5,"T3-E2":6};
   const [savingNote, setSavingNote] = useState({}); // {eleveId: 'pending'|'saved'|'error'}
   const syncTimer = useRef({});
@@ -829,7 +829,7 @@ function MesClassesPage() {
     return true;
   });
 
-  // â”€â”€ PrÃ©sences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Présences ────────────────────────────────────────────────
   const absKey = selClasse ? `${user.id}||${selClasse}||${datePresence}` : null;
   const absentsJour = absKey ? (data?.absences?.[absKey]||[]) : [];
 
@@ -840,15 +840,15 @@ function MesClassesPage() {
       : [...absentsJour, eleveId];
     setData(prev => ({...prev, absences:{...(prev?.absences||{}), [absKey]:newAbsents}}));
     try {
-      // Ã‰criture via RPC sÃ©curisÃ©e (submit_absence) plutÃ´t que PATCH/POST direct.
+      // Écriture via RPC sécurisée (submit_absence) plutôt que PATCH/POST direct.
       const ok = await sb.rpc("submit_absence", {
         p_ens_id: user.id, p_classe: selClasse, p_seance: datePresence, p_absents: newAbsents
       });
-      if (!ok) showToast("âš  PrÃ©sence non sauvegardÃ©e â€” rÃ©essaie", false);
-    } catch { showToast("âš  Erreur rÃ©seau â€” prÃ©sence non sauvegardÃ©e", false); }
+      if (!ok) showToast("⚠ Présence non sauvegardée — réessaie", false);
+    } catch { showToast("⚠ Erreur réseau — présence non sauvegardée", false); }
   };
 
-  // â”€â”€ Notes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Notes ────────────────────────────────────────────────────
   // evalCode : format bulletin "matiere-Sn" pour alignement avec genBulletin
   const seqNum = {"T1-E1":1,"T1-E2":2,"T2-E1":3,"T2-E2":4,"T3-E1":5,"T3-E2":6}[`${selTrim}-${selEval}`]||1;
   const evalCode = selMatiere ? `${selMatiere}-S${seqNum}` : `${selTrim}-${selEval}`;
@@ -868,53 +868,53 @@ function MesClassesPage() {
     if (syncTimer.current[timerKey]) clearTimeout(syncTimer.current[timerKey]);
     syncTimer.current[timerKey] = setTimeout(async () => {
       try {
-        // Ã‰criture via RPC sÃ©curisÃ©e (submit_note) plutÃ´t que PATCH/POST direct sur la table â€”
-        // notes passe en RLS avec Ã©criture directe bloquÃ©e ; seule cette fonction peut Ã©crire.
+        // Écriture via RPC sécurisée (submit_note) plutôt que PATCH/POST direct sur la table —
+        // notes passe en RLS avec écriture directe bloquée ; seule cette fonction peut écrire.
         const ok = await sb.rpc("submit_note", {
           p_classe: selClasse, p_evaluation: evalCode, p_eleve_id: eleveId, p_note: num
         });
         setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]: ok?"saved":"error"}));
-        if (!ok) showToast("âš  Note non sauvegardÃ©e â€” rÃ©essaie", false);
+        if (!ok) showToast("⚠ Note non sauvegardée — réessaie", false);
       } catch {
         setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"error"}));
-        showToast("âš  Erreur rÃ©seau â€” note non sauvegardÃ©e", false);
+        showToast("⚠ Erreur réseau — note non sauvegardée", false);
       }
     }, 600);
   };
 
-  // â”€â”€ Ajout / retrait Ã©lÃ¨ve (persistÃ© dans eleves_import) â”€â”€â”€â”€â”€â”€
+  // ── Ajout / retrait élève (persisté dans eleves_import) ──────
   const persisterClasse = async (nouvelleListe) => {
     const ok = await sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe");
-    if (!ok) showToast("âš  Sauvegarde Supabase Ã©chouÃ©e â€” Ã©lÃ¨ve visible ici seulement", false);
+    if (!ok) showToast("⚠ Sauvegarde Supabase échouée — élève visible ici seulement", false);
     return ok;
   };
 
   const addEleve = async () => {
     const nom = newEleveNom.trim().toUpperCase().split(/\s+/).join(" ");
-    if (!selClasse || nom.length < 3) { showToast("âš  Nom trop court (min 3 car.)", false); return; }
+    if (!selClasse || nom.length < 3) { showToast("⚠ Nom trop court (min 3 car.)", false); return; }
     const id = selClasse.replace(/[^a-zA-Z0-9]/g,"_") + "_" + Date.now();
     const nouvel = {id, nom, g:newEleveGenre};
     const nouvelleListe = [...(ELEVES_DB[selClasse]||[]), nouvel];
     ELEVES_DB[selClasse] = nouvelleListe;
     setNewEleveNom(""); setShowAddEleve(false);
-    showToast(`âœ“ ${nom} ajoutÃ©(e) Ã  ${selClasse}`);
+    showToast(`✓ ${nom} ajouté(e) à ${selClasse}`);
     await persisterClasse(nouvelleListe);
   };
 
   const retirerEleve = async (eleve) => {
     const nouvelleListe = (ELEVES_DB[selClasse]||[]).filter(e=>e.id!==eleve.id);
     ELEVES_DB[selClasse] = nouvelleListe;
-    showToast(`âœ“ ${eleve.nom} retirÃ©(e)`);
+    showToast(`✓ ${eleve.nom} retiré(e)`);
     await persisterClasse(nouvelleListe);
   };
 
-  // â”€â”€ Rendu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Rendu ──────────────────────────────────────────────────────
   if (mesClasses.length===0) {
     return (
       <div style={{padding:isMobile?16:24}}>
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:40, textAlign:"center"}}>
-          <div style={{fontSize:32, marginBottom:10}}>ðŸ“š</div>
-          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignÃ©e.</p>
+          <div style={{fontSize:32, marginBottom:10}}>📚</div>
+          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignée.</p>
         </div>
       </div>
     );
@@ -923,7 +923,7 @@ function MesClassesPage() {
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,overflow:"hidden"}}>
     <div style={{flex:1, minHeight:0, overflowY:"auto", padding:isMobile?12:24, display:"flex", flexDirection:"column", gap:14}}>
-      {/* SÃ©lecteur de classe */}
+      {/* Sélecteur de classe */}
       <div style={{display:"flex", gap:8, overflowX:"auto", paddingBottom:4, flexShrink:0}}>
         {mesClasses.map(cl=>(
           <button key={cl} onClick={()=>setSelClasse(cl)}
@@ -938,7 +938,7 @@ function MesClassesPage() {
 
       {/* Onglets Liste / Notes */}
       <div style={{display:"flex", gap:8, flexShrink:0}}>
-        {[{id:"liste",label:"ðŸ‘¥ Liste & prÃ©sences"},...(user?.role==="surveillant_general"?[]:[{id:"notes",label:"ðŸ“ Notes"}])].map(t=>(
+        {[{id:"liste",label:"👥 Liste & présences"},...(user?.role==="surveillant_general"?[]:[{id:"notes",label:"📝 Notes"}])].map(t=>(
           <button key={t.id} onClick={()=>setOnglet(t.id)}
             style={{flex: isMobile?1:"none", padding: isMobile?"10px":"8px 16px", borderRadius:9, fontSize:12.5, fontWeight:700, fontFamily:"inherit", cursor:"pointer",
               border:`1.5px solid ${onglet===t.id?C.green:C.border}`,
@@ -951,10 +951,10 @@ function MesClassesPage() {
 
       {onglet==="liste" ? (
         <>
-          {/* Barre prÃ©sences */}
+          {/* Barre présences */}
           <div style={{background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:11, padding: isMobile?"12px":"12px 16px",
             display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"stretch":"center", gap:10, flexShrink:0}}>
-            <span style={{fontSize:12.5, fontWeight:700, color:C.green, flexShrink:0}}>ðŸ“… PrÃ©sences du jour</span>
+            <span style={{fontSize:12.5, fontWeight:700, color:C.green, flexShrink:0}}>📅 Présences du jour</span>
             <div style={{display:"flex", gap:8, flex:1}}>
               <input type="date" value={datePresence} onChange={e=>setDatePresence(e.target.value)}
                 style={{flex:1, padding: isMobile?"9px":"6px 10px", borderRadius:8, border:`1px solid ${C.greenBorder}`, fontSize:12.5, fontFamily:"inherit"}}/>
@@ -967,10 +967,10 @@ function MesClassesPage() {
 
           {/* Recherche + filtre genre */}
           <div style={{display:"flex", flexDirection: isMobile?"column":"row", gap:8, flexShrink:0}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ðŸ” Rechercher un Ã©lÃ¨veâ€¦"
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un élève…"
               style={{flex:1, padding: isMobile?"10px 12px":"8px 12px", borderRadius:9, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit"}}/>
             <div style={{display:"flex", gap:6}}>
-              {[{id:"all",label:"Tous"},{id:"M",label:"â™‚ GarÃ§ons"},{id:"F",label:"â™€ Filles"}].map(f=>(
+              {[{id:"all",label:"Tous"},{id:"M",label:"♂ Garçons"},{id:"F",label:"♀ Filles"}].map(f=>(
                 <button key={f.id} onClick={()=>setFiltreG(f.id)}
                   style={{flex: isMobile?1:"none", padding: isMobile?"9px 10px":"6px 12px", borderRadius:8, fontSize:11.5, fontWeight:700, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap",
                     border:`1.5px solid ${filtreG===f.id?C.blue:C.border}`,
@@ -982,59 +982,59 @@ function MesClassesPage() {
             </div>
           </div>
 
-          {/* Liste Ã©lÃ¨ves */}
+          {/* Liste élèves */}
           <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0}}>
             {elevesFiltres.length===0 ? (
-              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun Ã©lÃ¨ve trouvÃ©</div>
+              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun élève trouvé</div>
             ) : elevesFiltres.map((e,i)=>{
               const absent = absentsJour.includes(e.id);
               return (
                 <div key={e.id} style={{display:"flex", alignItems:"center", gap:10, padding: isMobile?"10px 12px":"9px 14px",
                   borderBottom: i<elevesFiltres.length-1?`1px solid #f1f5f9`:"none"}}>
                   <span style={{fontSize:11, color:C.txtLight, width:20, flexShrink:0}}>{i+1}</span>
-                  <span style={{fontSize:14, flexShrink:0}}>{e.g==="F"?"ðŸ‘§":"ðŸ‘¦"}</span>
+                  <span style={{fontSize:14, flexShrink:0}}>{e.g==="F"?"👧":"👦"}</span>
                   <span onClick={()=>user?.role==="surveillant_general"?setFicheEleveSG({...e,classe:selClasse}):null}
                     style={{flex:1,fontSize:isMobile?12.5:13,fontWeight:600,color:C.txt,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                       cursor:user?.role==="surveillant_general"?"pointer":"default"}}>{e.nom}</span>
                   <button onClick={()=>toggleAbsence(e.id)}
                     style={{padding: isMobile?"7px 12px":"5px 12px", borderRadius:7, border:"none", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", flexShrink:0,
                       background:absent?"#fef2f2":"#f0fdf4", color:absent?"#b91c1c":"#166534"}}>
-                    {absent ? "âœ• Absent" : "âœ“ PrÃ©sent"}
+                    {absent ? "✕ Absent" : "✓ Présent"}
                   </button>
-                  <button onClick={()=>retirerEleve(e)} title="Retirer cet Ã©lÃ¨ve"
+                  <button onClick={()=>retirerEleve(e)} title="Retirer cet élève"
                     style={{width:26, height:26, borderRadius:6, border:"none", background:"transparent", color:"#cbd5e1", fontSize:14, cursor:"pointer", flexShrink:0}}>
-                    âœ•
+                    ✕
                   </button>
                 </div>
               );
             })}
           </div>
 
-          {/* Ajout Ã©lÃ¨ve */}
+          {/* Ajout élève */}
           {showAddEleve ? (
             <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.green}`, padding: isMobile?14:16, display:"flex", flexDirection: isMobile?"column":"row", gap:10, flexShrink:0}}>
-              <input value={newEleveNom} onChange={e=>setNewEleveNom(e.target.value)} placeholder="Nom complet de l'Ã©lÃ¨ve"
+              <input value={newEleveNom} onChange={e=>setNewEleveNom(e.target.value)} placeholder="Nom complet de l'élève"
                 style={{flex:1, padding: isMobile?"10px 12px":"8px 12px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit"}}/>
               <select value={newEleveGenre} onChange={e=>setNewEleveGenre(e.target.value)}
                 style={{padding: isMobile?"10px 12px":"8px 12px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit"}}>
-                <option value="M">GarÃ§on</option>
+                <option value="M">Garçon</option>
                 <option value="F">Fille</option>
               </select>
               <div style={{display:"flex", gap:8}}>
-                <button onClick={addEleve} style={{flex:1, padding: isMobile?"10px":"8px 16px", borderRadius:8, border:"none", background:C.green, color:"#fff", fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>âœ“ Ajouter</button>
+                <button onClick={addEleve} style={{flex:1, padding: isMobile?"10px":"8px 16px", borderRadius:8, border:"none", background:C.green, color:"#fff", fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>✓ Ajouter</button>
                 <button onClick={()=>{setShowAddEleve(false);setNewEleveNom("");}} style={{padding: isMobile?"10px 14px":"8px 14px", borderRadius:8, border:"none", background:"transparent", color:C.txtMuted, fontSize:12.5, cursor:"pointer", fontFamily:"inherit"}}>Annuler</button>
               </div>
             </div>
           ) : (
             <button onClick={()=>setShowAddEleve(true)}
               style={{padding: isMobile?"12px":"10px", borderRadius:10, border:`1.5px dashed ${C.border}`, background:"transparent", color:C.txtMuted, fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit", flexShrink:0}}>
-              + Nouvel Ã©lÃ¨ve
+              + Nouvel élève
             </button>
           )}
         </>
       ) : (
         <>
-          {/* SÃ©lecteurs Trimestre / Ã‰valuation */}
+          {/* Sélecteurs Trimestre / Évaluation */}
           <div style={{display:"flex", flexDirection: isMobile?"column":"row", gap:10, flexShrink:0}}>
             <div style={{display:"flex", gap:6, flex:1}}>
               {["T1","T2","T3"].map(t=>(
@@ -1050,13 +1050,13 @@ function MesClassesPage() {
                 <button key={ev} onClick={()=>setSelEval(ev)}
                   style={{flex:1, padding: isMobile?"9px":"7px", borderRadius:8, fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer",
                     border:`1.5px solid ${selEval===ev?C.blue:"#cbd5e1"}`, background:selEval===ev?C.bluePale:"#eef1f5", color:selEval===ev?C.blue:"#475569"}}>
-                  {ev==="E1"?"Ã‰valuation 1":"Ã‰valuation 2"}
+                  {ev==="E1"?"Évaluation 1":"Évaluation 2"}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* SÃ©lecteur matiÃ¨re â€” menu dÃ©roulant */}
+          {/* Sélecteur matière — menu déroulant */}
           {selClasse && (()=>{
             const matieres = getCoefsForClasse(selClasse).map(c=>c.matiere);
             return matieres.length>0 ? (
@@ -1066,25 +1066,25 @@ function MesClassesPage() {
                     borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"inherit",
                     outline:"none",background:selMatiere?"#f5f3ff":"#fff",
                     color:selMatiere?"#7c3aed":"#6b7280",fontWeight:selMatiere?700:400}}>
-                  <option value="">â€” Choisir une matiÃ¨re â€”</option>
+                  <option value="">— Choisir une matière —</option>
                   {matieres.map(m=><option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
             ) : null;
           })()}
 
-          {/* Message si matiÃ¨re non sÃ©lectionnÃ©e */}
+          {/* Message si matière non sélectionnée */}
           {!selMatiere && (
             <div style={{background:"#fef9c3",border:"1.5px solid #fbbf24",borderRadius:8,padding:"10px 14px",
               fontSize:12,fontWeight:700,color:"#b45309",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-              âš ï¸ SÃ©lectionnez une matiÃ¨re ci-dessus avant de saisir les notes
+              ⚠️ Sélectionnez une matière ci-dessus avant de saisir les notes
             </div>
           )}
 
           {/* Liste notes */}
           <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0, opacity:selMatiere?1:0.4, pointerEvents:selMatiere?"auto":"none"}}>
             {eleves.length===0 ? (
-              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun Ã©lÃ¨ve dans cette classe</div>
+              <div style={{padding:32, textAlign:"center", color:C.txtLight, fontSize:13}}>Aucun élève dans cette classe</div>
             ) : eleves.map((e,i)=>{
               const val = notesEval[e.id];
               const status = savingNote[`${e.id}-${evalCode}`];
@@ -1094,10 +1094,10 @@ function MesClassesPage() {
                   <span style={{fontSize:11, color:C.txtLight, width:20, flexShrink:0}}>{i+1}</span>
                   <span style={{flex:1, fontSize: isMobile?12.5:13, fontWeight:600, color:C.txt, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{e.nom}</span>
                   <input key={`${e.id}-${evalCode}`} type="number" min="0" max="20" step="0.5" defaultValue={val??""} onChange={ev=>saveNote(e.id, ev.target.value)}
-                    placeholder="â€”"
+                    placeholder="—"
                     style={{width: isMobile?60:64, padding: isMobile?"8px":"6px 8px", borderRadius:7, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit", textAlign:"center", flexShrink:0}}/>
                   <span style={{width:16, flexShrink:0, fontSize:13}}>
-                    {status==="pending"?"â³":status==="saved"?"âœ…":status==="error"?"âš ï¸":""}
+                    {status==="pending"?"⏳":status==="saved"?"✅":status==="error"?"⚠️":""}
                   </span>
                 </div>
               );
@@ -1111,9 +1111,9 @@ function MesClassesPage() {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// MON PROGRAMME (enseignant) â€” synthÃ¨se de couverture par classe
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// MON PROGRAMME (enseignant) — synthèse de couverture par classe
+// ═══════════════════════════════════════════════════════════════
 function MonProgrammePage() {
   const {user, data} = useApp();
   const {isMobile} = useDevice();
@@ -1121,7 +1121,7 @@ function MonProgrammePage() {
 
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
-      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargementâ€¦</div>
+      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargement…</div>
     </div>
   );
 
@@ -1150,8 +1150,8 @@ function MonProgrammePage() {
     }).length;
 
     const taux   = lp>0 ? Math.min(100, Math.round(lfTrim/lp*100)) : null;
-    // tpFait limitÃ© Ã  la mÃªme plage que tpP (range) â€” sinon des TP/TD faits en avance
-    // sur un autre trimestre se comptaient dans le trimestre affichÃ©, faussant le taux.
+    // tpFait limité à la même plage que tpP (range) — sinon des TP/TD faits en avance
+    // sur un autre trimestre se comptaient dans le trimestre affiché, faussant le taux.
     const tpFait = (meta?.tp||[]).filter(n => prog.includes(n) && (trim===0 || (range && n>=range[0] && n<=range[1]))).length;
     const tauxTP = tpP>0 ? Math.min(100, Math.round(tpFait/tpP*100)) : null;
     const ef     = (ELEVES_DB[cl]||[]).length;
@@ -1177,7 +1177,7 @@ function MonProgrammePage() {
       {taux!==null ? (
         <span style={{fontSize:10.5, fontWeight:800, padding:"2px 7px", borderRadius:20, background:`${color}15`, color}}>{taux}%</span>
       ) : (
-        <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>â€”</span>
+        <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>—</span>
       )}
     </div>
   );
@@ -1186,14 +1186,14 @@ function MonProgrammePage() {
     <div style={{padding:isMobile?12:24, display:"flex", flexDirection:"column", gap:14}}>
       {/* KPIs */}
       <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-        <KpiCard label="Couverture moyenne" value={`${tauxMoyen}%`} sub={tauxMoyen>=75?"Objectif atteint âœ“":"Sous l'objectif"} subColor={taux2col(tauxMoyen)} iconEmoji="ðŸ“Š" bg={C.greenPale} loading={false} delay={0}/>
-        <KpiCard label="LeÃ§ons dispensÃ©es" value={totalFait} sub={`sur ${totalPrevu} prÃ©vues`} iconEmoji="âœ…" bg={C.bluePale} subColor={C.blue} loading={false} delay={0.05}/>
-        <KpiCard label="Mes classes" value={mesClasses.length} sub={`${rows.reduce((s,r)=>s+r.ef,0)} Ã©lÃ¨ves`} iconEmoji="ðŸ“š" bg={C.amberPale} subColor={C.amber} loading={false} delay={0.1}/>
+        <KpiCard label="Couverture moyenne" value={`${tauxMoyen}%`} sub={tauxMoyen>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={taux2col(tauxMoyen)} iconEmoji="📊" bg={C.greenPale} loading={false} delay={0}/>
+        <KpiCard label="Leçons dispensées" value={totalFait} sub={`sur ${totalPrevu} prévues`} iconEmoji="✅" bg={C.bluePale} subColor={C.blue} loading={false} delay={0.05}/>
+        <KpiCard label="Mes classes" value={mesClasses.length} sub={`${rows.reduce((s,r)=>s+r.ef,0)} élèves`} iconEmoji="📚" bg={C.amberPale} subColor={C.amber} loading={false} delay={0.1}/>
       </div>
 
-      {/* SÃ©lecteur pÃ©riode */}
+      {/* Sélecteur période */}
       <div style={{display:"flex", gap:6}}>
-        {[{id:0,label:"AnnÃ©e"},{id:1,label:"T1"},{id:2,label:"T2"},{id:3,label:"T3"}].map(t=>(
+        {[{id:0,label:"Année"},{id:1,label:"T1"},{id:2,label:"T2"},{id:3,label:"T3"}].map(t=>(
           <button key={t.id} onClick={()=>setTrim(t.id)}
             style={{flex: isMobile?1:"none", padding: isMobile?"9px":"7px 16px", borderRadius:8, fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer",
               border:`1.5px solid ${trim===t.id?C.green:"#cbd5e1"}`, background:trim===t.id?C.green:"#eef1f5", color:trim===t.id?"#fff":"#475569"}}>
@@ -1205,7 +1205,7 @@ function MonProgrammePage() {
       {/* Liste classes */}
       {mesClasses.length===0 ? (
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:40, textAlign:"center", color:C.txtMuted}}>
-          Aucune classe assignÃ©e.
+          Aucune classe assignée.
         </div>
       ) : isMobile ? (
         <div style={{display:"flex", flexDirection:"column", gap:10}}>
@@ -1220,7 +1220,7 @@ function MonProgrammePage() {
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
                   <div>
                     <div style={{fontSize:13.5, fontWeight:800, color:C.txt}}>{displayCl(r.cl)}</div>
-                    <div style={{fontSize:10.5, color:C.txtMuted}}>{r.ef} Ã©lÃ¨ve{r.ef>1?"s":""}</div>
+                    <div style={{fontSize:10.5, color:C.txtMuted}}>{r.ef} élève{r.ef>1?"s":""}</div>
                   </div>
                   {statut && (
                     <span style={{display:"inline-flex", alignItems:"center", gap:5, padding:"4px 10px", borderRadius:20, background:statut.bg, color:statut.fg, fontSize:10.5, fontWeight:700}}>
@@ -1258,7 +1258,7 @@ function MonProgrammePage() {
                   <tr key={r.cl} style={{borderBottom:`1px solid #f1f5f9`}}>
                     <td style={{padding:"12px 14px"}}>
                       <div style={{fontSize:12.5,fontWeight:700,color:"#1e293b"}}>{displayCl(r.cl)}</div>
-                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} Ã©lÃ¨ve{r.ef>1?"s":""}</div>
+                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} élève{r.ef>1?"s":""}</div>
                     </td>
                     <td style={{padding:"12px 14px"}}>{badge(`${r.lf}/${r.lp}`, r.taux, r.taux!==null?taux2col(r.taux):"#94a3b8")}</td>
                     <td style={{padding:"12px 14px"}}>{badge(`${r.tpFait}/${r.tpP}`, r.tauxTP, r.tauxTP!==null?taux2col(r.tauxTP):"#94a3b8")}</td>
@@ -1281,11 +1281,11 @@ function MonProgrammePage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CAHIER DE TEXTE (enseignant) â€” wrapper de sÃ©lection de classe
-// rÃ©utilise EnsClasLecons (liste des leÃ§ons + cases Ã  cocher),
-// dÃ©jÃ  existant et fonctionnel pour la vue admin par enseignant.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// CAHIER DE TEXTE (enseignant) — wrapper de sélection de classe
+// réutilise EnsClasLecons (liste des leçons + cases à cocher),
+// déjà existant et fonctionnel pour la vue admin par enseignant.
+// ═══════════════════════════════════════════════════════════════
 function CahierDeTextePage() {
   const {user, data, setData, showToast} = useApp();
   const {isMobile} = useDevice();
@@ -1299,8 +1299,8 @@ function CahierDeTextePage() {
     return (
       <div style={{padding:isMobile?16:24}}>
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:40, textAlign:"center"}}>
-          <div style={{fontSize:32, marginBottom:10}}>ðŸ“–</div>
-          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignÃ©e.</p>
+          <div style={{fontSize:32, marginBottom:10}}>📖</div>
+          <p style={{color:C.txtMuted, fontSize:13}}>Aucune classe ne t'est encore assignée.</p>
         </div>
       </div>
     );
@@ -1320,7 +1320,7 @@ function CahierDeTextePage() {
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,overflow:"hidden"}}>
     <div style={{flex:1, minHeight:0, overflowY:"auto", padding:isMobile?16:24, display:"flex", flexDirection:"column", gap:14}}>
-      <h2 style={{fontSize:15, fontWeight:800, color:C.txt, margin:0}}>ðŸ“– Choisis une classe</h2>
+      <h2 style={{fontSize:15, fontWeight:800, color:C.txt, margin:0}}>📖 Choisis une classe</h2>
       <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"repeat(auto-fill,minmax(200px,1fr))", gap:10}}>
         {mesClasses.map(cl=>{
           const code = resolveProgCode(cl);
@@ -1332,11 +1332,11 @@ function CahierDeTextePage() {
             <button key={cl} onClick={()=>setSelClasse(cl)}
               style={{textAlign:"left", padding:16, borderRadius:12, border:`1px solid ${C.border}`, background:C.white, cursor:"pointer", fontFamily:"inherit"}}>
               <div style={{fontSize:13.5, fontWeight:800, color:C.txt, marginBottom:6}}>{displayCl(cl)}</div>
-              <div style={{fontSize:11, color:C.txtMuted, marginBottom:8}}>{(ELEVES_DB[cl]||[]).length} Ã©lÃ¨ves</div>
+              <div style={{fontSize:11, color:C.txtMuted, marginBottom:8}}>{(ELEVES_DB[cl]||[]).length} élèves</div>
               <div style={{height:6, borderRadius:3, background:"#e2e8f0", overflow:"hidden"}}>
                 <div style={{width:`${taux}%`, height:"100%", background:taux2col(taux)}}/>
               </div>
-              <div style={{fontSize:10.5, color:taux2col(taux), fontWeight:700, marginTop:5}}>{fait} leÃ§ons faites Â· {taux}%</div>
+              <div style={{fontSize:10.5, color:taux2col(taux), fontWeight:700, marginTop:5}}>{fait} leçons faites · {taux}%</div>
             </button>
           );
         })}
@@ -1349,20 +1349,20 @@ function CahierDeTextePage() {
 function ElevesPage() {
   const {isMobile} = useDevice();
   const {pendingClasseSelect, setPendingClasseSelect} = useApp();
-  // â”€â”€ Ã‰tat principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const [selClasse, setSelClasse] = useState(() => "6Ã¨me 1");
+  // ── État principal ────────────────────────────────────────────────
+  const [selClasse, setSelClasse] = useState(() => "6ème 1");
   const [search, setSearch]       = useState("");
   const [filtreGenre, setFiltreGenre] = useState("all");
   const [vue, setVue]             = useState("registre");
 
-  // Navigation ciblÃ©e depuis la recherche globale
+  // Navigation ciblée depuis la recherche globale
   useEffect(() => {
     if (!pendingClasseSelect) return;
     setSelClasse(pendingClasseSelect);
     setPendingClasseSelect(null);
   }, [pendingClasseSelect]);
 
-  // â”€â”€ Base locale â€” modifiable (ajout / retrait) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Base locale — modifiable (ajout / retrait) ───────────────────
   const [localDB, setLocalDB] = useState(() => {
     // Cloner ELEVES_DB pour pouvoir le modifier localement
     const clone = {};
@@ -1370,7 +1370,7 @@ function ElevesPage() {
     return clone;
   });
 
-  // â”€â”€ Modal ajout / retrait â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Modal ajout / retrait ─────────────────────────────────────────
   const [modal, setModal]           = useState(null); // null | "ajout" | {type:"retrait",eleve}
   const [newNom, setNewNom]         = useState("");
   const [newGenre, setNewGenre]     = useState("M");
@@ -1385,35 +1385,35 @@ function ElevesPage() {
     setTimeout(()=>setToast(null), 2800);
   }
 
-  // â”€â”€ Ajout d'un Ã©lÃ¨ve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Ajout d'un élève ─────────────────────────────────────────────
   function ajouterEleve() {
     const nom = newNom.trim().toUpperCase();
-    if (!nom || nom.length < 3) return showToast("âš  Nom trop court", false);
+    if (!nom || nom.length < 3) return showToast("⚠ Nom trop court", false);
     const safe = selClasse.replace(/[^a-zA-Z0-9]/g,'_');
     const id   = `${safe}_new_${Date.now()}`;
     const nouvelleListe = [...(localDB[selClasse]||[]), {id, nom, g:newGenre}];
     setLocalDB(prev => ({ ...prev, [selClasse]: nouvelleListe }));
     ELEVES_DB[selClasse] = nouvelleListe;
-    showToast(`âœ“ ${nom} ajoutÃ©(e) en ${selClasse}`);
+    showToast(`✓ ${nom} ajouté(e) en ${selClasse}`);
     setNewNom(""); setModal(null);
     sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe")
-      .then(ok=>{ if(!ok) showToast("âš  Sauvegarde Supabase Ã©chouÃ©e â€” Ã©lÃ¨ve visible ici seulement", false); })
-      .catch(()=>showToast("âš  Sauvegarde Supabase Ã©chouÃ©e", false));
+      .then(ok=>{ if(!ok) showToast("⚠ Sauvegarde Supabase échouée — élève visible ici seulement", false); })
+      .catch(()=>showToast("⚠ Sauvegarde Supabase échouée", false));
   }
 
-  // â”€â”€ Retrait d'un Ã©lÃ¨ve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Retrait d'un élève ───────────────────────────────────────────
   function retirerEleve(eleve) {
     const nouvelleListe = (localDB[selClasse]||[]).filter(e => e.id !== eleve.id);
     setLocalDB(prev => ({ ...prev, [selClasse]: nouvelleListe }));
     ELEVES_DB[selClasse] = nouvelleListe;
-    showToast(`âœ“ ${eleve.nom} retirÃ©(e)`);
+    showToast(`✓ ${eleve.nom} retiré(e)`);
     setConfirmRetrait(null);
     sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe")
-      .then(ok=>{ if(!ok) showToast("âš  Sauvegarde Supabase Ã©chouÃ©e", false); })
-      .catch(()=>showToast("âš  Sauvegarde Supabase Ã©chouÃ©e", false));
+      .then(ok=>{ if(!ok) showToast("⚠ Sauvegarde Supabase échouée", false); })
+      .catch(()=>showToast("⚠ Sauvegarde Supabase échouée", false));
   }
 
-  // â”€â”€ DonnÃ©es de la classe sÃ©lectionnÃ©e â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Données de la classe sélectionnée ────────────────────────────
   const eleves   = localDB[selClasse] || [];
   const filles   = eleves.filter(e=>e.g==="F").length;
   const garcons  = eleves.length - filles;
@@ -1424,22 +1424,22 @@ function ElevesPage() {
     return ms && mg;
   }), [eleves, search, filtreGenre]);
 
-  // â”€â”€ Stats globales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Stats globales ────────────────────────────────────────────────
   const TOTAL_LOC   = Object.values(localDB).reduce((s,cl)=>s+cl.length, 0);
   const FILLES_LOC  = Object.values(localDB).reduce((s,cl)=>s+cl.filter(e=>e.g==="F").length, 0);
   const GARCONS_LOC = TOTAL_LOC - FILLES_LOC;
   const ALL_CLS     = Object.keys(localDB);
 
-  // â”€â”€ Groupement sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Groupement sidebar ────────────────────────────────────────────
   const GROUPES_ORDRE = [
-    {label:"6Ã¨me",     classes:["6Ã¨me 1","6Ã¨me 2","6Ã¨me 3"]},
-    {label:"5Ã¨me",     classes:["5Ã¨me 1","5Ã¨me 2","5Ã¨me 3"]},
-    {label:"4Ã¨me",     classes:["4Ã¨me ALL","4Ã¨me ARB","4Ã¨me CHN","4Ã¨me ITA","4Ã¨me ESP"]},
-    {label:"3Ã¨me",     classes:["3Ã¨me ALL","3Ã¨me ARB","3Ã¨me CHN","3Ã¨me ESP","3Ã¨me ITA"]},
+    {label:"6ème",     classes:["6ème 1","6ème 2","6ème 3"]},
+    {label:"5ème",     classes:["5ème 1","5ème 2","5ème 3"]},
+    {label:"4ème",     classes:["4ème ALL","4ème ARB","4ème CHN","4ème ITA","4ème ESP"]},
+    {label:"3ème",     classes:["3ème ALL","3ème ARB","3ème CHN","3ème ESP","3ème ITA"]},
     {label:"2nde A4",  classes:["2nde ALL","2nde ARB","2nde CHN","2nde ITA","2nde ESP"]},
     {label:"2nde C",   classes:["2nde C"]},
-    {label:"1Ã¨re A4",  classes:["1Ã¨re A4 ALL","1Ã¨re A4 ARB","1Ã¨re A4 ESP","1Ã¨re CHN","1Ã¨re ITA"]},
-    {label:"1Ã¨re S/D", classes:["1Ã¨re C","1Ã¨re D","1Ã¨re Ti"]},
+    {label:"1ère A4",  classes:["1ère A4 ALL","1ère A4 ARB","1ère A4 ESP","1ère CHN","1ère ITA"]},
+    {label:"1ère S/D", classes:["1ère C","1ère D","1ère Ti"]},
     {label:"Tle A4",   classes:["Tle A4 ALL","Tle A4 ARB","Tle A4 CHN","Tle A4 ITA","Tle A4 ESP"]},
     {label:"Tle S/D",  classes:["Tle C","Tle D","Tle Ti"]},
   ];
@@ -1450,7 +1450,7 @@ function ElevesPage() {
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0,overflow:"hidden"}}>
 
-      {/* Modal profil Ã©lÃ¨ve â€” Proviseur uniquement */}
+      {/* Modal profil élève — Proviseur uniquement */}
       {profilModal && isProviseur && (
         <ProfilEleveModal eleve={profilModal} classe={selClasse}
           onClose={()=>setProfilModal(null)}
@@ -1461,10 +1461,10 @@ function ElevesPage() {
           }}/>
       )}
 
-      {/* â”€â”€ Barre d'onglets + KPIs (remplace l'ancien header propre) â”€â”€ */}
+      {/* ── Barre d'onglets + KPIs (remplace l'ancien header propre) ── */}
       <div style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:"8px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
         <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:9,padding:3}}>
-          {[["registre","ðŸ“‹ Registre"],["stats","ðŸ“Š Stats"],["programmes","ðŸ“š Programmes"]].map(([id,label])=>(
+          {[["registre","📋 Registre"],["stats","📊 Stats"],["programmes","📚 Programmes"]].map(([id,label])=>(
             <button key={id} onClick={()=>setVue(id)}
               style={{padding:"5px 12px",borderRadius:7,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",background:vue===id?C.white:"transparent",color:vue===id?C.txt:C.txtMuted,boxShadow:vue===id?"0 1px 4px rgba(0,0,0,.08)":"none"}}>
               {label}
@@ -1474,9 +1474,9 @@ function ElevesPage() {
         <div style={{flex:1}}/>
         <div style={{display:"flex",gap:8}}>
           {[
-            {v:TOTAL_LOC,  l:"Ã‰lÃ¨ves", col:C.green},
+            {v:TOTAL_LOC,  l:"Élèves", col:C.green},
             {v:FILLES_LOC, l:"Filles",  col:C.pink},
-            {v:GARCONS_LOC,l:"GarÃ§ons", col:C.blue},
+            {v:GARCONS_LOC,l:"Garçons", col:C.blue},
             {v:ALL_CLS.length,l:"Classes",col:C.purple},
           ].map((k,i)=>(
             <div key={i} style={{textAlign:"center",padding:"3px 10px",background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:8}}>
@@ -1489,7 +1489,7 @@ function ElevesPage() {
 
       <div style={{display:"flex", flexDirection: isMobile?"column":"row", flex:1,minHeight:0,overflow:"hidden"}}>
 
-        {/* â”€â”€ Sidebar classes â€” vertical (desktop) ou chips horizontaux (mobile) â”€â”€ */}
+        {/* ── Sidebar classes — vertical (desktop) ou chips horizontaux (mobile) ── */}
         {isMobile ? (
           <div style={{display:"flex", gap:6, overflowX:"auto", padding:"10px 12px", background:C.sidebar, flexShrink:0, scrollbarWidth:"none", WebkitOverflowScrolling:"touch"}}>
             {GROUPES_ORDRE.flatMap(g=>g.classes).map(cl=>{
@@ -1532,10 +1532,10 @@ function ElevesPage() {
           </aside>
         )}
 
-        {/* â”€â”€ Contenu principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Contenu principal ────────────────────────────────── */}
         <main style={{flex:1,padding: isMobile?12:20,overflowY:"auto",minHeight:0}}>
 
-          {/* â•â• VUE REGISTRE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══ VUE REGISTRE ══════════════════════════════════════ */}
           {vue==="registre" && (
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
@@ -1544,15 +1544,15 @@ function ElevesPage() {
                 <div>
                   <h2 style={{fontSize:18,fontWeight:800,color:C.txt,margin:0}}>{selClasse}</h2>
                   <div style={{fontSize:12,color:C.txtMuted,marginTop:4}}>
-                    LycÃ©e de Kakatare Â· Maroua Â· 2025â€“2026
+                    Lycée de Kakatare · Maroua · 2025–2026
                     {niveau && <span style={{marginLeft:8,padding:"1px 8px",background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:20,fontSize:10,fontWeight:700,color:C.green}}>{niveau}</span>}
                   </div>
                   {prog && (
                     <div style={{marginTop:8,display:"flex",gap:8,flexWrap:"wrap"}}>
                       <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.greenPale,color:C.green,fontWeight:600}}>Coeff. {prog.coeff}</span>
-                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.bluePale,color:C.blue,fontWeight:600}}>T1: {prog.lp_t1} leÃ§ons</span>
-                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#fffbeb",color:C.amber,fontWeight:600}}>T2: {prog.lp_t2} leÃ§ons</span>
-                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.purplePale,color:C.purple,fontWeight:600}}>T3: {prog.lp_t3} leÃ§ons</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.bluePale,color:C.blue,fontWeight:600}}>T1: {prog.lp_t1} leçons</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#fffbeb",color:C.amber,fontWeight:600}}>T2: {prog.lp_t2} leçons</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:C.purplePale,color:C.purple,fontWeight:600}}>T3: {prog.lp_t3} leçons</span>
                     </div>
                   )}
                 </div>
@@ -1561,7 +1561,7 @@ function ElevesPage() {
                   {[
                     {v:eleves.length,l:"Total", col:C.txt, bg:"#f8fafc"},
                     {v:filles,       l:"Filles", col:C.pink, bg:C.pinkPale},
-                    {v:garcons,      l:"GarÃ§ons",col:C.blue, bg:C.bluePale},
+                    {v:garcons,      l:"Garçons",col:C.blue, bg:C.bluePale},
                   ].map((k,i)=>(
                     <div key={i} style={{textAlign:"center",padding:"8px 14px",background:k.bg,borderRadius:9,border:`1px solid ${C.border}`}}>
                       <div style={{fontSize:22,fontWeight:900,color:k.col}}>{k.v}</div>
@@ -1574,8 +1574,8 @@ function ElevesPage() {
               {/* Barre genre */}
               <div style={{background:C.white,borderRadius:10,border:`1px solid ${C.border}`,padding:"10px 14px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                  <span style={{fontSize:11,color:C.pink,fontWeight:700}}>â™€ {filles} filles ({eleves.length?Math.min(100, Math.round(filles/eleves.length*100)):0}%)</span>
-                  <span style={{fontSize:11,color:C.blue,fontWeight:700}}>â™‚ {garcons} garÃ§ons ({eleves.length?Math.min(100, Math.round(garcons/eleves.length*100)):0}%)</span>
+                  <span style={{fontSize:11,color:C.pink,fontWeight:700}}>♀ {filles} filles ({eleves.length?Math.min(100, Math.round(filles/eleves.length*100)):0}%)</span>
+                  <span style={{fontSize:11,color:C.blue,fontWeight:700}}>♂ {garcons} garçons ({eleves.length?Math.min(100, Math.round(garcons/eleves.length*100)):0}%)</span>
                 </div>
                 <div style={{height:8,borderRadius:4,overflow:"hidden",background:"#e2e8f0",display:"flex"}}>
                   <div style={{width:`${eleves.length?filles/eleves.length*100:50}%`,background:C.pink,transition:"width .5s"}}/>
@@ -1587,40 +1587,40 @@ function ElevesPage() {
               <div style={{display:"flex",gap:9,alignItems:"center",flexWrap:"wrap"}}>
                 {/* Recherche */}
                 <div style={{position:"relative",flex:1,minWidth:180}}>
-                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:13}}>ðŸ”</span>
-                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un Ã©lÃ¨veâ€¦"
+                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:13}}>🔍</span>
+                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un élève…"
                     style={{width:"100%",padding:"8px 12px 8px 32px",border:`1px solid ${C.border}`,borderRadius:9,fontSize:12,color:C.txt,background:"#f8fafc",outline:"none"}}
                     onFocus={e=>{e.target.style.borderColor=C.green;e.target.style.background=C.white;}}
                     onBlur={e=>{e.target.style.borderColor=C.border;e.target.style.background="#f8fafc";}}/>
                 </div>
                 {/* Filtre genre */}
                 <div style={{display:"flex",gap:4}}>
-                  {[["all","Tous"],["F","â™€ Filles"],["M","â™‚ GarÃ§ons"]].map(([val,lab])=>(
+                  {[["all","Tous"],["F","♀ Filles"],["M","♂ Garçons"]].map(([val,lab])=>(
                     <button key={val} onClick={()=>setFiltreGenre(val)}
                       style={{padding:"7px 11px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",border:`1.5px solid ${filtreGenre===val?(val==="F"?C.pink:val==="M"?C.blue:C.green):C.border}`,background:filtreGenre===val?(val==="F"?C.pinkPale:val==="M"?C.bluePale:C.greenPale):C.white,color:filtreGenre===val?(val==="F"?C.pink:val==="M"?C.blue:C.green):C.txtMuted}}>
                       {lab}
                     </button>
                   ))}
                 </div>
-                {/* Bouton Ajouter â€” Proviseur uniquement */}
+                {/* Bouton Ajouter — Proviseur uniquement */}
                 {isProviseur && <button onClick={()=>{setModal("ajout");setNewNom("");setNewGenre("M");}}
                   style={{padding:"7px 14px",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                  âž• Ajouter un Ã©lÃ¨ve
+                  ➕ Ajouter un élève
                 </button>}
                 {/* Impression */}
                 <button onClick={()=>imprimerListeClasse(selClasse, eleves)}
                   style={{padding:"7px 14px",background:C.white,color:C.txt,border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                  ðŸ–¨ï¸ Imprimer
+                  🖨️ Imprimer
                 </button>
                 <span style={{fontSize:11,color:C.txtMuted}}>{elevesFiltres.length}/{eleves.length}</span>
               </div>
 
-              {/* Table des Ã©lÃ¨ves */}
+              {/* Table des élèves */}
               <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}><div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{minWidth:480,width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#f8fafc",borderBottom:`1px solid ${C.border}`}}>
-                      <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:48}}>NÂ°</th>
-                      <th style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>NOM ET PRÃ‰NOM(S)</th>
+                      <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:48}}>N°</th>
+                      <th style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>NOM ET PRÉNOM(S)</th>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:80}}>GENRE</th>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:80}}>ACTION</th>
                     </tr>
@@ -1628,7 +1628,7 @@ function ElevesPage() {
                   <tbody>
                     {elevesFiltres.length===0 ? (
                       <tr><td colSpan={4} style={{padding:"32px",textAlign:"center",color:C.txtLight}}>
-                        <div style={{fontSize:28,marginBottom:6}}>ðŸ”</div>Aucun Ã©lÃ¨ve trouvÃ©
+                        <div style={{fontSize:28,marginBottom:6}}>🔍</div>Aucun élève trouvé
                       </td></tr>
                     ) : elevesFiltres.map((e,i)=>(
                       <tr key={e.id}
@@ -1646,19 +1646,19 @@ function ElevesPage() {
                         </td>
                         <td style={{padding:"10px 12px",textAlign:"center"}}>
                           <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,background:e.g==="F"?C.pinkPale:C.bluePale,color:e.g==="F"?C.pink:C.blue,border:`1px solid ${e.g==="F"?C.pinkA40:C.blueA40}`}}>
-                            {e.g==="F"?"â™€ F":"â™‚ M"}
+                            {e.g==="F"?"♀ F":"♂ M"}
                           </span>
                         </td>
                         <td style={{padding:"10px 12px",textAlign:"center",display:"flex",gap:4,justifyContent:"center"}}>
                           {isProviseur && (
                             <button onClick={()=>setProfilModal(e)} title="Modifier profil"
                               style={{padding:"4px 9px",borderRadius:7,border:"1px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:11,fontWeight:700,cursor:"pointer"}}>
-                              âœï¸
+                              ✏️
                             </button>
                           )}
                           <button onClick={()=>setConfirmRetrait(e)}
                             style={{padding:"4px 10px",background:C.redPale,border:`1px solid ${C.redBorder}`,borderRadius:7,color:C.red,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-                            âœ• Retirer
+                            ✕ Retirer
                           </button>
                         </td>
                       </tr>
@@ -1670,16 +1670,16 @@ function ElevesPage() {
             </div>
           )}
 
-          {/* â•â• VUE STATISTIQUES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══ VUE STATISTIQUES ══════════════════════════════════ */}
           {vue==="stats" && (
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>ðŸ“Š Statistiques â€” 2025â€“2026</h2>
+              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>📊 Statistiques — 2025–2026</h2>
               <div style={{display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12}}>
                 {[
-                  {v:TOTAL_LOC,  l:"Total Ã©lÃ¨ves", col:C.green,  bg:C.greenPale,  emoji:"ðŸŽ“"},
-                  {v:FILLES_LOC, l:"Filles",        col:C.pink,   bg:C.pinkPale,   emoji:"â™€"},
-                  {v:GARCONS_LOC,l:"GarÃ§ons",       col:C.blue,   bg:C.bluePale,   emoji:"â™‚"},
-                  {v:ALL_CLS.length,l:"Classes",   col:C.purple, bg:C.purplePale, emoji:"ðŸ“š"},
+                  {v:TOTAL_LOC,  l:"Total élèves", col:C.green,  bg:C.greenPale,  emoji:"🎓"},
+                  {v:FILLES_LOC, l:"Filles",        col:C.pink,   bg:C.pinkPale,   emoji:"♀"},
+                  {v:GARCONS_LOC,l:"Garçons",       col:C.blue,   bg:C.bluePale,   emoji:"♂"},
+                  {v:ALL_CLS.length,l:"Classes",   col:C.purple, bg:C.purplePale, emoji:"📚"},
                 ].map((k,i)=>(
                   <div key={i} style={{background:k.bg,borderRadius:11,border:`1px solid ${C.border}`,padding:"16px",textAlign:"center"}}>
                     <div style={{fontSize:22}}>{k.emoji}</div>
@@ -1690,11 +1690,11 @@ function ElevesPage() {
               </div>
               {/* Tableau par groupe */}
               <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden"}}>
-                <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:700,color:C.txt}}>RÃ©partition par niveau</div>
+                <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:700,color:C.txt}}>Répartition par niveau</div>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#0f1f14",color:"#fff"}}>
-                      {["Niveau","Classes","Total","Filles","GarÃ§ons","Ratio â™€"].map((h,i)=>(
+                      {["Niveau","Classes","Total","Filles","Garçons","Ratio ♀"].map((h,i)=>(
                         <th key={i} style={{padding:"9px 12px",textAlign:i===0?"left":"center",fontSize:10,fontWeight:700}}>{h}</th>
                       ))}
                     </tr>
@@ -1737,10 +1737,10 @@ function ElevesPage() {
             </div>
           )}
 
-          {/* â•â• VUE PROGRAMMES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══ VUE PROGRAMMES ════════════════════════════════════ */}
           {vue==="programmes" && (
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>ðŸ“š RÃ©fÃ©rentiel programmes SVTEEHB</h2>
+              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>📚 Référentiel programmes SVTEEHB</h2>
               <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14}}>
                 {Object.entries(PROGRAMME_SVTEEHB).map(([niv,prog])=>{
                   const total = prog.lp_t1+prog.lp_t2+prog.lp_t3;
@@ -1749,7 +1749,7 @@ function ElevesPage() {
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
                         <div>
                           <h3 style={{fontSize:14,fontWeight:800,color:C.txt,margin:0}}>{niv}</h3>
-                          <div style={{fontSize:11,color:C.txtMuted,marginTop:2}}>{total} leÃ§ons Â· {prog.tp} TP Â· Coeff. {prog.coeff}</div>
+                          <div style={{fontSize:11,color:C.txtMuted,marginTop:2}}>{total} leçons · {prog.tp} TP · Coeff. {prog.coeff}</div>
                         </div>
                         <div style={{padding:"4px 10px",background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:20,fontSize:12,fontWeight:800,color:C.green}}>Coeff. {prog.coeff}</div>
                       </div>
@@ -1763,7 +1763,7 @@ function ElevesPage() {
                           <div key={i} style={{background:d.bg,borderRadius:8,padding:"8px",textAlign:"center"}}>
                             <div style={{fontSize:10,color:d.col,fontWeight:700,marginBottom:2}}>{d.t}</div>
                             <div style={{fontSize:18,fontWeight:900,color:d.col}}>{d.v}</div>
-                            <div style={{fontSize:9,color:C.txtMuted}}>leÃ§ons</div>
+                            <div style={{fontSize:9,color:C.txtMuted}}>leçons</div>
                           </div>
                         ))}
                       </div>
@@ -1776,15 +1776,15 @@ function ElevesPage() {
         </main>
       </div>
 
-      {/* â•â• MODAL AJOUT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══ MODAL AJOUT ═══════════════════════════════════════════ */}
       {modal==="ajout" && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,animation:"fadeIn .2s"}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
-            <h3 style={{fontSize:16,fontWeight:800,color:C.txt,marginBottom:4}}>âž• Ajouter un Ã©lÃ¨ve</h3>
+            <h3 style={{fontSize:16,fontWeight:800,color:C.txt,marginBottom:4}}>➕ Ajouter un élève</h3>
             <p style={{fontSize:12,color:C.txtMuted,marginBottom:20}}>Classe : <strong>{selClasse}</strong></p>
 
             <div style={{marginBottom:14}}>
-              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:5}}>Nom et PrÃ©nom(s) <span style={{color:C.red}}>*</span></label>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:5}}>Nom et Prénom(s) <span style={{color:C.red}}>*</span></label>
               <input
                 autoFocus
                 value={newNom}
@@ -1799,7 +1799,7 @@ function ElevesPage() {
             <div style={{marginBottom:20}}>
               <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:5}}>Genre</label>
               <div style={{display:"flex",gap:10}}>
-                {[["M","â™‚ Masculin",C.blue,C.bluePale],["F","â™€ FÃ©minin",C.pink,C.pinkPale]].map(([val,lab,col,bg])=>(
+                {[["M","♂ Masculin",C.blue,C.bluePale],["F","♀ Féminin",C.pink,C.pinkPale]].map(([val,lab,col,bg])=>(
                   <button key={val} onClick={()=>setNewGenre(val)}
                     style={{flex:1,padding:"10px",borderRadius:9,border:`2px solid ${newGenre===val?col:C.border}`,background:newGenre===val?bg:C.white,color:newGenre===val?col:C.txtMuted,fontSize:13,fontWeight:700,cursor:"pointer"}}>
                     {lab}
@@ -1815,24 +1815,24 @@ function ElevesPage() {
               </button>
               <button onClick={ajouterEleve}
                 style={{flex:2,padding:"11px",borderRadius:9,border:"none",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                âœ“ Confirmer l'ajout
+                ✓ Confirmer l'ajout
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* â•â• MODAL CONFIRMATION RETRAIT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══ MODAL CONFIRMATION RETRAIT ════════════════════════════ */}
       {confirmRetrait && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,animation:"fadeIn .2s"}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:400,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
-            <div style={{fontSize:32,textAlign:"center",marginBottom:12}}>âš ï¸</div>
-            <h3 style={{fontSize:15,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>Retirer cet Ã©lÃ¨ve ?</h3>
+            <div style={{fontSize:32,textAlign:"center",marginBottom:12}}>⚠️</div>
+            <h3 style={{fontSize:15,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>Retirer cet élève ?</h3>
             <p style={{fontSize:13,color:C.txtMuted,textAlign:"center",marginBottom:6}}>
               <strong style={{color:C.txt}}>{confirmRetrait.nom}</strong>
             </p>
             <p style={{fontSize:12,color:C.txtMuted,textAlign:"center",marginBottom:24}}>
-              sera retirÃ©(e) de <strong>{selClasse}</strong>. Cette action est rÃ©versible uniquement par rechargement de la page.
+              sera retiré(e) de <strong>{selClasse}</strong>. Cette action est réversible uniquement par rechargement de la page.
             </p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setConfirmRetrait(null)}
@@ -1841,7 +1841,7 @@ function ElevesPage() {
               </button>
               <button onClick={()=>retirerEleve(confirmRetrait)}
                 style={{flex:1,padding:"11px",borderRadius:9,border:"none",background:C.red,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                âœ• Confirmer le retrait
+                ✕ Confirmer le retrait
               </button>
             </div>
           </div>
@@ -1852,14 +1852,14 @@ function ElevesPage() {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SECTION ENSEIGNANTS â€” Interface Animatrice PÃ©dagogique
-// Vue : liste globale â†’ dÃ©tail par enseignant â†’ dÃ©tail par classe
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GESTION ENSEIGNANTS â€” Ajout Â· Suppression Â· DonnÃ©es fictives
-// IntÃ©grÃ© dans EnseignantsPage comme onglet "GÃ©rer"
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// SECTION ENSEIGNANTS — Interface Animatrice Pédagogique
+// Vue : liste globale → détail par enseignant → détail par classe
+// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// GESTION ENSEIGNANTS — Ajout · Suppression · Données fictives
+// Intégré dans EnseignantsPage comme onglet "Gérer"
+// ══════════════════════════════════════════════════════════════════════
 
 function EnseignantsPage() {
   const {data, setData, showToast, refreshData} = useApp();
@@ -1871,18 +1871,18 @@ function EnseignantsPage() {
 
   if (!data) return (
     <div style={{padding:"40px",textAlign:"center",color:C.txtMuted}}>
-      <Spinner size={28} color={C.green}/><br/><br/>Chargementâ€¦
+      <Spinner size={28} color={C.green}/><br/><br/>Chargement…
     </div>
   );
 
-  // Niveau 3 â€” LeÃ§ons d'une classe
+  // Niveau 3 — Leçons d'une classe
   if (viewEns && viewCl) {
     return <EnsClasLecons ens={viewEns} cl={viewCl}
       data={data} setData={setData} showToast={showToast}
       onBack={()=>setViewCl(null)}/>;
   }
 
-  // Niveau 2 â€” DÃ©tail enseignant
+  // Niveau 2 — Détail enseignant
   if (viewEns) {
     return <EnsDetail ens={viewEns}
       data={data} setData={setData} showToast={showToast}
@@ -1893,13 +1893,13 @@ function EnseignantsPage() {
   return (
     <div style={{display:"flex", flexDirection:"column", flex:1}}>
 
-      {/* â”€â”€ Onglets â”€â”€ */}
+      {/* ── Onglets ── */}
       <div style={{background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:0, flexShrink:0}}>
         <div style={{display:"flex"}}>
           {[
-            {id:"liste", label:"ðŸ‘¥ Enseignants",     sub:"Vue globale"},
-            {id:"gerer", label:"âš™ï¸ GÃ©rer",            sub:"Ajouter Â· Supprimer"},
-            {id:"clean", label:"ðŸ§¹ DonnÃ©es fictives", sub:"Nettoyer la base"},
+            {id:"liste", label:"👥 Enseignants",     sub:"Vue globale"},
+            {id:"gerer", label:"⚙️ Gérer",            sub:"Ajouter · Supprimer"},
+            {id:"clean", label:"🧹 Données fictives", sub:"Nettoyer la base"},
           ].map(o=>(
             <button key={o.id} onClick={()=>setOnglet(o.id)}
               style={{padding:"12px 18px", border:"none", borderBottom:`3px solid ${onglet===o.id?C.green:"transparent"}`, background:"transparent", cursor:"pointer", fontFamily:"inherit", textAlign:"left"}}>
@@ -1915,11 +1915,11 @@ function EnseignantsPage() {
           }}
           disabled={refreshing}
           style={{display:"flex", alignItems:"center", gap:6, padding: isMobile?"8px":"7px 14px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, color:C.txtMuted, fontSize:11.5, fontWeight:700, cursor:refreshing?"not-allowed":"pointer", fontFamily:"inherit", flexShrink:0}}>
-          {refreshing ? <Spinner size={12} color={C.txtMuted}/> : "ðŸ”„"} {!isMobile && "Actualiser"}
+          {refreshing ? <Spinner size={12} color={C.txtMuted}/> : "🔄"} {!isMobile && "Actualiser"}
         </button>
       </div>
 
-      {/* â”€â”€ Contenu â”€â”€ */}
+      {/* ── Contenu ── */}
       <div style={{flex:1, overflowY:"auto"}}>
         {onglet==="liste" && <EnsListe data={data} onSelect={ens=>{setViewEns(ens);}}/>}
         {onglet==="gerer" && <EnsGerer data={data} setData={setData} showToast={showToast}/>}
@@ -1929,13 +1929,13 @@ function EnseignantsPage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ONGLET GÃ‰RER â€” Ajouter / Modifier / Supprimer un enseignant
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â”€â”€ DÃ©tecteur de conflits : une classe assignÃ©e Ã  plusieurs enseignants Ã  la fois â”€â”€
+// ══════════════════════════════════════════════════════════════════════
+// ONGLET GÉRER — Ajouter / Modifier / Supprimer un enseignant
+// ══════════════════════════════════════════════════════════════════════
+// ── Détecteur de conflits : une classe assignée à plusieurs enseignants à la fois ──
 function ConflitsClassesPanel({ enseignants, data }) {
   const { showToast, refreshData } = useApp();
-  const [resolving, setResolving] = useState(null); // nom de la classe ou id enseignant en cours de rÃ©solution
+  const [resolving, setResolving] = useState(null); // nom de la classe ou id enseignant en cours de résolution
 
   const conflits = useMemo(() => {
     const parClasse = {};
@@ -1945,9 +1945,9 @@ function ConflitsClassesPanel({ enseignants, data }) {
     return Object.entries(parClasse).filter(([, list]) => list.length > 1);
   }, [enseignants]);
 
-  // IncohÃ©rences par enseignant : ses "classes assignÃ©es" ne correspondent pas Ã  ce qui
-  // est rÃ©ellement dans son EDT (cas vÃ©cu : Essamba avait "1Ã¨re A4 ARB" en classes
-  // assignÃ©es mais "1Ã¨re L2 ARA/ITA/ESP" dans son EDT_REEL d'origine).
+  // Incohérences par enseignant : ses "classes assignées" ne correspondent pas à ce qui
+  // est réellement dans son EDT (cas vécu : Essamba avait "1ère A4 ARB" en classes
+  // assignées mais "1ère L2 ARA/ITA/ESP" dans son EDT_REEL d'origine).
   const incoherences = useMemo(() => {
     const result = [];
     enseignants.forEach(ens => {
@@ -1976,9 +1976,9 @@ function ConflitsClassesPanel({ enseignants, data }) {
       if (slots.length > 0) {
         await sb.rpc("admin_set_edt_slots", { p_ens_id: ens.id, p_slots: slots.map(slot=>({ slot, lbl:"" })) });
       }
-      // Cascade identique Ã  ModalEnsForm : la classe transfÃ©rÃ©e ne doit pas laisser
-      // de progression (ni de suivi digital) fantÃ´me rattachÃ©e au perdant du conflit.
-      // NettoyÃ©e seulement si le retrait de classe a rÃ©ellement rÃ©ussi (r).
+      // Cascade identique à ModalEnsForm : la classe transférée ne doit pas laisser
+      // de progression (ni de suivi digital) fantôme rattachée au perdant du conflit.
+      // Nettoyée seulement si le retrait de classe a réellement réussi (r).
       const r = await sb.rpc("admin_set_teacher_classes", { p_id: ens.id, p_classes: nouvellesClasses });
       if (r) {
         await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: ens.id, p_classe: classe });
@@ -1989,24 +1989,24 @@ function ConflitsClassesPanel({ enseignants, data }) {
     }
     setResolving(null);
     const nomGarde = getNomCourt(enseignants.find(e=>e.id===ensGardeId)?.nom);
-    showToast(ok ? `âœ“ "${classe}" attribuÃ©e uniquement Ã  ${nomGarde}` : "âš  Ã‰chec partiel â€” vÃ©rifiez la connexion", ok);
+    showToast(ok ? `✓ "${classe}" attribuée uniquement à ${nomGarde}` : "⚠ Échec partiel — vérifiez la connexion", ok);
     await refreshData?.();
   };
 
   const reconcilier = async (item) => {
     const { ens, manquantes, classesEdt } = item;
     setResolving(ens.id);
-    // VÃ©rifier qu'aucune des classes manquantes n'est dÃ©jÃ  chez un autre enseignant
-    // (Ã©vite de crÃ©er un nouveau conflit en rÃ©conciliant celui-ci)
+    // Vérifier qu'aucune des classes manquantes n'est déjà chez un autre enseignant
+    // (évite de créer un nouveau conflit en réconciliant celui-ci)
     const dejaAilleurs = manquantes.filter(cl => enseignants.some(autre => autre.id!==ens.id && (autre.classes||[]).includes(cl)));
     if (dejaAilleurs.length > 0) {
-      showToast(`âš  RÃ©conciliation bloquÃ©e : ${dejaAilleurs.join(", ")} dÃ©jÃ  chez un autre enseignant â€” rÃ©sous d'abord ce conflit ci-dessus`, false);
+      showToast(`⚠ Réconciliation bloquée : ${dejaAilleurs.join(", ")} déjà chez un autre enseignant — résous d'abord ce conflit ci-dessus`, false);
       setResolving(null);
       return;
     }
     const ok = await sb.rpc("admin_set_teacher_classes", { p_id: ens.id, p_classes: classesEdt });
     setResolving(null);
-    showToast(ok ? `âœ“ Classes de ${getNomCourt(ens.nom)} alignÃ©es sur son EDT rÃ©el` : "âš  Ã‰chec â€” vÃ©rifiez la connexion", ok);
+    showToast(ok ? `✓ Classes de ${getNomCourt(ens.nom)} alignées sur son EDT réel` : "⚠ Échec — vérifiez la connexion", ok);
     await refreshData?.();
   };
 
@@ -2023,11 +2023,11 @@ function ConflitsClassesPanel({ enseignants, data }) {
   const nbAbsences = Object.entries(data?.absences||{}).filter(([k])=>k.startsWith(ens.id+"||")).length;
   const nbEpreuves = (data?.epreuves||[]).filter(e=>e.ens_id===ens.id).length;
   const nbEpAttente = (data?.epreuves||[]).filter(e=>e.ens_id===ens.id&&e.statut==="attente").length;
-  const deptNom = DEPARTEMENTS_LIST.find(d=>d.id===ens.departement_id)?.nom||"â€”";
+  const deptNom = DEPARTEMENTS_LIST.find(d=>d.id===ens.departement_id)?.nom||"—";
   return (
     <div style={{display:"flex", flexDirection:"column", gap:12}}>
 
-      {/* â”€â”€ Fiche profil â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Fiche profil ─────────────────────────────────────────── */}
       <div style={{background:"#0B3D20",borderRadius:16,padding:"20px 24px",display:"flex",gap:18,alignItems:"flex-start",flexWrap:"wrap"}}>
         {/* Photo */}
         <div style={{flexShrink:0}}>
@@ -2037,15 +2037,15 @@ function ConflitsClassesPanel({ enseignants, data }) {
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:2}}>{ens.nom}</div>
           <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:10}}>
-            {deptNom} Â· {(ens.classes||[]).join(", ")||"Aucune classe"}
+            {deptNom} · {(ens.classes||[]).join(", ")||"Aucune classe"}
           </div>
           {/* KPIs */}
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {[
               {label:"Couverture prog.",value:tauxCouv+"%",color:tauxCouv>=75?"#4ade80":tauxCouv>=50?"#fbbf24":"#f87171"},
-              {label:"LeÃ§ons faites",value:totalFait+"/"+totalRef,color:"rgba(255,255,255,.8)"},
-              {label:"SÃ©ances saisies",value:nbAbsences,color:"rgba(255,255,255,.8)"},
-              {label:"Ã‰preuves",value:nbEpreuves+(nbEpAttente>0?" ("+nbEpAttente+" en attente)":""),color:nbEpAttente>0?"#fbbf24":"rgba(255,255,255,.8)"},
+              {label:"Leçons faites",value:totalFait+"/"+totalRef,color:"rgba(255,255,255,.8)"},
+              {label:"Séances saisies",value:nbAbsences,color:"rgba(255,255,255,.8)"},
+              {label:"Épreuves",value:nbEpreuves+(nbEpAttente>0?" ("+nbEpAttente+" en attente)":""),color:nbEpAttente>0?"#fbbf24":"rgba(255,255,255,.8)"},
               {label:"Classes",value:(ens.classes||[]).length,color:"rgba(255,255,255,.8)"},
             ].map((k,i)=>(
               <div key={i} style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:"8px 14px",minWidth:90,textAlign:"center"}}>
@@ -2060,8 +2060,8 @@ function ConflitsClassesPanel({ enseignants, data }) {
       {conflits.length > 0 && (
         <div style={{background:C.redPale, border:`1px solid ${C.redBorder}`, borderRadius:12, padding:"16px 18px", display:"flex", flexDirection:"column", gap:14}}>
           <div>
-            <h3 style={{fontSize:13, fontWeight:800, color:C.red, margin:0}}>âš ï¸ {conflits.length} classe{conflits.length>1?"s":""} assignÃ©e{conflits.length>1?"s":""} Ã  plusieurs enseignants</h3>
-            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Choisis qui garde chaque classe â€” elle sera retirÃ©e automatiquement des autres (classes assignÃ©es + leur EDT).</p>
+            <h3 style={{fontSize:13, fontWeight:800, color:C.red, margin:0}}>⚠️ {conflits.length} classe{conflits.length>1?"s":""} assignée{conflits.length>1?"s":""} à plusieurs enseignants</h3>
+            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Choisis qui garde chaque classe — elle sera retirée automatiquement des autres (classes assignées + leur EDT).</p>
           </div>
           {conflits.map(([classe, list]) => (
             <div key={classe} style={{background:C.white, borderRadius:9, padding:"12px 14px", display:"flex", flexDirection:"column", gap:8}}>
@@ -2083,18 +2083,18 @@ function ConflitsClassesPanel({ enseignants, data }) {
       {incoherences.length > 0 && (
         <div style={{background:C.amberPale, border:`1px solid #fde68a`, borderRadius:12, padding:"16px 18px", display:"flex", flexDirection:"column", gap:14}}>
           <div>
-            <h3 style={{fontSize:13, fontWeight:800, color:"#92400e", margin:0}}>ðŸ”¶ {incoherences.length} enseignant{incoherences.length>1?"s":""} dont les classes assignÃ©es ne correspondent pas Ã  l'EDT</h3>
-            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Ses "classes assignÃ©es" et le contenu rÃ©el de son emploi du temps ont divergÃ© â€” probablement un ancien rÃ©glage jamais mis Ã  jour.</p>
+            <h3 style={{fontSize:13, fontWeight:800, color:"#92400e", margin:0}}>🔶 {incoherences.length} enseignant{incoherences.length>1?"s":""} dont les classes assignées ne correspondent pas à l'EDT</h3>
+            <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>Ses "classes assignées" et le contenu réel de son emploi du temps ont divergé — probablement un ancien réglage jamais mis à jour.</p>
           </div>
           {incoherences.map(item => (
             <div key={item.ens.id} style={{background:C.white, borderRadius:9, padding:"12px 14px", display:"flex", flexDirection:"column", gap:8}}>
               <div style={{fontWeight:800, fontSize:13, color:C.txt}}>{getNomCourt(item.ens.nom)}</div>
-              {item.manquantes.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans son EDT mais pas dans ses classes assignÃ©es : <strong>{item.manquantes.join(", ")}</strong></div>}
-              {item.enTrop.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans ses classes assignÃ©es mais absent de son EDT : <strong>{item.enTrop.join(", ")}</strong></div>}
+              {item.manquantes.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans son EDT mais pas dans ses classes assignées : <strong>{item.manquantes.join(", ")}</strong></div>}
+              {item.enTrop.length>0 && <div style={{fontSize:11.5, color:C.txtMuted}}>Dans ses classes assignées mais absent de son EDT : <strong>{item.enTrop.join(", ")}</strong></div>}
               <button disabled={resolving===item.ens.id} onClick={()=>reconcilier(item)}
                 style={{alignSelf:"flex-start", padding:"7px 14px", borderRadius:8, border:"1.5px solid #92400e", background:C.white, fontSize:12, fontWeight:700,
                   color:"#92400e", cursor:resolving===item.ens.id?"not-allowed":"pointer", fontFamily:"inherit", opacity:resolving===item.ens.id?.6:1}}>
-                âœ“ Aligner ses classes assignÃ©es sur son EDT rÃ©el
+                ✓ Aligner ses classes assignées sur son EDT réel
               </button>
             </div>
           ))}
@@ -2105,8 +2105,8 @@ function ConflitsClassesPanel({ enseignants, data }) {
 }
 
 function EnsGerer({ data, setData, showToast }) {
-  const [modal,    setModal]    = useState(null); // null | "ajout" | {ens} pour Ã©dition
-  const [confirm,  setConfirm]  = useState(null); // enseignant Ã  supprimer
+  const [modal,    setModal]    = useState(null); // null | "ajout" | {ens} pour édition
+  const [confirm,  setConfirm]  = useState(null); // enseignant à supprimer
   const [saving,   setSaving]   = useState(false);
 
   // Source enseignants
@@ -2115,7 +2115,7 @@ function EnsGerer({ data, setData, showToast }) {
     ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), ini:u.ini||getIni(u.nom), classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, col:getColor(a.id), ini:getIni(a.nom), classes:ENS_CLASSES_REF[a.id]||[]}));
 
-  // â”€â”€ Supprimer un enseignant â”€â”€
+  // ── Supprimer un enseignant ──
   const supprimerEnseignant = async(ens) => {
     setSaving(true);
     // 1. Supprimer de Supabase utilisateurs
@@ -2124,11 +2124,11 @@ function EnsGerer({ data, setData, showToast }) {
     const ok2 = await sb.rpc("admin_delete_prog_by_teacher", { p_ens_id: ens.id });
     // 3. Supprimer ses epreuves
     const ok3 = await sb.rpc("admin_delete_epreuves_by_teacher", { p_ens_id: ens.id });
-    // 4. Supprimer ses exceptions d'EDT (sinon orphelines â€” pourraient ressurgir si l'id est rÃ©utilisÃ©)
+    // 4. Supprimer ses exceptions d'EDT (sinon orphelines — pourraient ressurgir si l'id est réutilisé)
     await sb.rpc("admin_delete_edt_slots_by_teacher", { p_ens_id: ens.id });
     // 5. Supprimer ses absences et ses notes
     await sb.rpc("admin_delete_absences_by_teacher", { p_ens_id: ens.id });
-    // 6. Mettre Ã  jour le contexte local
+    // 6. Mettre à jour le contexte local
     setData(prev => {
       const newUsers = {...(prev.users||{})};
       delete newUsers[ens.id];
@@ -2141,8 +2141,8 @@ function EnsGerer({ data, setData, showToast }) {
     });
     setSaving(false);
     setConfirm(null);
-    if(ok1) showToast(`âœ“ ${ens.nom} supprimÃ©(e)`);
-    else     showToast("âš  Erreur Supabase â€” compte local supprimÃ©", false);
+    if(ok1) showToast(`✓ ${ens.nom} supprimé(e)`);
+    else     showToast("⚠ Erreur Supabase — compte local supprimé", false);
   };
 
   return (
@@ -2151,12 +2151,12 @@ function EnsGerer({ data, setData, showToast }) {
       {/* Header + bouton ajouter */}
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
         <div>
-          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>âš™ï¸ Gestion des enseignants</h2>
-          <p style={{fontSize:12, color:C.txtMuted, margin:"4px 0 0"}}>DÃ©partement SVTEEHB Â· LycÃ©e de Kakatare</p>
+          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>⚙️ Gestion des enseignants</h2>
+          <p style={{fontSize:12, color:C.txtMuted, margin:"4px 0 0"}}>Département SVTEEHB · Lycée de Kakatare</p>
         </div>
         <button onClick={()=>setModal("ajout")}
           style={{padding:"9px 18px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:7}}>
-          âž• Ajouter un enseignant
+          ➕ Ajouter un enseignant
         </button>
       </div>
 
@@ -2165,7 +2165,7 @@ function EnsGerer({ data, setData, showToast }) {
       {/* Liste enseignants */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden"}}>
         <div style={{padding:"12px 18px", borderBottom:`1px solid ${C.border}`, fontSize:12, fontWeight:700, color:C.txt}}>
-          {enseignants.length} enseignant{enseignants.length>1?"s":""} dans le dÃ©partement
+          {enseignants.length} enseignant{enseignants.length>1?"s":""} dans le département
         </div>
         {enseignants.map((ens,i)=>(
           <div key={ens.id} style={{display:"flex", alignItems:"center", gap:12, padding:"14px 18px", borderBottom:i<enseignants.length-1?`1px solid ${C.border}`:"none"}}>
@@ -2176,7 +2176,7 @@ function EnsGerer({ data, setData, showToast }) {
               <div style={{fontSize:14, fontWeight:700, color:C.txt}}>{ens.nom}</div>
               <div style={{fontSize:11, color:C.txtMuted, marginTop:2}}>
                 id: <code style={{background:"#f1f5f9", padding:"1px 5px", borderRadius:4, fontSize:11}}>{ens.id}</code>
-                &nbsp;Â·&nbsp; {(ens.classes||[]).length} classe{(ens.classes||[]).length>1?"s":""}
+                &nbsp;·&nbsp; {(ens.classes||[]).length} classe{(ens.classes||[]).length>1?"s":""}
               </div>
               {(ens.classes||[]).length > 0 && (
                 <div style={{display:"flex", flexWrap:"wrap", gap:4, marginTop:5}}>
@@ -2190,11 +2190,11 @@ function EnsGerer({ data, setData, showToast }) {
             <div style={{display:"flex", gap:8, flexShrink:0}}>
               <button onClick={()=>setModal(ens)}
                 style={{padding:"6px 12px", background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", color:C.green, fontFamily:"inherit"}}>
-                âœŽ Modifier
+                ✎ Modifier
               </button>
               <button onClick={()=>setConfirm(ens)}
                 style={{padding:"6px 12px", background:C.redPale, border:`1px solid ${C.redBorder||"#fca5a5"}`, borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", color:C.red, fontFamily:"inherit"}}>
-                ðŸ—‘ Supprimer
+                🗑 Supprimer
               </button>
             </div>
           </div>
@@ -2214,7 +2214,7 @@ function EnsGerer({ data, setData, showToast }) {
       {confirm && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:400,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
-            <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>âš ï¸</div>
+            <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>⚠️</div>
             <h3 style={{fontSize:15,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>
               Supprimer cet enseignant ?
             </h3>
@@ -2222,7 +2222,7 @@ function EnsGerer({ data, setData, showToast }) {
               <strong style={{color:C.txt}}>{confirm.nom}</strong>
             </p>
             <p style={{fontSize:12,color:C.txtMuted,textAlign:"center",marginBottom:24,lineHeight:1.5}}>
-              Son compte, ses leÃ§ons cochÃ©es et ses Ã©preuves seront dÃ©finitivement supprimÃ©s de Supabase.
+              Son compte, ses leçons cochées et ses épreuves seront définitivement supprimés de Supabase.
             </p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setConfirm(null)} disabled={saving}
@@ -2231,7 +2231,7 @@ function EnsGerer({ data, setData, showToast }) {
               </button>
               <button onClick={()=>supprimerEnseignant(confirm)} disabled={saving}
                 style={{flex:1,padding:"11px",borderRadius:9,border:"none",background:C.red,color:"#fff",fontSize:13,fontWeight:700,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                {saving?<><Spinner size={14} color="#fff"/>Suppressionâ€¦</>:"ðŸ—‘ Confirmer"}
+                {saving?<><Spinner size={14} color="#fff"/>Suppression…</>:"🗑 Confirmer"}
               </button>
             </div>
           </div>
@@ -2241,7 +2241,7 @@ function EnsGerer({ data, setData, showToast }) {
   );
 }
 
-// â”€â”€ Formulaire Ajout / Modification enseignant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Formulaire Ajout / Modification enseignant ────────────────────────
 function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   const {isMobile} = useDevice();
   const {user} = useApp();
@@ -2253,21 +2253,21 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   const [newCl,   setNewCl]   = useState("");
   const [saving,  setSaving]  = useState(false);
   const [err,     setErr]     = useState("");
-  const [photoFile, setPhotoFile] = useState(null);   // nouveau fichier choisi (pas encore envoyÃ©)
-  const [photoPreview, setPhotoPreview] = useState(null); // aperÃ§u local (URL objet)
-  const [photoExistant, setPhotoExistant] = useState(ens?.photo||null); // chemin dÃ©jÃ  en base
+  const [photoFile, setPhotoFile] = useState(null);   // nouveau fichier choisi (pas encore envoyé)
+  const [photoPreview, setPhotoPreview] = useState(null); // aperçu local (URL objet)
+  const [photoExistant, setPhotoExistant] = useState(ens?.photo||null); // chemin déjà en base
   const fileInputRef = useRef(null);
 
   const choisirPhoto = (file) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { showToast("âš  Choisis une image (jpg, pngâ€¦)", false); return; }
-    if (file.size > 8*1024*1024) { showToast("âš  Image trop lourde (max 8 Mo)", false); return; }
+    if (!file.type.startsWith("image/")) { showToast("⚠ Choisis une image (jpg, png…)", false); return; }
+    if (file.size > 8*1024*1024) { showToast("⚠ Image trop lourde (max 8 Mo)", false); return; }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };
 
   const toId = (nom) => nom.toLowerCase()
-    .normalize("NFD").replace(/[Ì€-Í¯]/g,"")
+    .normalize("NFD").replace(/[̀-ͯ]/g,"")
     .replace(/[^a-z0-9]/g,"").slice(0,12);
 
   useEffect(()=>{
@@ -2286,7 +2286,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     if(!nom.trim()) return setErr("Le nom est requis.");
     if(!ensId.trim()) return setErr("L'identifiant est requis.");
     if(!isEdit && !mdp.trim()) return setErr("Le mot de passe est requis pour un nouvel enseignant.");
-    if(!isEdit && mdp.trim().length < 6) return setErr("Le mot de passe doit contenir au moins 6 caractÃ¨res.");
+    if(!isEdit && mdp.trim().length < 6) return setErr("Le mot de passe doit contenir au moins 6 caractères.");
 
     setSaving(true); setErr("");
 
@@ -2297,9 +2297,9 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         const path = `${ensId.trim()}_${Date.now()}.jpg`;
         const ok = await sb.uploadPhoto(path, compressed);
         if (ok) photoPath = path;
-        else showToast("âš  Photo non envoyÃ©e â€” le reste a Ã©tÃ© sauvegardÃ©", false);
+        else showToast("⚠ Photo non envoyée — le reste a été sauvegardé", false);
       } catch {
-        showToast("âš  Erreur lors du traitement de la photo", false);
+        showToast("⚠ Erreur lors du traitement de la photo", false);
       }
     }
 
@@ -2309,12 +2309,12 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
       role: "enseignant",
       classes,
       photo: photoPath,
-      // mdp retirÃ© : plus jamais Ã©crit en clair â€” voir admin_set_password() aprÃ¨s l'upsert
+      // mdp retiré : plus jamais écrit en clair — voir admin_set_password() après l'upsert
     };
 
-    // Classes retirÃ©es des "Classes assignÃ©es" lors de cette modification (vide si nouvel enseignant)
+    // Classes retirées des "Classes assignées" lors de cette modification (vide si nouvel enseignant)
     const classesRetirees = isEdit ? (ens.classes||[]).filter(c => !classes.includes(c)) : [];
-    // Classes ajoutÃ©es â€” Ã  vÃ©rifier pour conflit avec un autre enseignant
+    // Classes ajoutées — à vérifier pour conflit avec un autre enseignant
     const classesAjouteesIci = isEdit ? classes.filter(c => !(ens.classes||[]).includes(c)) : classes;
 
     const currentDept = user?.departement_id ?? ens?.departement_id ?? null;
@@ -2324,18 +2324,18 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
       autresEns.forEach(autre => { if ((autre.classes||[]).includes(cl)) conflits.push({ classe:cl, autreEns:autre }); });
     });
     if (conflits.length > 0) {
-      const liste = conflits.map(c => `â€¢ ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
+      const liste = conflits.map(c => `• ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
       const continuer = window.confirm(
-        `${conflits.length>1?"Ces classes sont":"Cette classe est"} dÃ©jÃ  assignÃ©e(s) Ã  un autre enseignant :\n\n${liste}\n\n`+
-        `Continuer va la/les retirer de l'autre enseignant (classes assignÃ©es + son EDT) pour la/les transfÃ©rer ici.\n\nContinuer ?`
+        `${conflits.length>1?"Ces classes sont":"Cette classe est"} déjà assignée(s) à un autre enseignant :\n\n${liste}\n\n`+
+        `Continuer va la/les retirer de l'autre enseignant (classes assignées + son EDT) pour la/les transférer ici.\n\nContinuer ?`
       );
       if (!continuer) { setSaving(false); return; }
     }
 
     const ok = await sb.rpc("admin_upsert_teacher", { p_id: userData.id, p_nom: userData.nom, p_classes: userData.classes, p_photo: userData.photo });
 
-    // Si un mot de passe a Ã©tÃ© saisi (crÃ©ation ou rÃ©initialisation), le dÃ©finir via la RPC
-    // sÃ©curisÃ©e (hachage cÃ´tÃ© serveur â€” jamais plus Ã©crit en clair depuis le client).
+    // Si un mot de passe a été saisi (création ou réinitialisation), le définir via la RPC
+    // sécurisée (hachage côté serveur — jamais plus écrit en clair depuis le client).
     let mdpOk = true;
     if (ok && mdp.trim()) {
       mdpOk = await sb.rpc("admin_set_password", { p_id: ensId.trim(), p_new_mdp: mdp.trim() });
@@ -2344,8 +2344,8 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     if(ok) {
       let nouvellesExceptions = data?.exceptions || {};
 
-      // Nettoyage chez les enseignants en conflit : retirer la classe transfÃ©rÃ©e de leurs
-      // classes assignÃ©es ET de tous leurs crÃ©neaux EDT correspondants.
+      // Nettoyage chez les enseignants en conflit : retirer la classe transférée de leurs
+      // classes assignées ET de tous leurs créneaux EDT correspondants.
       if (conflits.length > 0) {
         const parAutreEns = {};
         conflits.forEach(c => { (parAutreEns[c.autreEns.id] ||= []).push(c.classe); });
@@ -2364,8 +2364,8 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         }
       }
 
-      // Cascade : effacer automatiquement les classes retirÃ©es de tous ses crÃ©neaux EDT,
-      // pour Ã©viter qu'une classe reste affichÃ©e chez deux enseignants Ã  la fois.
+      // Cascade : effacer automatiquement les classes retirées de tous ses créneaux EDT,
+      // pour éviter qu'une classe reste affichée chez deux enseignants à la fois.
       let progKeysASupprimer = [];
       if (classesRetirees.length > 0) {
         const rt = buildEdtRuntime(data?.exceptions||{}, data?.edtBase||{})[ens.id] || {};
@@ -2383,8 +2383,8 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
 
         // Cascade identique pour prog_suivi (progression de cours + suivi digital) :
         // une classe qui quitte un enseignant ne doit pas laisser de traces de
-        // progression rattachÃ©es Ã  lui â€” mÃªme logique que la suppression complÃ¨te
-        // d'un enseignant, mais limitÃ©e Ã  la seule classe retirÃ©e.
+        // progression rattachées à lui — même logique que la suppression complète
+        // d'un enseignant, mais limitée à la seule classe retirée.
         for (const cl of classesRetirees) {
           await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(cl)}`);
           await sb.del("prog_suivi", `?ens_id=eq.${encodeURIComponent(ens.id)}&classe=eq.${encodeURIComponent(cl+"||dig")}`);
@@ -2392,7 +2392,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         }
       }
 
-      // Mettre Ã  jour le contexte local
+      // Mettre à jour le contexte local
       setData(prev=>{
         const newProg = {...(prev.prog||{})};
         progKeysASupprimer.forEach(k => delete newProg[k]);
@@ -2411,18 +2411,18 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
         };
       });
       const msgParts = [];
-      if (classesRetirees.length>0) msgParts.push(`${classesRetirees.join(", ")} retirÃ©e(s) de son EDT`);
-      if (conflits.length>0) msgParts.push(`${[...new Set(conflits.map(c=>c.classe))].join(", ")} transfÃ©rÃ©e(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
+      if (classesRetirees.length>0) msgParts.push(`${classesRetirees.join(", ")} retirée(s) de son EDT`);
+      if (conflits.length>0) msgParts.push(`${[...new Set(conflits.map(c=>c.classe))].join(", ")} transférée(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
       if (!mdpOk) {
-        showToast(`âš  ${userData.nom} sauvegardÃ©(e), mais la dÃ©finition du mot de passe a Ã©chouÃ© â€” rÃ©essaie depuis "GÃ©rer enseignants"`, false);
+        showToast(`⚠ ${userData.nom} sauvegardé(e), mais la définition du mot de passe a échoué — réessaie depuis "Gérer enseignants"`, false);
       } else {
         showToast(msgParts.length>0
-          ? `âœ“ ${userData.nom} mis Ã  jour Â· ${msgParts.join(" Â· ")}`
-          : `âœ“ ${userData.nom} ${isEdit?"mis Ã  jour":"ajoutÃ©(e)"}`);
+          ? `✓ ${userData.nom} mis à jour · ${msgParts.join(" · ")}`
+          : `✓ ${userData.nom} ${isEdit?"mis à jour":"ajouté(e)"}`);
       }
       onClose();
     } else {
-      setErr("Erreur Supabase. VÃ©rifiez les donnÃ©es.");
+      setErr("Erreur Supabase. Vérifiez les données.");
     }
     setSaving(false);
   };
@@ -2431,13 +2431,13 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,overflowY:"auto",padding:20}}>
       <div style={{background:C.white,borderRadius:16,padding:"28px 30px",width:"100%",maxWidth:480,boxShadow:"0 24px 80px rgba(0,0,0,.25)"}}>
         <h3 style={{fontSize:16,fontWeight:800,color:C.txt,margin:"0 0 4px"}}>
-          {isEdit?"âœŽ Modifier l'enseignant":"âž• Nouvel enseignant"}
+          {isEdit?"✎ Modifier l'enseignant":"➕ Nouvel enseignant"}
         </h3>
-        <p style={{fontSize:12,color:C.txtMuted,margin:"0 0 20px"}}>DÃ©partement SVTEEHB Â· LycÃ©e de Kakatare</p>
+        <p style={{fontSize:12,color:C.txtMuted,margin:"0 0 20px"}}>Département SVTEEHB · Lycée de Kakatare</p>
 
         {err && (
           <div style={{background:C.redPale,border:`1px solid ${C.redBorder||"#fca5a5"}`,borderRadius:8,padding:"9px 12px",marginBottom:14,fontSize:12,color:C.red,fontWeight:600}}>
-            âš ï¸ {err}
+            ⚠️ {err}
           </div>
         )}
 
@@ -2466,7 +2466,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
               ) : photoExistant ? (
                 <img src={sb.photoUrl(photoExistant)} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
               ) : (
-                <span style={{fontSize: isMobile?28:22,color:"#cbd5e1"}}>ðŸ‘¤</span>
+                <span style={{fontSize: isMobile?28:22,color:"#cbd5e1"}}>👤</span>
               )}
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:7,width: isMobile?"100%":"auto"}}>
@@ -2474,7 +2474,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
                 onChange={e=>choisirPhoto(e.target.files?.[0])}/>
               <button type="button" onClick={()=>fileInputRef.current?.click()}
                 style={{padding: isMobile?"11px 14px":"7px 14px",borderRadius:9,border:`1.5px solid ${C.green}`,background:C.greenPale,color:C.green,fontSize: isMobile?13:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%",textAlign:"center"}}>
-                ðŸ“· {photoExistant||photoPreview ? "Changer la photo" : "Ajouter une photo"}
+                📷 {photoExistant||photoPreview ? "Changer la photo" : "Ajouter une photo"}
               </button>
               {(photoExistant||photoPreview) && (
                 <button type="button" onClick={()=>{setPhotoFile(null);setPhotoPreview(null);setPhotoExistant(null);}}
@@ -2498,7 +2498,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
             onFocus={e=>e.target.style.borderColor=C.green}
             onBlur={e=>e.target.style.borderColor=C.border}/>
           <div style={{fontSize:10,color:C.txtMuted,marginTop:3}}>
-            GÃ©nÃ©rÃ© automatiquement Â· {isEdit?"non modifiable en Ã©dition":""}
+            Généré automatiquement · {isEdit?"non modifiable en édition":""}
           </div>
         </div>
 
@@ -2508,16 +2508,16 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
             Mot de passe {!isEdit && <span style={{color:C.red}}>*</span>}
           </label>
           <input type="password" value={mdp} onChange={e=>setMdp(e.target.value)}
-            placeholder={isEdit?"Laisser vide pour ne pas modifier":"Minimum 8 caractÃ¨res"}
+            placeholder={isEdit?"Laisser vide pour ne pas modifier":"Minimum 8 caractères"}
             style={{width:"100%",padding:"10px 14px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,color:C.txt,fontFamily:"inherit"}}
             onFocus={e=>e.target.style.borderColor=C.green}
             onBlur={e=>e.target.style.borderColor=C.border}/>
         </div>
 
-        {/* Classes assignÃ©es */}
+        {/* Classes assignées */}
         <div style={{marginBottom:20}}>
           <label style={{fontSize:11,fontWeight:700,color:C.txtMuted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:".06em"}}>
-            Classes assignÃ©es
+            Classes assignées
           </label>
           {/* Tags classes */}
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
@@ -2525,16 +2525,16 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
               <span key={cl} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,background:C.greenPale,border:`1px solid ${C.greenBorder}`,fontSize:12,fontWeight:700,color:C.green}}>
                 {cl}
                 <button onClick={()=>setClasses(prev=>prev.filter(c=>c!==cl))}
-                  style={{background:"none",border:"none",cursor:"pointer",color:C.green,fontSize:14,padding:0,lineHeight:1}}>Ã—</button>
+                  style={{background:"none",border:"none",cursor:"pointer",color:C.green,fontSize:14,padding:0,lineHeight:1}}>×</button>
               </span>
             ))}
-            {classes.length===0 && <span style={{fontSize:12,color:C.txtLight}}>Aucune classe assignÃ©e</span>}
+            {classes.length===0 && <span style={{fontSize:12,color:C.txtLight}}>Aucune classe assignée</span>}
           </div>
           {/* Ajouter une classe */}
           <div style={{display:"flex",gap:8}}>
             <select value={newCl} onChange={e=>setNewCl(e.target.value)}
               style={{flex:1,padding:"8px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.txt,fontFamily:"inherit",background:C.white}}>
-              <option value="">â€” Choisir une classe â€”</option>
+              <option value="">— Choisir une classe —</option>
               {Object.keys(ELEVES_DB).sort().filter(cl=>!classes.includes(cl)).map(cl=><option key={cl} value={cl}>{cl}</option>)}
             </select>
             <button onClick={ajouterClasse}
@@ -2552,7 +2552,7 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
           </button>
           <button onClick={sauvegarder} disabled={saving}
             style={{flex:2,padding:"11px",borderRadius:9,border:"none",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,color:"#fff",fontSize:13,fontWeight:700,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            {saving?<><Spinner size={14} color="#fff"/>Sauvegardeâ€¦</>:(isEdit?"âœ“ Enregistrer":"âœ“ CrÃ©er l'enseignant")}
+            {saving?<><Spinner size={14} color="#fff"/>Sauvegarde…</>:(isEdit?"✓ Enregistrer":"✓ Créer l'enseignant")}
           </button>
         </div>
       </div>
@@ -2560,34 +2560,34 @@ function ModalEnsForm({ ens, data, setData, showToast, onClose }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ONGLET NETTOYER â€” Suppression des donnÃ©es fictives
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// ONGLET NETTOYER — Suppression des données fictives
+// ══════════════════════════════════════════════════════════════════════
 function EnsClean({ data, setData, showToast }) {
   const {isMobile} = useDevice();
   const [loading,  setLoading]  = useState(false);
   const [results,  setResults]  = useState(null);
-  const [confirm,  setConfirm]  = useState(null); // action Ã  confirmer
+  const [confirm,  setConfirm]  = useState(null); // action à confirmer
 
-  // â”€â”€ Analyser ce qui existe dans Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Analyser ce qui existe dans Supabase ──────────────────────────
   const epreuves    = data?.epreuves||[];
   const progEntries = Object.entries(data?.prog||{});
 
-  // DÃ©tection donnÃ©es fictives / test
+  // Détection données fictives / test
   const epsTest = epreuves.filter(e=>
     e.type==="test" || e.type==="demo" ||
     !e.ens_id || !DEMO_ACCOUNTS.find(a=>a.id===e.ens_id) ||
     e.titre?.toLowerCase().includes("test") ||
-    e.titre?.toLowerCase().includes("dÃ©mo")
+    e.titre?.toLowerCase().includes("démo")
   );
   const progVides = progEntries.filter(([k,v])=>!v||v.length===0);
 
-  // â”€â”€ Actions de nettoyage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Actions de nettoyage ──────────────────────────────────────────
   const actions = [
     {
       id:"eps-test",
-      icon:"ðŸ“‹", titre:"Ã‰preuves de test",
-      desc:`${epsTest.length} Ã©preuve${epsTest.length>1?"s":""} dÃ©tectÃ©e${epsTest.length>1?"s":""} comme fictive${epsTest.length>1?"s":""}`,
+      icon:"📋", titre:"Épreuves de test",
+      desc:`${epsTest.length} épreuve${epsTest.length>1?"s":""} détectée${epsTest.length>1?"s":""} comme fictive${epsTest.length>1?"s":""}`,
       count: epsTest.length,
       danger: true,
       exec: async()=>{
@@ -2599,23 +2599,23 @@ function EnsClean({ data, setData, showToast }) {
         }
         setData(prev=>({...prev, epreuves:(prev.epreuves||[]).filter(e=>!epsTest.find(t=>t.id===e.id))}));
         setLoading(false);
-        showToast(ok ? `âœ“ ${epsTest.length} Ã©preuve${epsTest.length>1?"s":""} supprimÃ©e${epsTest.length>1?"s":""}` : "âš  Erreurs partielles", ok);
+        showToast(ok ? `✓ ${epsTest.length} épreuve${epsTest.length>1?"s":""} supprimée${epsTest.length>1?"s":""}` : "⚠ Erreurs partielles", ok);
         setResults({done:"eps-test", count:epsTest.length});
       }
     },
     {
       id:"prog-vides",
-      icon:"ðŸ“–", titre:"Progressions vides",
-      desc:`${progVides.length} entrÃ©e${progVides.length>1?"s":""} prog_suivi sans leÃ§ons cochÃ©es`,
+      icon:"📖", titre:"Progressions vides",
+      desc:`${progVides.length} entrée${progVides.length>1?"s":""} prog_suivi sans leçons cochées`,
       count: progVides.length,
       danger: false,
       exec: async()=>{
         setLoading(true);
         let ok = true;
         for(const [key] of progVides) {
-          // Split sur le PREMIER sÃ©parateur seulement : une classe peut elle-mÃªme
-          // contenir "||dig" (clÃ© digitalisation), qu'il ne faut jamais tronquer
-          // sous peine de cibler/supprimer la mauvaise ligne (perte de vraies donnÃ©es).
+          // Split sur le PREMIER séparateur seulement : une classe peut elle-même
+          // contenir "||dig" (clé digitalisation), qu'il ne faut jamais tronquer
+          // sous peine de cibler/supprimer la mauvaise ligne (perte de vraies données).
           const sep = key.indexOf("||");
           const ens_id = key.slice(0, sep);
           const classe = key.slice(sep + 2);
@@ -2628,14 +2628,14 @@ function EnsClean({ data, setData, showToast }) {
           return {...prev, prog:newProg};
         });
         setLoading(false);
-        showToast(ok ? `âœ“ ${progVides.length} entrÃ©e${progVides.length>1?"s":""} nettoyÃ©e${progVides.length>1?"s":""}` : "âš  Erreurs partielles", ok);
+        showToast(ok ? `✓ ${progVides.length} entrée${progVides.length>1?"s":""} nettoyée${progVides.length>1?"s":""}` : "⚠ Erreurs partielles", ok);
         setResults({done:"prog-vides", count:progVides.length});
       }
     },
     {
       id:"tout-prog",
-      icon:"ðŸ”„", titre:"RÃ©initialiser toutes les progressions",
-      desc:"Supprime TOUTES les leÃ§ons cochÃ©es de TOUS les enseignants",
+      icon:"🔄", titre:"Réinitialiser toutes les progressions",
+      desc:"Supprime TOUTES les leçons cochées de TOUS les enseignants",
       count: progEntries.filter(([,v])=>v?.length>0).length,
       danger: true,
       exec: async()=>{
@@ -2643,14 +2643,14 @@ function EnsClean({ data, setData, showToast }) {
         const res = await sb.rpc("admin_delete_all_prog", {}); // supprimer toutes les progressions
         setData(prev=>({...prev, prog:{}}));
         setLoading(false);
-        showToast(res ? "âœ“ Toutes les progressions rÃ©initialisÃ©es" : "âš  Erreur Supabase", res);
+        showToast(res ? "✓ Toutes les progressions réinitialisées" : "⚠ Erreur Supabase", res);
         setResults({done:"tout-prog", count:progEntries.length});
       }
     },
     {
       id:"tout-epreuves",
-      icon:"ðŸ“‹", titre:"Vider toutes les Ã©preuves",
-      desc:`Supprime les ${epreuves.length} Ã©preuve${epreuves.length>1?"s":""} de la base`,
+      icon:"📋", titre:"Vider toutes les épreuves",
+      desc:`Supprime les ${epreuves.length} épreuve${epreuves.length>1?"s":""} de la base`,
       count: epreuves.length,
       danger: true,
       exec: async()=>{
@@ -2658,7 +2658,7 @@ function EnsClean({ data, setData, showToast }) {
         const res = await sb.rpc("admin_delete_all_epreuves", {});
         setData(prev=>({...prev, epreuves:[]}));
         setLoading(false);
-        showToast(res ? `âœ“ ${epreuves.length} Ã©preuve${epreuves.length>1?"s":""} supprimÃ©e${epreuves.length>1?"s":""}` : "âš  Erreur Supabase", res);
+        showToast(res ? `✓ ${epreuves.length} épreuve${epreuves.length>1?"s":""} supprimée${epreuves.length>1?"s":""}` : "⚠ Erreur Supabase", res);
         setResults({done:"tout-epreuves", count:epreuves.length});
       }
     },
@@ -2668,20 +2668,20 @@ function EnsClean({ data, setData, showToast }) {
     <div style={{padding:"20px", display:"flex", flexDirection:"column", gap:16}}>
 
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 20px"}}>
-        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>ðŸ§¹ Nettoyage des donnÃ©es</h2>
+        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>🧹 Nettoyage des données</h2>
         <p style={{fontSize:12, color:C.txtMuted, margin:0}}>
-          Supprime les donnÃ©es fictives, de test ou non dÃ©sirÃ©es de la base Supabase.
-          <strong style={{color:C.red}}> Actions irrÃ©versibles.</strong>
+          Supprime les données fictives, de test ou non désirées de la base Supabase.
+          <strong style={{color:C.red}}> Actions irréversibles.</strong>
         </p>
       </div>
 
-      {/* Ã‰tat actuel */}
+      {/* État actuel */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px"}}>
-        <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:12}}>ðŸ“Š Ã‰tat actuel de la base</div>
+        <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:12}}>📊 État actuel de la base</div>
         <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(3,1fr)", gap:10}}>
           {[
-            {label:"Ã‰preuves total",   val:epreuves.length,      col:epreuves.length>0?C.amber:C.green},
-            {label:"Ã‰preuves test",    val:epsTest.length,       col:epsTest.length>0?C.red:C.green},
+            {label:"Épreuves total",   val:epreuves.length,      col:epreuves.length>0?C.amber:C.green},
+            {label:"Épreuves test",    val:epsTest.length,       col:epsTest.length>0?C.red:C.green},
             {label:"Progressions",     val:progEntries.length,   col:C.blue},
           ].map((k,i)=>(
             <div key={i} style={{textAlign:"center", padding:"12px 8px", background:"#f8fafc", borderRadius:9, border:`1px solid ${C.border}`}}>
@@ -2702,7 +2702,7 @@ function EnsClean({ data, setData, showToast }) {
                 <span style={{fontSize:20}}>{action.icon}</span>
                 <span style={{fontSize:14, fontWeight:700, color:C.txt}}>{action.titre}</span>
                 {action.danger && <span style={{fontSize:9, padding:"1px 7px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700}}>DANGER</span>}
-                {done && <span style={{fontSize:9, padding:"1px 7px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>âœ“ FAIT</span>}
+                {done && <span style={{fontSize:9, padding:"1px 7px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>✓ FAIT</span>}
               </div>
               <div style={{fontSize:12, color:C.txtMuted}}>{action.desc}</div>
             </div>
@@ -2717,7 +2717,7 @@ function EnsClean({ data, setData, showToast }) {
                 color:done?C.green:action.danger?C.red:C.green,
                 fontFamily:"inherit", flexShrink:0, opacity:(action.count===0||done)?.5:1,
               }}>
-              {done ? "âœ“ TerminÃ©" : loading ? "â€¦" : action.count===0 ? "Rien Ã  faire" : "ExÃ©cuter"}
+              {done ? "✓ Terminé" : loading ? "…" : action.count===0 ? "Rien à faire" : "Exécuter"}
             </button>
           </div>
         );
@@ -2727,11 +2727,11 @@ function EnsClean({ data, setData, showToast }) {
       {confirm && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:C.white,borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
-            <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>âš ï¸</div>
+            <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>⚠️</div>
             <h3 style={{fontSize:16,fontWeight:800,color:C.txt,textAlign:"center",marginBottom:8}}>{confirm.titre}</h3>
             <p style={{fontSize:13,color:C.txtMuted,textAlign:"center",marginBottom:24,lineHeight:1.5}}>
               {confirm.desc}<br/>
-              <strong style={{color:C.red}}>Cette action est irrÃ©versible.</strong>
+              <strong style={{color:C.red}}>Cette action est irréversible.</strong>
             </p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setConfirm(null)}
@@ -2740,7 +2740,7 @@ function EnsClean({ data, setData, showToast }) {
               </button>
               <button onClick={()=>{setConfirm(null);confirm.exec();}}
                 style={{flex:1,padding:"11px",borderRadius:9,border:"none",background:C.red,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                âœ“ Confirmer
+                ✓ Confirmer
               </button>
             </div>
           </div>
@@ -2757,7 +2757,7 @@ function EnsListe({ data, onSelect }) {
 
   // Fallback : si Supabase ne retourne pas les utilisateurs, utiliser DEMO_ACCOUNTS
   // Source des enseignants : fusionner Supabase + ENS_CLASSES_REF
-  // Si un enseignant Supabase n'a pas de classes â†’ utiliser ENS_CLASSES_REF comme fallback
+  // Si un enseignant Supabase n'a pas de classes → utiliser ENS_CLASSES_REF comme fallback
   const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
   const sourceData = (supabaseEns.length > 0 || data?.deptFilterActive)
     // Enrichir les users Supabase avec ENS_CLASSES_REF si classes vides
@@ -2799,10 +2799,10 @@ function EnsListe({ data, onSelect }) {
       {/* KPIs globaux */}
       <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)", gap:10}}>
         {[
-          {label:"Enseignants",       val:enseignants.length, emoji:"ðŸ‘¥", col:C.green,  bg:C.greenPale},
-          {label:"Couverture moyenne",val:`${tauxMoyen}%`,    emoji:"ðŸ“Š", col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen)},
-          {label:"Objectif atteint â‰¥75%", val:enseignants.filter(e=>e.taux>=75).length, emoji:"âœ…", col:C.green, bg:C.greenPale},
-          {label:"En alerte <50%",   val:alertes, emoji:"âš ï¸", col:alertes>0?C.red:C.green, bg:alertes>0?C.redPale:C.greenPale},
+          {label:"Enseignants",       val:enseignants.length, emoji:"👥", col:C.green,  bg:C.greenPale},
+          {label:"Couverture moyenne",val:`${tauxMoyen}%`,    emoji:"📊", col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen)},
+          {label:"Objectif atteint ≥75%", val:enseignants.filter(e=>e.taux>=75).length, emoji:"✅", col:C.green, bg:C.greenPale},
+          {label:"En alerte <50%",   val:alertes, emoji:"⚠️", col:alertes>0?C.red:C.green, bg:alertes>0?C.redPale:C.greenPale},
         ].map((k,i)=>(
           <div key={i} style={{background:k.bg, borderRadius:11, border:`1px solid ${C.border}`, padding:"14px 16px"}}>
             <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
@@ -2816,9 +2816,9 @@ function EnsListe({ data, onSelect }) {
 
       {/* Barre de recherche */}
       <div style={{position:"relative"}}>
-        <span style={{position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14}}>ðŸ”</span>
+        <span style={{position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14}}>🔍</span>
         <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Rechercher un enseignantâ€¦"
+          placeholder="Rechercher un enseignant…"
           style={{width:"100%", padding:"10px 14px 10px 36px", border:`1px solid ${C.border}`, borderRadius:10, fontSize:13, color:C.txt, background:"#f8fafc", outline:"none", fontFamily:"inherit"}}
           onFocus={e=>{e.target.style.borderColor=C.green; e.target.style.background=C.white;}}
           onBlur={e=>{e.target.style.borderColor=C.border; e.target.style.background="#f8fafc";}}/>
@@ -2827,15 +2827,15 @@ function EnsListe({ data, onSelect }) {
       {/* Tableau enseignants */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, overflow:"hidden"}}>
         <div style={{padding:"12px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-          <h3 style={{margin:0, fontSize:13, fontWeight:700, color:C.txt}}>ðŸ‘¥ Tous les enseignants</h3>
+          <h3 style={{margin:0, fontSize:13, fontWeight:700, color:C.txt}}>👥 Tous les enseignants</h3>
           <span style={{fontSize:11, color:C.txtMuted}}>{enseignants.length} enseignant{enseignants.length>1?"s":""}</span>
         </div>
 
         <div style={{display:"flex", flexDirection:"column"}}>
           {enseignants.length === 0 ? (
             <div style={{padding:"40px", textAlign:"center", color:C.txtLight}}>
-              <div style={{fontSize:32, marginBottom:8}}>ðŸ”</div>
-              Aucun enseignant trouvÃ©
+              <div style={{fontSize:32, marginBottom:8}}>🔍</div>
+              Aucun enseignant trouvé
             </div>
           ) : enseignants.map((ens, i) => {
             const alerte = ens.taux < 50;
@@ -2859,20 +2859,20 @@ function EnsListe({ data, onSelect }) {
                 <div style={{flex:1, minWidth:0}}>
                   <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:4}}>
                     <span style={{fontSize:13, fontWeight:700, color:C.txt, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{ens.nom}</span>
-                    {alerte && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700, flexShrink:0}}>âš  Alerte</span>}
-                    {bon    && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700, flexShrink:0}}>âœ“ Objectif</span>}
-                    {ens.epAttente>0 && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.amberPale, color:C.amber, fontWeight:700, flexShrink:0}}>â³ {ens.epAttente} Ã©preuve{ens.epAttente>1?"s":""}</span>}
+                    {alerte && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700, flexShrink:0}}>⚠ Alerte</span>}
+                    {bon    && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700, flexShrink:0}}>✓ Objectif</span>}
+                    {ens.epAttente>0 && <span style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:C.amberPale, color:C.amber, fontWeight:700, flexShrink:0}}>⏳ {ens.epAttente} épreuve{ens.epAttente>1?"s":""}</span>}
                   </div>
                   <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
                     <div style={{flex:"1 1 80px", minWidth:60}}><ProgBar value={ens.taux}/></div>
                     <span style={{fontSize:12, fontWeight:800, color:taux2col(ens.taux), flexShrink:0}}>{ens.taux}%</span>
-                    <span style={{fontSize:10, color:C.txtMuted, flexShrink:0}}>{ens.totalFait}/{ens.totalRef} leÃ§.</span>
+                    <span style={{fontSize:10, color:C.txtMuted, flexShrink:0}}>{ens.totalFait}/{ens.totalRef} leç.</span>
                     <span style={{fontSize:10, color:C.txtMuted, flexShrink:0}}>{(ens.classes||[]).length} cl.</span>
                   </div>
                 </div>
 
-                {/* FlÃ¨che */}
-                <div style={{color:C.txtLight, fontSize:16, flexShrink:0}}>â€º</div>
+                {/* Flèche */}
+                <div style={{color:C.txtLight, fontSize:16, flexShrink:0}}>›</div>
               </div>
             );
           })}
@@ -2882,7 +2882,7 @@ function EnsListe({ data, onSelect }) {
   );
 }
 
-// â”€â”€ NIVEAU 2 : DÃ©tail d'un enseignant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── NIVEAU 2 : Détail d'un enseignant ─────────────────────────────────
 function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
   const [trim, setTrim] = useState(0);
 
@@ -2905,7 +2905,7 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
         lfTrim = ((data?.prog||{})[key]||[]).filter(n=>n>=range[0]&&n<=range[1]).length;
       }
     }
-    // tpPrevu/tpFait limitÃ©s Ã  la mÃªme plage que lpTrim/lfTrim (sinon incohÃ©rent avec le trimestre affichÃ©)
+    // tpPrevu/tpFait limités à la même plage que lpTrim/lfTrim (sinon incohérent avec le trimestre affiché)
     const tpAll   = meta?.tp||[];
     const tpPrevu = range ? tpAll.filter(n=>n>=range[0]&&n<=range[1]).length : tpAll.length;
     const tpFait  = tpAll.filter(n => ((data?.prog||{})[key]||[]).includes(n) && (!range || (n>=range[0]&&n<=range[1]))).length;
@@ -2931,10 +2931,10 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
       <div style={{display:"flex", alignItems:"center", gap:8}}>
         <button onClick={onBack}
           style={{padding:"6px 12px", background:C.white, border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, color:C.txtMuted, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:5}}>
-          â† Retour
+          ← Retour
         </button>
         <span style={{fontSize:12, color:C.txtMuted}}>Enseignants</span>
-        <span style={{fontSize:12, color:C.txtMuted}}>â€º</span>
+        <span style={{fontSize:12, color:C.txtMuted}}>›</span>
         <span style={{fontSize:12, fontWeight:700, color:C.txt}}>{ens.nom}</span>
       </div>
 
@@ -2945,11 +2945,11 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
           <div style={{flex:1}}>
             <div style={{fontSize:17, fontWeight:800, color:C.txt}}>{ens.nom}</div>
             <div style={{fontSize:12, color:C.txtMuted, marginTop:2}}>
-              Enseignant SVTEEHB Â· {classes.length} classe{classes.length>1?"s":""} Â· {classes.reduce((s,c)=>s+c.ef,0)} Ã©lÃ¨ves
+              Enseignant SVTEEHB · {classes.length} classe{classes.length>1?"s":""} · {classes.reduce((s,c)=>s+c.ef,0)} élèves
             </div>
             {coursActuel && (
               <div style={{marginTop:4, fontSize:11, color:C.green, fontWeight:700}}>
-                ðŸŸ¢ En cours : {coursActuel}
+                🟢 En cours : {coursActuel}
               </div>
             )}
           </div>
@@ -2986,10 +2986,10 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                   </div>
                   <div>
                     <div style={{fontSize:13, fontWeight:800, color:C.txt}}>{c.cl}</div>
-                    <div style={{fontSize:10, color:C.txtMuted}}>{c.ef} Ã©lÃ¨ves Â· {c.meta?.vh||0}h/sem</div>
+                    <div style={{fontSize:10, color:C.txtMuted}}>{c.ef} élèves · {c.meta?.vh||0}h/sem</div>
                   </div>
-                  {alerte && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700}}>âš  En retard</span>}
-                  {bon    && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>âœ“ Objectif</span>}
+                  {alerte && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.redPale, color:C.red, fontWeight:700}}>⚠ En retard</span>}
+                  {bon    && <span style={{fontSize:9, padding:"2px 8px", borderRadius:20, background:C.greenPale, color:C.green, fontWeight:700}}>✓ Objectif</span>}
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:20, fontWeight:900, color:taux2col(c.tauxTrim)}}>{c.tauxTrim}%</div>
@@ -2997,18 +2997,18 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                 </div>
               </div>
 
-              {/* MÃ©triques */}
+              {/* Métriques */}
               <div style={{padding:"10px 16px"}}>
                 <ProgBar value={c.tauxTrim} h={6}/>
                 <div style={{display:"flex", gap:12, marginTop:10, flexWrap:"wrap"}}>
                   <div style={{display:"flex", gap:4, alignItems:"center"}}>
-                    <span style={{fontSize:10, color:C.txtMuted}}>LeÃ§ons :</span>
+                    <span style={{fontSize:10, color:C.txtMuted}}>Leçons :</span>
                     <span style={{fontSize:11, fontWeight:700, color:C.txt}}>{c.lfTrim}</span>
                     <span style={{fontSize:10, color:C.txtMuted}}>/ {c.lpTrim}</span>
                   </div>
                   <div style={{display:"flex", gap:4, alignItems:"center"}}>
                     <span style={{fontSize:10, color:C.txtMuted}}>Heures dues :</span>
-                    <span style={{fontSize:11, fontWeight:700, color:C.txt}}>{c.meta?.hd||"â€”"}</span>
+                    <span style={{fontSize:11, fontWeight:700, color:C.txt}}>{c.meta?.hd||"—"}</span>
                   </div>
                   {c.tpPrevu > 0 && (
                     <div style={{display:"flex", gap:4, alignItems:"center"}}>
@@ -3016,12 +3016,12 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                       <span style={{fontSize:11, fontWeight:700, color:c.tpFait===c.tpPrevu?C.green:C.amber}}>{c.tpFait}/{c.tpPrevu}</span>
                     </div>
                   )}
-                  {/* Ã‰preuves */}
+                  {/* Épreuves */}
                   {c.eps.length > 0 && (
                     <div style={{display:"flex", gap:4, alignItems:"center"}}>
-                      <span style={{fontSize:10, color:C.txtMuted}}>Ã‰preuves :</span>
+                      <span style={{fontSize:10, color:C.txtMuted}}>Épreuves :</span>
                       {c.eps.map((ep,ei)=>{
-                        const cfg = {attente:{bg:C.amberPale,col:C.amber,label:"â³"},validee:{bg:C.greenPale,col:C.green,label:"âœ…"},rejetee:{bg:C.redPale,col:C.red,label:"âŒ"}};
+                        const cfg = {attente:{bg:C.amberPale,col:C.amber,label:"⏳"},validee:{bg:C.greenPale,col:C.green,label:"✅"},rejetee:{bg:C.redPale,col:C.red,label:"❌"}};
                         const s = cfg[ep.statut]||cfg.attente;
                         return <span key={ei} style={{fontSize:9, padding:"1px 6px", borderRadius:20, background:s.bg, color:s.col, fontWeight:700}}>{s.label} {ep.trim} {ep.ep}</span>;
                       })}
@@ -3033,7 +3033,7 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
                 <div style={{display:"flex", gap:8, marginTop:10}}>
                   <button onClick={()=>onViewClass(c.cl)}
                     style={{flex:1, padding:"7px 0", background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", color:C.green, fontFamily:"inherit"}}>
-                    ðŸ“– Voir les leÃ§ons
+                    📖 Voir les leçons
                   </button>
                 </div>
               </div>
@@ -3042,10 +3042,10 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
         })}
       </div>
 
-      {/* EDT rÃ©sumÃ© */}
+      {/* EDT résumé */}
       <div style={{background:C.white, borderRadius:11, border:`1px solid ${C.border}`, overflow:"hidden"}}>
         <div style={{padding:"12px 16px", borderBottom:`1px solid ${C.border}`, fontSize:12, fontWeight:700, color:C.txt}}>
-          ðŸ—“ Emploi du temps SVTEEHB
+          🗓 Emploi du temps SVTEEHB
         </div>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%", borderCollapse:"collapse", fontSize:11}}>
@@ -3084,7 +3084,7 @@ function EnsDetail({ ens, data, setData, showToast, onBack, onViewClass }) {
   );
 }
 
-// â”€â”€ NIVEAU 3 : LeÃ§ons d'une classe (lecture seule pour l'animatrice) â”€â”€
+// ── NIVEAU 3 : Leçons d'une classe (lecture seule pour l'animatrice) ──
 function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
   const [trim, setTrim] = useState(0);
   const [search, setSearch] = useState("");
@@ -3145,18 +3145,18 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
         }
       }
       setSaving(false);
-      if(ok) showToast("âœ“ Progression mise Ã  jour");
-      else showToast("âš  Erreur",false);
+      if(ok) showToast("✓ Progression mise à jour");
+      else showToast("⚠ Erreur",false);
     },600);
   },[data,ens,cl,progKey]);
 
-  // ClÃ© et timer dÃ©diÃ©s Ã  la digitalisation (indÃ©pendants de toggleLecon)
+  // Clé et timer dédiés à la digitalisation (indépendants de toggleLecon)
   const digKey   = `${ens.id}||${cl}||dig`;
   const digFaites = (data?.prog||{})[digKey]||[];
   const digTimer = useRef(null);
 
   const toggleDigital = useCallback(async(n, e)=>{
-    e.stopPropagation(); // ne pas dÃ©clencher toggleLecon sur la mÃªme ligne
+    e.stopPropagation(); // ne pas déclencher toggleLecon sur la même ligne
     const current = [...((data?.prog||{})[digKey]||[])];
     const newDig  = current.includes(n) ? current.filter(x=>x!==n) : [...current,n];
     setData(prev=>({...prev, prog:{...prev.prog, [digKey]:newDig}}));
@@ -3181,8 +3181,8 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
         }
       }
       setSaving(false);
-      if(ok) showToast("âœ“ Digitalisation mise Ã  jour");
-      else showToast("âš  Erreur sauvegarde digitalisation",false);
+      if(ok) showToast("✓ Digitalisation mise à jour");
+      else showToast("⚠ Erreur sauvegarde digitalisation",false);
     },600);
   },[data,ens,cl,digKey]);
 
@@ -3193,23 +3193,23 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
       <div style={{display:"flex", alignItems:"center", gap:8}}>
         <button onClick={onBack}
           style={{padding:"6px 12px", background:C.white, border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, color:C.txtMuted, cursor:"pointer", fontFamily:"inherit"}}>
-          â† {ens.nom}
+          ← {ens.nom}
         </button>
-        <span style={{fontSize:12, color:C.txtMuted}}>â€º</span>
+        <span style={{fontSize:12, color:C.txtMuted}}>›</span>
         <span style={{fontSize:12, fontWeight:700, color:C.txt}}>{cl}</span>
-        {saving && <Pill ch="ðŸ”„ Sauvegardeâ€¦" color={C.blue}/>}
+        {saving && <Pill ch="🔄 Sauvegarde…" color={C.blue}/>}
       </div>
 
       {/* Header */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px"}}>
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10}}>
           <div>
-            <div style={{fontSize:15, fontWeight:800, color:C.txt}}>{cl} â€” {PROGRAMMES_LABELS[code]||code||"Programme"}</div>
-            <div style={{fontSize:11, color:C.txtMuted, marginTop:3}}>{ens.nom} Â· {meta?.vh||0}h/sem Â· {meta?.hd||0}h annuelles</div>
+            <div style={{fontSize:15, fontWeight:800, color:C.txt}}>{cl} — {PROGRAMMES_LABELS[code]||code||"Programme"}</div>
+            <div style={{fontSize:11, color:C.txtMuted, marginTop:3}}>{ens.nom} · {meta?.vh||0}h/sem · {meta?.hd||0}h annuelles</div>
           </div>
           <div style={{textAlign:"right", display:"flex", flexDirection:"column", gap:4}}>
             <div style={{fontSize:24, fontWeight:900, color:taux2col(taux)}}>{taux}%</div>
-            <div style={{fontSize:10, color:C.txtMuted}}>{totalFait}/{totalRef} leÃ§ons</div>
+            <div style={{fontSize:10, color:C.txtMuted}}>{totalFait}/{totalRef} leçons</div>
             {(() => {
               const digTotal = lecons.filter(l=>l.d===1 && (!range || (l.n>=range[0]&&l.n<=range[1]))).length;
               const digFait  = digFaites.filter(n=>{ const l=lecons.find(x=>x.n===n); return l&&l.d===1&&(!range||(n>=range[0]&&n<=range[1])); }).length;
@@ -3217,7 +3217,7 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
                 <div style={{display:"inline-flex", alignItems:"center", gap:5, padding:"2px 8px", borderRadius:20,
                   background:digFait>0?"#eff6ff":"#f8fafc", border:`1px solid ${digFait>0?"#bfdbfe":"#e2e8f0"}`,
                   fontSize:10, fontWeight:700, color:digFait>0?"#0369a1":"#94a3b8"}}>
-                  ðŸ’» {digFait}/{digTotal} digital
+                  💻 {digFait}/{digTotal} digital
                 </div>
               ) : null;
             })()}
@@ -3236,12 +3236,12 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
 
       {/* Recherche */}
       <input value={search} onChange={e=>setSearch(e.target.value)}
-        placeholder="ðŸ” Rechercher une leÃ§onâ€¦"
+        placeholder="🔍 Rechercher une leçon…"
         style={{padding:"8px 14px", border:`1px solid ${C.border}`, borderRadius:9, fontSize:12, color:C.txt, background:"#f8fafc", outline:"none", fontFamily:"inherit"}}
         onFocus={e=>{e.target.style.borderColor=C.green; e.target.style.background=C.white;}}
         onBlur={e=>{e.target.style.borderColor=C.border; e.target.style.background="#f8fafc";}}/>
 
-      {/* LeÃ§ons par sÃ©quence */}
+      {/* Leçons par séquence */}
       {seqs.map(seq=>{
         const leconsSec = filtered.filter(l=>(l.seq||l.s)===seq);
         const secFait = leconsSec.filter(l=>faites.includes(l.n)).length;
@@ -3251,7 +3251,7 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
             <div style={{padding:"10px 14px", background:"#f8fafc", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
               <div>
                 <div style={{fontSize:12, fontWeight:700, color:C.txt}}>{seq}</div>
-                <div style={{fontSize:10, color:C.txtMuted}}>{secFait}/{leconsSec.length} dispensÃ©es</div>
+                <div style={{fontSize:10, color:C.txtMuted}}>{secFait}/{leconsSec.length} dispensées</div>
               </div>
               <div style={{display:"flex", alignItems:"center", gap:8}}>
                 <div style={{width:80}}><ProgBar value={secTaux}/></div>
@@ -3261,27 +3261,27 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
             {leconsSec.map((l,li)=>{
               const done      = faites.includes(l.n);
               const isTP      = meta?.tp?.includes(l.n);
-              const isDigital = l.d===1; // leÃ§on disponible en version digitalisÃ©e
-              const digDone   = digFaites.includes(l.n); // ressource digitale utilisÃ©e
+              const isDigital = l.d===1; // leçon disponible en version digitalisée
+              const digDone   = digFaites.includes(l.n); // ressource digitale utilisée
               return (
                 <div key={l.n} onClick={()=>toggleLecon(l.n)}
                   style={{display:"flex", alignItems:"center", gap:12, padding:"9px 14px", borderTop:li>0?`1px solid ${C.border}`:"none", cursor:"pointer", background:done?"rgba(22,163,74,.04)":"transparent", transition:"background .12s"}}
                   onMouseEnter={e=>{if(!done)e.currentTarget.style.background="#f8fafc";}}
                   onMouseLeave={e=>e.currentTarget.style.background=done?"rgba(22,163,74,.04)":"transparent"}>
-                  {/* Checkbox principale â€” dispensÃ©e */}
+                  {/* Checkbox principale — dispensée */}
                   <div style={{width:20, height:20, borderRadius:6, border:`2px solid ${done?C.green:C.border}`, background:done?C.green:"transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
-                    {done && <span style={{color:"#fff", fontSize:12, fontWeight:900}}>âœ“</span>}
+                    {done && <span style={{color:"#fff", fontSize:12, fontWeight:900}}>✓</span>}
                   </div>
                   <span style={{width:22, textAlign:"center", fontSize:11, fontWeight:700, color:done?C.green:C.txtLight}}>{l.n}</span>
                   <span style={{flex:1, fontSize:12, fontWeight:done?600:400, color:done?C.txt:C.txtMuted}}>{l.t}</span>
                   <div style={{display:"flex", gap:5, alignItems:"center"}}>
                     {isTP && <Pill ch="TP" color={C.blue}/>}
-                    {done && <Pill ch="âœ“" color={C.green}/>}
-                    {/* Bouton de bascule digital â€” visible uniquement pour les leÃ§ons digitalisÃ©es */}
+                    {done && <Pill ch="✓" color={C.green}/>}
+                    {/* Bouton de bascule digital — visible uniquement pour les leçons digitalisées */}
                     {isDigital && (
                       <button
                         onClick={(e)=>toggleDigital(l.n, e)}
-                        title={digDone ? "Marquer comme non utilisÃ© en digital" : "Marquer comme utilisÃ© en digital"}
+                        title={digDone ? "Marquer comme non utilisé en digital" : "Marquer comme utilisé en digital"}
                         style={{
                           display:"inline-flex", alignItems:"center", gap:4,
                           padding:"2px 8px", borderRadius:20, fontSize:10, fontWeight:700,
@@ -3291,7 +3291,7 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
                           color:digDone?"#0369a1":"#94a3b8",
                           transition:"all .15s",
                         }}>
-                        ðŸ’» {digDone?"Dig âœ“":"Dig"}
+                        💻 {digDone?"Dig ✓":"Dig"}
                       </button>
                     )}
                   </div>
@@ -3307,9 +3307,9 @@ function EnsClasLecons({ ens, cl, data, setData, showToast, onBack }) {
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// VUE ENSEIGNANT â€” dÃ©tail par classe + cochage leÃ§ons
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// VUE ENSEIGNANT — détail par classe + cochage leçons
+// ═══════════════════════════════════════════════════
 function ViewTeacher({ ens, data, setData, isAdmin }) {
   const {isMobile} = useDevice();
   const [selClasse, setSelClasse] = useState(null);
@@ -3323,7 +3323,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
 
   const classes = (ens.classes || []);
 
-  // SÃ©lection auto premiÃ¨re classe
+  // Sélection auto première classe
   useEffect(() => { if (classes.length && !selClasse) setSelClasse(classes[0]); }, [classes]);
 
   const progKey = selClasse ? `${ens.id}||${selClasse}` : null;
@@ -3335,13 +3335,13 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   const programme = code ? buildLecons(code) : [];
 
   function buildLecons(code) {
-    // GÃ©nÃ¨re les leÃ§ons depuis PROG_META/PROG_MAP
-    // DonnÃ©es inline compactes issues du prototype pour chaque code
+    // Génère les leçons depuis PROG_META/PROG_MAP
+    // Données inline compactes issues du prototype pour chaque code
     return LECONS_DATA[code] || [];
   }
 
   // Filtrage par trimestre
-  // trim est un Number (0/1/2/3) â€” getTrimRange attend "T1"/"T2"/"T3"
+  // trim est un Number (0/1/2/3) — getTrimRange attend "T1"/"T2"/"T3"
   const trimKey = trim > 0 ? ["T1","T2","T3"][trim-1] : null;
   const trimRange = (trimKey && code) ? getTrimRange(code, trimKey) : null;
   const leconsFiltered = programme.filter(l => {
@@ -3360,17 +3360,17 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   const digTotal = programme.filter(l=>l.d===1).length;
   const digFaitCount = digFaitesVT.filter(n=>{ const l=programme.find(x=>x.n===n); return l&&l.d===1; }).length;
 
-  // SÃ©quences uniques pour le rÃ©sumÃ©
+  // Séquences uniques pour le résumé
   const seqs = [...new Set(leconsFiltered.map(l => (l.seq||l.s)))];
 
-  // Toggle leÃ§on (cochage)
+  // Toggle leçon (cochage)
   const toggleLecon = useCallback(async (n) => {
     if (isAdmin) return; // animateur ne coche pas
     const key = `${ens.id}||${selClasse}`;
     const current = [...((data?.prog||{})[key] || [])];
     const newFaites = current.includes(n) ? current.filter(x => x !== n) : [...current, n];
 
-    // Mise Ã  jour optimiste
+    // Mise à jour optimiste
     setData(prev => ({ ...prev, prog: { ...prev.prog, [key]: newFaites } }));
 
     // Debounce sync Supabase (500ms)
@@ -3396,11 +3396,11 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
         }
       }
       setSaving(false);
-      showToast(ok ? "âœ“ Progression sauvegardÃ©e" : "âš  Erreur de sauvegarde", ok);
+      showToast(ok ? "✓ Progression sauvegardée" : "⚠ Erreur de sauvegarde", ok);
     }, 500);
   }, [data, ens, selClasse, isAdmin]);
 
-  // Toggle digital â€” mÃªme mÃ©canique que toggleLecon mais sur la clÃ© ||dig
+  // Toggle digital — même mécanique que toggleLecon mais sur la clé ||dig
   const digTimerVT = useRef(null);
   useEffect(()=>()=>{ if(digTimerVT.current) clearTimeout(digTimerVT.current); },[]);
   const toggleDigitalVT = useCallback(async (n, e) => {
@@ -3431,7 +3431,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
         }
       }
       setSaving(false);
-      showToast(ok ? "âœ“ Digitalisation mise Ã  jour" : "âš  Erreur de sauvegarde", ok);
+      showToast(ok ? "✓ Digitalisation mise à jour" : "⚠ Erreur de sauvegarde", ok);
     }, 500);
   }, [data, ens, selClasse]);
 
@@ -3443,8 +3443,8 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   if (!classes.length) {
     return (
       <div style={{ textAlign:"center",padding:"60px 24px",color:C.txtMuted }}>
-        <div style={{ fontSize:40,marginBottom:12 }}>ðŸ“­</div>
-        <div style={{ fontSize:14,fontWeight:600 }}>Aucune classe assignÃ©e Ã  {ens.nom}</div>
+        <div style={{ fontSize:40,marginBottom:12 }}>📭</div>
+        <div style={{ fontSize:14,fontWeight:600 }}>Aucune classe assignée à {ens.nom}</div>
       </div>
     );
   }
@@ -3453,7 +3453,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
     <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
       {toast && <Toast msg={toast.msg} ok={toast.ok}/>}
 
-      {/* SÃ©lecteur de classes */}
+      {/* Sélecteur de classes */}
       <div style={{ display:"flex",gap:8,flexWrap:"wrap",alignItems:"center" }}>
         <span style={{ fontSize:12,color:C.txtMuted,fontWeight:600 }}>Classe :</span>
         {classes.map(cl => {
@@ -3475,14 +3475,14 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
 
       {selClasse && (
         <>
-          {/* Stats classe sÃ©lectionnÃ©e */}
+          {/* Stats classe sélectionnée */}
           <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:10 }}>
             {[
-              { label:"LeÃ§ons dispensÃ©es", val:totalFait, sub:`/ ${totalRef} prÃ©vues`, col:taux2col(tauxCouv), emoji:"âœ…" },
-              { label:"Couverture", val:`${tauxCouv}%`, sub:tauxCouv>=75?"Objectif atteint âœ“":"Sous l'objectif", col:taux2col(tauxCouv), emoji:"ðŸ“Š" },
-              { label:"TP effectuÃ©s", val:tpFait, sub:`/ ${tpTotal} prÃ©vus`, col:C.blue, emoji:"ðŸ”¬" },
-              ...(digTotal>0 ? [{ label:"Ressources digitales", val:digFaitCount, sub:`/ ${digTotal} disponibles`, col:"#0369a1", emoji:"ðŸ’»" }] : []),
-              { label:"Volume horaire", val:meta?`${meta.vh}h/sem`:"â€”", sub:meta?`${meta.hd}h annuelles`:"", col:C.purple, emoji:"â±" },
+              { label:"Leçons dispensées", val:totalFait, sub:`/ ${totalRef} prévues`, col:taux2col(tauxCouv), emoji:"✅" },
+              { label:"Couverture", val:`${tauxCouv}%`, sub:tauxCouv>=75?"Objectif atteint ✓":"Sous l'objectif", col:taux2col(tauxCouv), emoji:"📊" },
+              { label:"TP effectués", val:tpFait, sub:`/ ${tpTotal} prévus`, col:C.blue, emoji:"🔬" },
+              ...(digTotal>0 ? [{ label:"Ressources digitales", val:digFaitCount, sub:`/ ${digTotal} disponibles`, col:"#0369a1", emoji:"💻" }] : []),
+              { label:"Volume horaire", val:meta?`${meta.vh}h/sem`:"—", sub:meta?`${meta.hd}h annuelles`:"", col:C.purple, emoji:"⏱" },
             ].map((s,i) => (
               <div key={i} style={{ background:C.white,borderRadius:10,border:`1px solid ${C.border}`,padding:"12px 14px" }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4 }}>
@@ -3498,7 +3498,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
           {/* Barre de progression globale */}
           <div style={{ background:C.white,borderRadius:10,border:`1px solid ${C.border}`,padding:"14px 16px" }}>
             <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
-              <span style={{ fontSize:12,fontWeight:700,color:C.txt }}>{selClasse} â€” {PROGRAMMES_LABELS[code] || code}</span>
+              <span style={{ fontSize:12,fontWeight:700,color:C.txt }}>{selClasse} — {PROGRAMMES_LABELS[code] || code}</span>
               <span style={{ fontSize:13,fontWeight:800,color:taux2col(tauxCouv) }}>{tauxCouv}%</span>
             </div>
             <ProgBar value={tauxCouv} h={10}/>
@@ -3516,7 +3516,7 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
               ))}
             </div>
             {/* Recherche */}
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ðŸ” Rechercher une leÃ§onâ€¦"
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher une leçon…"
               style={{ padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.txt,background:"#f8fafc",outline:"none",fontFamily:"inherit",flex:1,minWidth:160 }}
               onFocus={e=>{ e.target.style.borderColor=C.green; e.target.style.background=C.white; }}
               onBlur={e=>{ e.target.style.borderColor=C.border; e.target.style.background="#f8fafc"; }}/>
@@ -3526,11 +3526,11 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
               Seulement faites
             </label>
             {/* Indicateur sauvegarde */}
-            {saving && <Pill ch="ðŸ”„ Sauvegardeâ€¦" color={C.blue}/>}
-            {!isAdmin && <Pill ch="âœï¸ Cliquez sur une leÃ§on pour la cocher/dÃ©cocher" color={C.txtMuted}/>}
+            {saving && <Pill ch="🔄 Sauvegarde…" color={C.blue}/>}
+            {!isAdmin && <Pill ch="✏️ Cliquez sur une leçon pour la cocher/décocher" color={C.txtMuted}/>}
           </div>
 
-          {/* Liste des leÃ§ons par sÃ©quence */}
+          {/* Liste des leçons par séquence */}
           <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
             {seqs.map(seq => {
               const lecons = leconsFiltered.filter(l => (l.seq||l.s) === seq);
@@ -3539,23 +3539,23 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
               const seqTotal = lecons.length;
               return (
                 <div key={seq} style={{ background:C.white,borderRadius:11,border:`1px solid ${C.border}`,overflow:"hidden" }}>
-                  {/* Header sÃ©quence */}
+                  {/* Header séquence */}
                   <div style={{ padding:"10px 14px",background:"#f8fafc",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:12,fontWeight:700,color:C.txt }}>{seq}</div>
-                      <div style={{ fontSize:10,color:C.txtMuted,marginTop:2 }}>{seqFait}/{seqTotal} leÃ§ons dispensÃ©es</div>
+                      <div style={{ fontSize:10,color:C.txtMuted,marginTop:2 }}>{seqFait}/{seqTotal} leçons dispensées</div>
                     </div>
                     <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                       <div style={{ width:80 }}><ProgBar value={seqTotal>0?Math.min(100, Math.round(seqFait/seqTotal*100)):0}/></div>
                       <span style={{ fontSize:11,fontWeight:700,color:taux2col(seqTotal>0?Math.min(100, Math.round(seqFait/seqTotal*100)):0),minWidth:30,textAlign:"right" }}>{seqTotal>0?Math.min(100, Math.round(seqFait/seqTotal*100)):0}%</span>
                     </div>
                   </div>
-                  {/* LeÃ§ons */}
+                  {/* Leçons */}
                   <div>
                     {lecons.map((l, li) => {
                       const done = faites.includes(l.n);
                       const isTP = meta?.tp?.includes(l.n);
-                      const isInteg = /intÃ©gration/i.test(l.t);
+                      const isInteg = /intégration/i.test(l.t);
                       const isDigital = l.d===1;
                       const digDoneVT = digFaitesVT.includes(l.n);
                       return (
@@ -3565,9 +3565,9 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
                           onMouseLeave={e=>{ if(!isAdmin) e.currentTarget.style.background=done?"rgba(22,163,74,.04)":"transparent"; }}>
                           {/* Checkbox */}
                           <div style={{ width:20,height:20,borderRadius:6,border:`2px solid ${done?C.green:C.border}`,background:done?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .2s" }}>
-                            {done && <span style={{ color:"#fff",fontSize:12,fontWeight:800 }}>âœ“</span>}
+                            {done && <span style={{ color:"#fff",fontSize:12,fontWeight:800 }}>✓</span>}
                           </div>
-                          {/* NumÃ©ro */}
+                          {/* Numéro */}
                           <div style={{ width:24,textAlign:"center",fontSize:11,fontWeight:700,color:done?C.green:C.txtLight,flexShrink:0 }}>{l.n}</div>
                           {/* Titre */}
                           <div style={{ flex:1 }}>
@@ -3576,14 +3576,14 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
                           {/* Badges */}
                           <div style={{ display:"flex",gap:5,flexShrink:0,alignItems:"center" }}>
                             {isTP && <Pill ch="TP" color={C.blue}/>}
-                            {isInteg && <Pill ch="IntÃ©gration" color={C.amber}/>}
-                            {done && <Pill ch="âœ“ Fait" color={C.green}/>}
+                            {isInteg && <Pill ch="Intégration" color={C.amber}/>}
+                            {done && <Pill ch="✓ Fait" color={C.green}/>}
                             {isDigital && (
                               <button onClick={(e)=>toggleDigitalVT(l.n,e)}
-                                title={digDoneVT?"Retirer la ressource digitale":"Marquer comme utilisÃ© en digital"}
+                                title={digDoneVT?"Retirer la ressource digitale":"Marquer comme utilisé en digital"}
                                 style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,
                                   border:`1.5px solid ${digDoneVT?"#0369a1":"#cbd5e1"}`,background:digDoneVT?"#eff6ff":"transparent",color:digDoneVT?"#0369a1":"#94a3b8",transition:"all .15s" }}>
-                                ðŸ’» {digDoneVT?"Dig âœ“":"Dig"}
+                                💻 {digDoneVT?"Dig ✓":"Dig"}
                               </button>
                             )}
                           </div>
@@ -3596,8 +3596,8 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
             })}
             {leconsFiltered.length === 0 && (
               <div style={{ textAlign:"center",padding:"40px",color:C.txtMuted }}>
-                <div style={{ fontSize:32,marginBottom:8 }}>ðŸ”</div>
-                <div style={{ fontSize:13 }}>Aucune leÃ§on trouvÃ©e avec ces filtres</div>
+                <div style={{ fontSize:32,marginBottom:8 }}>🔍</div>
+                <div style={{ fontSize:13 }}>Aucune leçon trouvée avec ces filtres</div>
               </div>
             )}
           </div>
@@ -3607,701 +3607,701 @@ function ViewTeacher({ ens, data, setData, isAdmin }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// DONNÃ‰ES LEÃ‡ONS (subset compact â€” les 12 programmes)
-// On gÃ©nÃ¨re les leÃ§ons depuis les donnÃ©es embarquÃ©es du prototype
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// DONNÉES LEÇONS (subset compact — les 12 programmes)
+// On génère les leçons depuis les données embarquées du prototype
+// ═══════════════════════════════════════════════════
 
 const LECONS_DATA = {
   "TERM_D": [
-    {n:1,s:"SÃ‰Q 1",t:"Ã‰changes d'eau",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"InterprÃ©tation des Ã©changes d'eau",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Ã‰changes des substances dissoutes, des particules",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 1",t:"Structure d'une fibre musculaire squelettique striÃ©e",c:1,d:1},
-    {n:6,s:"SÃ‰Q 1",t:"MÃ©canisme de la contraction musculaire",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Voies de restauration de l'ATP",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"Structures et rÃ´les des gonades chez les mammifÃ¨res",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Structures et rÃ´les des gonades chez les spermaphytes",c:1,d:1},
-    {n:11,s:"SÃ‰Q 2",t:"La mÃ©iose",c:1,d:1},
-    {n:12,s:"SÃ‰Q 2",t:"GamÃ©togenÃ¨se chez les mammifÃ¨res",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"GamÃ©togenÃ¨se chez les spermaphytes",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"FÃ©condation chez les mammifÃ¨res",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"FÃ©condation chez les spermaphytes",c:1,d:1},
-    {n:16,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 3",t:"Monohybridisme avec dominance",c:1,d:1},
-    {n:18,s:"SÃ‰Q 3",t:"Monohybridisme avec dominance intermÃ©diaire",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Monohybridisme gonosomal",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Dihybridisme",c:1,d:1},
-    {n:21,s:"SÃ‰Q 4",t:"Trihybridisme",c:1,d:1},
-    {n:22,s:"SÃ‰Q 4",t:"Brassage intrachromosomique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 4",t:"Quelques exceptions Ã  la monogÃ©nie",c:1,d:1},
-    {n:24,s:"SÃ‰Q 4",t:"Origine des nouveaux allÃ¨les",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"Notion d'arbre gÃ©nÃ©alogique",c:1,d:1},
-    {n:26,s:"SÃ‰Q 5",t:"Transmissions autosomiques",c:1,d:1},
-    {n:27,s:"SÃ‰Q 5",t:"Transmissions gonosomiques",c:1,d:1},
-    {n:28,s:"SÃ‰Q 5",t:"Ã‰valuation d'un risque gÃ©nÃ©tique",c:1,d:0},
-    {n:29,s:"SÃ‰Q 5",t:"Applications et implications des connaissances",c:1,d:1},
-    {n:30,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:31,s:"SÃ‰Q 6",t:"Structure du tissu nerveux",c:1,d:1},
-    {n:32,s:"SÃ‰Q 6",t:"RÃ©flexes innÃ©s (rÃ©flexe mÃ©dullaire)",c:1,d:1},
-    {n:33,s:"SÃ‰Q 6",t:"RÃ©flexes innÃ©s (rÃ©flexe myotatique)",c:1,d:1},
-    {n:34,s:"SÃ‰Q 6",t:"RÃ©flexes acquis",c:1,d:1},
-    {n:35,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SÃ‰Q 6",t:"Le potentiel de repos",c:1,d:1},
-    {n:37,s:"SÃ‰Q 7",t:"Le potentiel d'action",c:1,d:1},
-    {n:38,s:"SÃ‰Q 7",t:"Naissance du potentiel d'action",c:1,d:1},
-    {n:39,s:"SÃ‰Q 7",t:"Propagation du potentiel d'action",c:1,d:1},
-    {n:40,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:41,s:"SÃ‰Q 7",t:"Synapse : Structure",c:1,d:1},
-    {n:42,s:"SÃ‰Q 7",t:"Synapse : Fonctionnement",c:1,d:1},
-    {n:43,s:"SÃ‰Q 8",t:"L'intÃ©gration neuronale",c:1,d:1},
-    {n:44,s:"SÃ‰Q 8",t:"Effets de certaines substances",c:1,d:1},
-    {n:45,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:46,s:"SÃ‰Q 8",t:"Les diffÃ©rentes aires de l'encÃ©phale",c:1,d:1},
-    {n:47,s:"SÃ‰Q 8",t:"Quelques aspects de la motricitÃ© dirigÃ©e",c:1,d:1},
-    {n:48,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:49,s:"SÃ‰Q 9",t:"Origine des cellules immunitaires",c:1,d:1},
-    {n:50,s:"SÃ‰Q 9",t:"Structure de reconnaissance du non-soi",c:1,d:1},
-    {n:51,s:"SÃ‰Q 9",t:"MÃ©canisme de la rÃ©ponse immunitaire non spÃ©cifique",c:1,d:1},
-    {n:52,s:"SÃ‰Q 9",t:"MÃ©canisme de la rÃ©ponse immunitaire spÃ©cifique",c:1,d:1},
-    {n:53,s:"SÃ‰Q 9",t:"MÃ©moire immunitaire",c:1,d:1},
-    {n:54,s:"SÃ‰Q 9",t:"Maladies auto-immunes",c:1,d:1},
-    {n:55,s:"SÃ‰Q 10",t:"PandÃ©mies et leurs consÃ©quences",c:1,d:1},
-    {n:56,s:"SÃ‰Q 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:57,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez l'homme (1)",c:1,d:1},
-    {n:58,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez l'homme (2)",c:1,d:1},
-    {n:59,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez la femme (1)",c:1,d:1},
-    {n:60,s:"SÃ‰Q 10",t:"RÃ©gulation du taux d'hormones sexuelles chez la femme (2)",c:1,d:1},
-    {n:61,s:"SÃ‰Q 11",t:"RÃ©gulation du taux d'hormones sexuelles chez la femme (3)",c:1,d:1},
-    {n:62,s:"SÃ‰Q 11",t:"MaÃ®trise de la reproduction",c:1,d:1},
-    {n:63,s:"SÃ‰Q 11",t:"DÃ©rÃ¨glements des hormones sexuelles",c:1,d:1},
-    {n:64,s:"SÃ‰Q 11",t:"StÃ©rilitÃ©",c:1,d:1},
-    {n:65,s:"SÃ‰Q 11",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:66,s:"SÃ‰Q 11",t:"GlycÃ©mie : mesure et causes",c:1,d:1},
-    {n:67,s:"SÃ‰Q 12",t:"GlycÃ©mie : rÃ©gulation",c:1,d:1},
-    {n:68,s:"SÃ‰Q 12",t:"GlycÃ©mie : consÃ©quences",c:1,d:1},
-    {n:69,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : dÃ©finition et mesure",c:1,d:1},
-    {n:70,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : rÃ©gulation nerveuse",c:1,d:1},
-    {n:71,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : rÃ©gulation hormonale",c:1,d:1},
-    {n:72,s:"SÃ‰Q 12",t:"Pression artÃ©rielle : consÃ©quences",c:1,d:1},
-    {n:73,s:"SÃ‰Q 13",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:74,s:"SÃ‰Q 13",t:"ArrÃªt cardiaque",c:1,d:1},
-    {n:75,s:"SÃ‰Q 13",t:"Ã‰touffement total",c:1,d:1},
-    {n:76,s:"SÃ‰Q 13",t:"Perte de connaissance",c:1,d:1},
-    {n:77,s:"SÃ‰Q 13",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:78,s:"SÃ‰Q 13",t:"Plancher ocÃ©anique : morphologie",c:1,d:1},
-    {n:79,s:"SÃ‰Q 14",t:"Plancher ocÃ©anique : fonctionnement d'un rift",c:1,d:1},
-    {n:80,s:"SÃ‰Q 14",t:"Plancher ocÃ©anique : mouvements de convergence",c:1,d:1},
-    {n:81,s:"SÃ‰Q 14",t:"Plancher ocÃ©anique : mouvements de coulissage",c:1,d:1},
-    {n:82,s:"SÃ‰Q 14",t:"Catastrophes naturelles associÃ©es aux mouvements des plaques",c:1,d:1},
-    {n:83,s:"SÃ‰Q 14",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:84,s:"SÃ‰Q 14",t:"Les preuves de l'Ã©volution de l'Homme",c:1,d:1},
-    {n:85,s:"SÃ‰Q 15",t:"Les critÃ¨res de l'hominisation",c:1,d:1},
-    {n:86,s:"SÃ‰Q 15",t:"CapacitÃ© d'adaptation de l'Homme",c:1,d:1},
-    {n:87,s:"SÃ‰Q 15",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:88,s:"SÃ‰Q 15",t:"Transformation et conservation des fruits (mangue, tomate)",c:1,d:1},
-    {n:89,s:"SÃ‰Q 15",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:90,s:"SÃ‰Q 15",t:"Insectes comestibles et lutte biologique",c:1,d:1},
-    {n:91,s:"SÃ‰Q 16",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:92,s:"SÃ‰Q 16",t:"Production des biocarburants",c:1,d:1},
-    {n:93,s:"SÃ‰Q 16",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:94,s:"SÃ‰Q 16",t:"Valorisation des dÃ©chets papiers",c:1,d:1},
-    {n:95,s:"SÃ‰Q 16",t:"Valorisation des dÃ©chets plastiques",c:1,d:1},
-    {n:96,s:"SÃ‰Q 16",t:"Valorisation des dÃ©chets plastiques (suite)",c:1,d:1},
-    {n:97,s:"SÃ‰Q 17",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Échanges d'eau",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Interprétation des échanges d'eau",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Échanges des substances dissoutes, des particules",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 1",t:"Structure d'une fibre musculaire squelettique striée",c:1,d:1},
+    {n:6,s:"SÉQ 1",t:"Mécanisme de la contraction musculaire",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Voies de restauration de l'ATP",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"Structures et rôles des gonades chez les mammifères",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Structures et rôles des gonades chez les spermaphytes",c:1,d:1},
+    {n:11,s:"SÉQ 2",t:"La méiose",c:1,d:1},
+    {n:12,s:"SÉQ 2",t:"Gamétogenèse chez les mammifères",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Gamétogenèse chez les spermaphytes",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Fécondation chez les mammifères",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Fécondation chez les spermaphytes",c:1,d:1},
+    {n:16,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 3",t:"Monohybridisme avec dominance",c:1,d:1},
+    {n:18,s:"SÉQ 3",t:"Monohybridisme avec dominance intermédiaire",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Monohybridisme gonosomal",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Dihybridisme",c:1,d:1},
+    {n:21,s:"SÉQ 4",t:"Trihybridisme",c:1,d:1},
+    {n:22,s:"SÉQ 4",t:"Brassage intrachromosomique",c:1,d:1},
+    {n:23,s:"SÉQ 4",t:"Quelques exceptions à la monogénie",c:1,d:1},
+    {n:24,s:"SÉQ 4",t:"Origine des nouveaux allèles",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Notion d'arbre généalogique",c:1,d:1},
+    {n:26,s:"SÉQ 5",t:"Transmissions autosomiques",c:1,d:1},
+    {n:27,s:"SÉQ 5",t:"Transmissions gonosomiques",c:1,d:1},
+    {n:28,s:"SÉQ 5",t:"Évaluation d'un risque génétique",c:1,d:0},
+    {n:29,s:"SÉQ 5",t:"Applications et implications des connaissances",c:1,d:1},
+    {n:30,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:31,s:"SÉQ 6",t:"Structure du tissu nerveux",c:1,d:1},
+    {n:32,s:"SÉQ 6",t:"Réflexes innés (réflexe médullaire)",c:1,d:1},
+    {n:33,s:"SÉQ 6",t:"Réflexes innés (réflexe myotatique)",c:1,d:1},
+    {n:34,s:"SÉQ 6",t:"Réflexes acquis",c:1,d:1},
+    {n:35,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SÉQ 6",t:"Le potentiel de repos",c:1,d:1},
+    {n:37,s:"SÉQ 7",t:"Le potentiel d'action",c:1,d:1},
+    {n:38,s:"SÉQ 7",t:"Naissance du potentiel d'action",c:1,d:1},
+    {n:39,s:"SÉQ 7",t:"Propagation du potentiel d'action",c:1,d:1},
+    {n:40,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:41,s:"SÉQ 7",t:"Synapse : Structure",c:1,d:1},
+    {n:42,s:"SÉQ 7",t:"Synapse : Fonctionnement",c:1,d:1},
+    {n:43,s:"SÉQ 8",t:"L'intégration neuronale",c:1,d:1},
+    {n:44,s:"SÉQ 8",t:"Effets de certaines substances",c:1,d:1},
+    {n:45,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:46,s:"SÉQ 8",t:"Les différentes aires de l'encéphale",c:1,d:1},
+    {n:47,s:"SÉQ 8",t:"Quelques aspects de la motricité dirigée",c:1,d:1},
+    {n:48,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:49,s:"SÉQ 9",t:"Origine des cellules immunitaires",c:1,d:1},
+    {n:50,s:"SÉQ 9",t:"Structure de reconnaissance du non-soi",c:1,d:1},
+    {n:51,s:"SÉQ 9",t:"Mécanisme de la réponse immunitaire non spécifique",c:1,d:1},
+    {n:52,s:"SÉQ 9",t:"Mécanisme de la réponse immunitaire spécifique",c:1,d:1},
+    {n:53,s:"SÉQ 9",t:"Mémoire immunitaire",c:1,d:1},
+    {n:54,s:"SÉQ 9",t:"Maladies auto-immunes",c:1,d:1},
+    {n:55,s:"SÉQ 10",t:"Pandémies et leurs conséquences",c:1,d:1},
+    {n:56,s:"SÉQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:57,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez l'homme (1)",c:1,d:1},
+    {n:58,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez l'homme (2)",c:1,d:1},
+    {n:59,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez la femme (1)",c:1,d:1},
+    {n:60,s:"SÉQ 10",t:"Régulation du taux d'hormones sexuelles chez la femme (2)",c:1,d:1},
+    {n:61,s:"SÉQ 11",t:"Régulation du taux d'hormones sexuelles chez la femme (3)",c:1,d:1},
+    {n:62,s:"SÉQ 11",t:"Maîtrise de la reproduction",c:1,d:1},
+    {n:63,s:"SÉQ 11",t:"Dérèglements des hormones sexuelles",c:1,d:1},
+    {n:64,s:"SÉQ 11",t:"Stérilité",c:1,d:1},
+    {n:65,s:"SÉQ 11",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:66,s:"SÉQ 11",t:"Glycémie : mesure et causes",c:1,d:1},
+    {n:67,s:"SÉQ 12",t:"Glycémie : régulation",c:1,d:1},
+    {n:68,s:"SÉQ 12",t:"Glycémie : conséquences",c:1,d:1},
+    {n:69,s:"SÉQ 12",t:"Pression artérielle : définition et mesure",c:1,d:1},
+    {n:70,s:"SÉQ 12",t:"Pression artérielle : régulation nerveuse",c:1,d:1},
+    {n:71,s:"SÉQ 12",t:"Pression artérielle : régulation hormonale",c:1,d:1},
+    {n:72,s:"SÉQ 12",t:"Pression artérielle : conséquences",c:1,d:1},
+    {n:73,s:"SÉQ 13",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:74,s:"SÉQ 13",t:"Arrêt cardiaque",c:1,d:1},
+    {n:75,s:"SÉQ 13",t:"Étouffement total",c:1,d:1},
+    {n:76,s:"SÉQ 13",t:"Perte de connaissance",c:1,d:1},
+    {n:77,s:"SÉQ 13",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:78,s:"SÉQ 13",t:"Plancher océanique : morphologie",c:1,d:1},
+    {n:79,s:"SÉQ 14",t:"Plancher océanique : fonctionnement d'un rift",c:1,d:1},
+    {n:80,s:"SÉQ 14",t:"Plancher océanique : mouvements de convergence",c:1,d:1},
+    {n:81,s:"SÉQ 14",t:"Plancher océanique : mouvements de coulissage",c:1,d:1},
+    {n:82,s:"SÉQ 14",t:"Catastrophes naturelles associées aux mouvements des plaques",c:1,d:1},
+    {n:83,s:"SÉQ 14",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:84,s:"SÉQ 14",t:"Les preuves de l'évolution de l'Homme",c:1,d:1},
+    {n:85,s:"SÉQ 15",t:"Les critères de l'hominisation",c:1,d:1},
+    {n:86,s:"SÉQ 15",t:"Capacité d'adaptation de l'Homme",c:1,d:1},
+    {n:87,s:"SÉQ 15",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:88,s:"SÉQ 15",t:"Transformation et conservation des fruits (mangue, tomate)",c:1,d:1},
+    {n:89,s:"SÉQ 15",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:90,s:"SÉQ 15",t:"Insectes comestibles et lutte biologique",c:1,d:1},
+    {n:91,s:"SÉQ 16",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:92,s:"SÉQ 16",t:"Production des biocarburants",c:1,d:1},
+    {n:93,s:"SÉQ 16",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:94,s:"SÉQ 16",t:"Valorisation des déchets papiers",c:1,d:1},
+    {n:95,s:"SÉQ 16",t:"Valorisation des déchets plastiques",c:1,d:1},
+    {n:96,s:"SÉQ 16",t:"Valorisation des déchets plastiques (suite)",c:1,d:1},
+    {n:97,s:"SÉQ 17",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "PREM_D": [
-    {n:1,s:"SEQ 1",t:"Cellules animale et vÃ©gÃ©tale vues au microscope",c:1,d:1},
-    {n:2,s:"SEQ 1",t:"Ultrastructures et rÃ´les des organites",c:1,d:1},
+    {n:1,s:"SEQ 1",t:"Cellules animale et végétale vues au microscope",c:1,d:1},
+    {n:2,s:"SEQ 1",t:"Ultrastructures et rôles des organites",c:1,d:1},
     {n:3,s:"SEQ 1",t:"Structure et composition chimique d'un chromosome",c:1,d:1},
-    {n:4,s:"SEQ 1",t:"L'ADN, support de l'information gÃ©nÃ©tique",c:1,d:1},
+    {n:4,s:"SEQ 1",t:"L'ADN, support de l'information génétique",c:1,d:1},
     {n:5,s:"SEQ 1",t:"Division cellulaire",c:1,d:1},
-    {n:6,s:"SEQ 1",t:"Cycle cellulaire et rÃ´les de la mitose",c:1,d:1},
-    {n:7,s:"SEQ 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:8,s:"SEQ 2",t:"Le renouvellement permanent des molÃ©cules",c:1,d:1},
-    {n:9,s:"SEQ 2",t:"La biosynthÃ¨se des protÃ©ines : la transcription",c:1,d:1},
-    {n:10,s:"SEQ 2",t:"BiosynthÃ¨se des protÃ©ines : la traduction",c:1,d:1},
-    {n:11,s:"SEQ 2",t:"BiosynthÃ¨se des protÃ©ines : le devenir des protÃ©ines",c:1,d:1},
-    {n:12,s:"SEQ 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SEQ 2",t:"GÃ©nie gÃ©nÃ©tique : caractÃ©ristiques des plantes transgÃ©niques",c:1,d:1},
-    {n:14,s:"SEQ 2",t:"GÃ©nie gÃ©nÃ©tique : technique d'obtention",c:1,d:1},
-    {n:15,s:"SEQ 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:16,s:"SEQ 3",t:"Relation entre l'Ã©quipement enzymatique et les rÃ©actions",c:1,d:1},
-    {n:17,s:"SEQ 3",t:"CaractÃ©ristiques de l'activitÃ© enzymatique",c:1,d:1},
-    {n:18,s:"SEQ 3",t:"Relation entre structure et fonction de la protÃ©ine",c:1,d:1},
+    {n:6,s:"SEQ 1",t:"Cycle cellulaire et rôles de la mitose",c:1,d:1},
+    {n:7,s:"SEQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:8,s:"SEQ 2",t:"Le renouvellement permanent des molécules",c:1,d:1},
+    {n:9,s:"SEQ 2",t:"La biosynthèse des protéines : la transcription",c:1,d:1},
+    {n:10,s:"SEQ 2",t:"Biosynthèse des protéines : la traduction",c:1,d:1},
+    {n:11,s:"SEQ 2",t:"Biosynthèse des protéines : le devenir des protéines",c:1,d:1},
+    {n:12,s:"SEQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SEQ 2",t:"Génie génétique : caractéristiques des plantes transgéniques",c:1,d:1},
+    {n:14,s:"SEQ 2",t:"Génie génétique : technique d'obtention",c:1,d:1},
+    {n:15,s:"SEQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:16,s:"SEQ 3",t:"Relation entre l'équipement enzymatique et les réactions",c:1,d:1},
+    {n:17,s:"SEQ 3",t:"Caractéristiques de l'activité enzymatique",c:1,d:1},
+    {n:18,s:"SEQ 3",t:"Relation entre structure et fonction de la protéine",c:1,d:1},
     {n:19,s:"SEQ 3",t:"Quelques applications de la catalyse enzymatique",c:1,d:1},
-    {n:20,s:"SEQ 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SEQ 3",t:"Ã‰valuation de la dÃ©pense Ã©nergÃ©tique",c:1,d:0},
-    {n:22,s:"SEQ 4",t:"Facteurs de variation de la dÃ©pense Ã©nergÃ©tique",c:1,d:1},
-    {n:23,s:"SEQ 4",t:"Le mÃ©tabolisme de base",c:1,d:1},
-    {n:24,s:"SEQ 4",t:"Les apports Ã©nergÃ©tiques",c:1,d:1},
-    {n:25,s:"SEQ 4",t:"DÃ©penses Ã©nergÃ©tiques produites par la respiration",c:1,d:1},
-    {n:26,s:"SEQ 4",t:"Le mÃ©canisme de la respiration",c:1,d:1},
-    {n:27,s:"SEQ 4",t:"DÃ©penses Ã©nergÃ©tiques produites par la fermentation",c:1,d:1},
-    {n:28,s:"SEQ 4",t:"Les mÃ©canismes de la fermentation",c:1,d:1},
-    {n:29,s:"SEQ 5",t:"Rendement Ã©nergÃ©tique de la respiration et de la fermentation",c:1,d:1},
-    {n:30,s:"SEQ 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:31,s:"SEQ 5",t:"Le captage de l'Ã©nergie lumineuse",c:1,d:1},
-    {n:32,s:"SEQ 5",t:"MÃ©canisme de la photosynthÃ¨se : la phase chimique",c:1,d:1},
-    {n:33,s:"SEQ 5",t:"MÃ©canisme de la photosynthÃ¨se : la phase photochimique",c:1,d:1},
-    {n:34,s:"SEQ 5",t:"Importance de la photosynthÃ¨se",c:1,d:1},
-    {n:35,s:"SEQ 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SEQ 6",t:"Organisation d'un Ã©cosystÃ¨me",c:1,d:1},
-    {n:37,s:"SEQ 6",t:"Le flux et la dissipation de l'Ã©nergie",c:1,d:1},
-    {n:38,s:"SEQ 6",t:"Le cycle biogÃ©ochimique du carbone (rÃ©servoirs)",c:1,d:1},
-    {n:39,s:"SEQ 6",t:"Le cycle biogÃ©ochimique du carbone (modifications)",c:1,d:1},
-    {n:40,s:"SEQ 6",t:"Le cycle biogÃ©ochimique de l'azote",c:1,d:1},
-    {n:41,s:"SEQ 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:20,s:"SEQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SEQ 3",t:"Évaluation de la dépense énergétique",c:1,d:0},
+    {n:22,s:"SEQ 4",t:"Facteurs de variation de la dépense énergétique",c:1,d:1},
+    {n:23,s:"SEQ 4",t:"Le métabolisme de base",c:1,d:1},
+    {n:24,s:"SEQ 4",t:"Les apports énergétiques",c:1,d:1},
+    {n:25,s:"SEQ 4",t:"Dépenses énergétiques produites par la respiration",c:1,d:1},
+    {n:26,s:"SEQ 4",t:"Le mécanisme de la respiration",c:1,d:1},
+    {n:27,s:"SEQ 4",t:"Dépenses énergétiques produites par la fermentation",c:1,d:1},
+    {n:28,s:"SEQ 4",t:"Les mécanismes de la fermentation",c:1,d:1},
+    {n:29,s:"SEQ 5",t:"Rendement énergétique de la respiration et de la fermentation",c:1,d:1},
+    {n:30,s:"SEQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:31,s:"SEQ 5",t:"Le captage de l'énergie lumineuse",c:1,d:1},
+    {n:32,s:"SEQ 5",t:"Mécanisme de la photosynthèse : la phase chimique",c:1,d:1},
+    {n:33,s:"SEQ 5",t:"Mécanisme de la photosynthèse : la phase photochimique",c:1,d:1},
+    {n:34,s:"SEQ 5",t:"Importance de la photosynthèse",c:1,d:1},
+    {n:35,s:"SEQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SEQ 6",t:"Organisation d'un écosystème",c:1,d:1},
+    {n:37,s:"SEQ 6",t:"Le flux et la dissipation de l'énergie",c:1,d:1},
+    {n:38,s:"SEQ 6",t:"Le cycle biogéochimique du carbone (réservoirs)",c:1,d:1},
+    {n:39,s:"SEQ 6",t:"Le cycle biogéochimique du carbone (modifications)",c:1,d:1},
+    {n:40,s:"SEQ 6",t:"Le cycle biogéochimique de l'azote",c:1,d:1},
+    {n:41,s:"SEQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
     {n:42,s:"SEQ 6",t:"Le soi",c:1,d:1},
     {n:43,s:"SEQ 7",t:"Le non-soi",c:1,d:1},
     {n:44,s:"SEQ 7",t:"Les principales cellules immunitaires",c:1,d:1},
     {n:45,s:"SEQ 7",t:"Le virus et son mode d'action",c:1,d:1},
     {n:46,s:"SEQ 7",t:"La multiplication du virus",c:1,d:1},
-    {n:47,s:"SEQ 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:48,s:"SEQ 7",t:"La sexualitÃ© prÃ©coce et ses consÃ©quences",c:1,d:1},
-    {n:49,s:"SEQ 7",t:"Les mutilations gÃ©nitales",c:1,d:1},
-    {n:50,s:"SEQ 8",t:"La prise des stupÃ©fiants",c:1,d:1},
-    {n:51,s:"SEQ 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:52,s:"SEQ 8",t:"L'alimentation Ã©quilibrÃ©e : dÃ©finition",c:1,d:1},
-    {n:53,s:"SEQ 8",t:"L'alimentation Ã©quilibrÃ©e : un menu Ã©quilibrÃ©",c:1,d:1},
-    {n:54,s:"SEQ 8",t:"Les consÃ©quences de la mauvaise alimentation",c:1,d:1},
-    {n:55,s:"SEQ 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:56,s:"SEQ 8",t:"L'origine de l'Ã©nergie reÃ§ue par la planÃ¨te",c:1,d:1},
-    {n:57,s:"SEQ 9",t:"Le devenir du rayonnement solaire (albÃ©do)",c:1,d:1},
+    {n:47,s:"SEQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:48,s:"SEQ 7",t:"La sexualité précoce et ses conséquences",c:1,d:1},
+    {n:49,s:"SEQ 7",t:"Les mutilations génitales",c:1,d:1},
+    {n:50,s:"SEQ 8",t:"La prise des stupéfiants",c:1,d:1},
+    {n:51,s:"SEQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:52,s:"SEQ 8",t:"L'alimentation équilibrée : définition",c:1,d:1},
+    {n:53,s:"SEQ 8",t:"L'alimentation équilibrée : un menu équilibré",c:1,d:1},
+    {n:54,s:"SEQ 8",t:"Les conséquences de la mauvaise alimentation",c:1,d:1},
+    {n:55,s:"SEQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:56,s:"SEQ 8",t:"L'origine de l'énergie reçue par la planète",c:1,d:1},
+    {n:57,s:"SEQ 9",t:"Le devenir du rayonnement solaire (albédo)",c:1,d:1},
     {n:58,s:"SEQ 9",t:"Le devenir du rayonnement solaire (bilan radiatif)",c:1,d:1},
     {n:59,s:"SEQ 9",t:"L'effet de serre",c:1,d:1},
-    {n:60,s:"SEQ 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:61,s:"SEQ 9",t:"Les causes de l'inÃ©gale rÃ©partition",c:1,d:1},
-    {n:62,s:"SEQ 9",t:"Les mouvements atmosphÃ©riques",c:1,d:1},
-    {n:63,s:"SEQ 9",t:"Les mouvements ocÃ©aniques",c:1,d:1},
-    {n:64,s:"SEQ 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:65,s:"SEQ 10",t:"L'altÃ©ration des roches",c:1,d:1},
-    {n:66,s:"SEQ 10",t:"Le devenir des produits d'altÃ©ration",c:1,d:1},
-    {n:67,s:"SEQ 10",t:"SÃ©dimentation",c:1,d:1},
-    {n:68,s:"SEQ 10",t:"DiagenÃ¨se et roches sÃ©dimentaires",c:1,d:1},
-    {n:69,s:"SEQ 10",t:"SÃ©ries et cycles sÃ©dimentaires",c:1,d:1},
+    {n:60,s:"SEQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:61,s:"SEQ 9",t:"Les causes de l'inégale répartition",c:1,d:1},
+    {n:62,s:"SEQ 9",t:"Les mouvements atmosphériques",c:1,d:1},
+    {n:63,s:"SEQ 9",t:"Les mouvements océaniques",c:1,d:1},
+    {n:64,s:"SEQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:65,s:"SEQ 10",t:"L'altération des roches",c:1,d:1},
+    {n:66,s:"SEQ 10",t:"Le devenir des produits d'altération",c:1,d:1},
+    {n:67,s:"SEQ 10",t:"Sédimentation",c:1,d:1},
+    {n:68,s:"SEQ 10",t:"Diagenèse et roches sédimentaires",c:1,d:1},
+    {n:69,s:"SEQ 10",t:"Séries et cycles sédimentaires",c:1,d:1},
     {n:70,s:"SEQ 10",t:"La chronologie relative",c:1,d:1},
-    {n:71,s:"SEQ 11",t:"La reconstitution des milieux sÃ©dimentaires",c:1,d:1},
-    {n:72,s:"SEQ 11",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:73,s:"SEQ 11",t:"Les Ã©lÃ©ments de sismologie (ondes)",c:1,d:1},
-    {n:74,s:"SEQ 11",t:"Les Ã©lÃ©ments de sismologie (comportement)",c:1,d:1},
-    {n:75,s:"SEQ 11",t:"La structure interne de la Terre (discontinuitÃ©s)",c:1,d:1},
+    {n:71,s:"SEQ 11",t:"La reconstitution des milieux sédimentaires",c:1,d:1},
+    {n:72,s:"SEQ 11",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:73,s:"SEQ 11",t:"Les éléments de sismologie (ondes)",c:1,d:1},
+    {n:74,s:"SEQ 11",t:"Les éléments de sismologie (comportement)",c:1,d:1},
+    {n:75,s:"SEQ 11",t:"La structure interne de la Terre (discontinuités)",c:1,d:1},
     {n:76,s:"SEQ 11",t:"La structure interne de la Terre (composition)",c:1,d:1},
-    {n:77,s:"SEQ 11",t:"L'Ã©nergie interne de la Terre",c:1,d:1},
-    {n:78,s:"SEQ 12",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:77,s:"SEQ 11",t:"L'énergie interne de la Terre",c:1,d:1},
+    {n:78,s:"SEQ 12",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "PREM_CTI": [
-    {n:1,s:"SEQ 1",t:"Rappels sur les rÃ´les des aliments et de la digestion",c:1,d:1},
+    {n:1,s:"SEQ 1",t:"Rappels sur les rôles des aliments et de la digestion",c:1,d:1},
     {n:2,s:"SEQ 1",t:"Rappel sur l'absorption intestinale et la circulation",c:1,d:1},
-    {n:3,s:"SEQ 1",t:"La respiration cellulaire : les Ã©tapes",c:1,d:1},
-    {n:4,s:"SEQ 1",t:"La respiration cellulaire : rÃ´le des transporteurs",c:1,d:1},
+    {n:3,s:"SEQ 1",t:"La respiration cellulaire : les étapes",c:1,d:1},
+    {n:4,s:"SEQ 1",t:"La respiration cellulaire : rôle des transporteurs",c:1,d:1},
     {n:5,s:"SEQ 1",t:"Quelques exemples de fermentation",c:1,d:1},
     {n:6,s:"SEQ 2",t:"Comparaison respiration-fermentation",c:1,d:1},
-    {n:7,s:"SEQ 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:8,s:"SEQ 2",t:"Ã‰valuation de la dÃ©pense Ã©nergÃ©tique",c:1,d:0},
-    {n:9,s:"SEQ 2",t:"Les facteurs de variation de la dÃ©pense Ã©nergÃ©tique",c:1,d:1},
-    {n:10,s:"SEQ 2",t:"Apports Ã©nergÃ©tiques des repas",c:1,d:1},
+    {n:7,s:"SEQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:8,s:"SEQ 2",t:"Évaluation de la dépense énergétique",c:1,d:0},
+    {n:9,s:"SEQ 2",t:"Les facteurs de variation de la dépense énergétique",c:1,d:1},
+    {n:10,s:"SEQ 2",t:"Apports énergétiques des repas",c:1,d:1},
     {n:11,s:"SEQ 3",t:"Crise cardiaque et AVC",c:1,d:1},
     {n:12,s:"SEQ 3",t:"Les moyens de lutte contre l'AVC",c:1,d:1},
-    {n:13,s:"SEQ 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:13,s:"SEQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
     {n:14,s:"SEQ 3",t:"Le soi et le non-soi",c:1,d:1},
     {n:15,s:"SEQ 3",t:"Les principales cellules immunitaires",c:1,d:1},
     {n:16,s:"SEQ 4",t:"La contamination par le VIH",c:1,d:1},
-    {n:17,s:"SEQ 4",t:"Les diffÃ©rentes phases de la maladie",c:1,d:1},
-    {n:18,s:"SEQ 4",t:"La prÃ©vention et le traitement",c:1,d:1},
-    {n:19,s:"SEQ 4",t:"Les causes et les consÃ©quences (IVG, alcoolismeâ€¦)",c:1,d:1},
+    {n:17,s:"SEQ 4",t:"Les différentes phases de la maladie",c:1,d:1},
+    {n:18,s:"SEQ 4",t:"La prévention et le traitement",c:1,d:1},
+    {n:19,s:"SEQ 4",t:"Les causes et les conséquences (IVG, alcoolisme…)",c:1,d:1},
     {n:20,s:"SEQ 4",t:"Les moyens de lutte",c:1,d:1},
-    {n:21,s:"SEQ 5",t:"Les diffÃ©rents groupes d'aliments simples",c:1,d:1},
-    {n:22,s:"SEQ 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:23,s:"SEQ 5",t:"Les mouvements atmosphÃ©riques",c:1,d:1},
-    {n:24,s:"SEQ 5",t:"Les mouvements ocÃ©aniques",c:1,d:1},
-    {n:25,s:"SEQ 5",t:"AltÃ©ration et Ã©rosion des roches",c:1,d:1},
-    {n:26,s:"SEQ 6",t:"Transport des produits d'altÃ©ration",c:1,d:1},
-    {n:27,s:"SEQ 6",t:"SÃ©dimentation et diagenÃ¨se",c:1,d:1},
-    {n:28,s:"SEQ 6",t:"Les roches sÃ©dimentaires et leur importance",c:1,d:1},
-    {n:29,s:"SEQ 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:21,s:"SEQ 5",t:"Les différents groupes d'aliments simples",c:1,d:1},
+    {n:22,s:"SEQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:23,s:"SEQ 5",t:"Les mouvements atmosphériques",c:1,d:1},
+    {n:24,s:"SEQ 5",t:"Les mouvements océaniques",c:1,d:1},
+    {n:25,s:"SEQ 5",t:"Altération et érosion des roches",c:1,d:1},
+    {n:26,s:"SEQ 6",t:"Transport des produits d'altération",c:1,d:1},
+    {n:27,s:"SEQ 6",t:"Sédimentation et diagenèse",c:1,d:1},
+    {n:28,s:"SEQ 6",t:"Les roches sédimentaires et leur importance",c:1,d:1},
+    {n:29,s:"SEQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
     {n:30,s:"SEQ 6",t:"La propagation des ondes sismiques",c:1,d:1},
     {n:31,s:"SEQ 7",t:"Les enveloppes internes du globe",c:1,d:1},
-    {n:32,s:"SEQ 7",t:"Les propriÃ©tÃ©s physicochimiques des enveloppes",c:1,d:1},
-    {n:33,s:"SEQ 7",t:"Origine de l'Ã©nergie interne",c:1,d:1},
-    {n:34,s:"SEQ 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SEQ 7",t:"La dÃ©rive des continents : les preuves",c:1,d:1},
-    {n:36,s:"SEQ 8",t:"La plaque lithosphÃ©rique",c:1,d:1},
+    {n:32,s:"SEQ 7",t:"Les propriétés physicochimiques des enveloppes",c:1,d:1},
+    {n:33,s:"SEQ 7",t:"Origine de l'énergie interne",c:1,d:1},
+    {n:34,s:"SEQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SEQ 7",t:"La dérive des continents : les preuves",c:1,d:1},
+    {n:36,s:"SEQ 8",t:"La plaque lithosphérique",c:1,d:1},
     {n:37,s:"SEQ 8",t:"Les mouvements des plaques",c:1,d:1},
-    {n:38,s:"SEQ 8",t:"La dissipation de l'Ã©nergie des Ã©cosystÃ¨mes",c:1,d:1},
-    {n:39,s:"SEQ 8",t:"Les modifications du rÃ©servoir de carbone",c:1,d:1},
+    {n:38,s:"SEQ 8",t:"La dissipation de l'énergie des écosystèmes",c:1,d:1},
+    {n:39,s:"SEQ 8",t:"Les modifications du réservoir de carbone",c:1,d:1},
     {n:40,s:"SEQ 8",t:"L'effet de serre",c:1,d:1},
-    {n:41,s:"SEQ 9",t:"RÃ´le de la couche d'ozone",c:1,d:1},
-    {n:42,s:"SEQ 9",t:"Les moyens de lutte contre le rÃ©chauffement climatique",c:1,d:1},
-    {n:43,s:"SEQ 9",t:"DÃ©finition et applications de la biotechnologie",c:1,d:1},
-    {n:44,s:"SEQ 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:41,s:"SEQ 9",t:"Rôle de la couche d'ozone",c:1,d:1},
+    {n:42,s:"SEQ 9",t:"Les moyens de lutte contre le réchauffement climatique",c:1,d:1},
+    {n:43,s:"SEQ 9",t:"Définition et applications de la biotechnologie",c:1,d:1},
+    {n:44,s:"SEQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "PREM_A": [
-    {n:1,s:"SÃ‰Q 1",t:"Les principaux constituants de la matiÃ¨re vivante",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Notion d'aliments simples et composÃ©s",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"RÃ´les des aliments",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 2",t:"La notion et les caractÃ©ristiques des caryotypes",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"L'hÃ©rÃ©ditÃ© hÃ©tÃ©rochromosomique",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Relation d'agressivitÃ© et de dominance chez l'Homme",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Relation Ã©motionnelle chez l'Homme",c:1,d:1},
-    {n:9,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:10,s:"SÃ‰Q 3",t:"Le soi, le non-soi et les cellules immunitaires",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Les dysfonctionnements : les allergies",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Les dÃ©ficiences : le VIH-Sida",c:1,d:1},
-    {n:13,s:"SÃ‰Q 4",t:"Les maladies nutritionnelles par carence",c:1,d:1},
-    {n:14,s:"SÃ‰Q 4",t:"Les maladies nutritionnelles par excÃ¨s",c:1,d:1},
-    {n:15,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:16,s:"SÃ‰Q 4",t:"MaÃ®trise de la reproduction",c:1,d:1},
-    {n:17,s:"SÃ‰Q 5",t:"Quelques comportements affectant la santÃ© reproductive",c:1,d:1},
-    {n:18,s:"SÃ‰Q 5",t:"VIH/Sida et grossesse",c:1,d:1},
-    {n:19,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:20,s:"SÃ‰Q 5",t:"L'assainissement de l'habitat",c:1,d:1},
-    {n:21,s:"SÃ‰Q 6",t:"Les dÃ©chets mÃ©nagers",c:1,d:1},
-    {n:22,s:"SÃ‰Q 6",t:"La pollution par les dÃ©chets mÃ©nagers",c:1,d:1},
-    {n:23,s:"SÃ‰Q 6",t:"Concept de biotechnologie et applications",c:1,d:1},
-    {n:24,s:"SÃ‰Q 6",t:"La production du biogaz",c:1,d:1},
-    {n:25,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Les principaux constituants de la matière vivante",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Notion d'aliments simples et composés",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Rôles des aliments",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 2",t:"La notion et les caractéristiques des caryotypes",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"L'hérédité hétérochromosomique",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Relation d'agressivité et de dominance chez l'Homme",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Relation émotionnelle chez l'Homme",c:1,d:1},
+    {n:9,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:10,s:"SÉQ 3",t:"Le soi, le non-soi et les cellules immunitaires",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Les dysfonctionnements : les allergies",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Les déficiences : le VIH-Sida",c:1,d:1},
+    {n:13,s:"SÉQ 4",t:"Les maladies nutritionnelles par carence",c:1,d:1},
+    {n:14,s:"SÉQ 4",t:"Les maladies nutritionnelles par excès",c:1,d:1},
+    {n:15,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:16,s:"SÉQ 4",t:"Maîtrise de la reproduction",c:1,d:1},
+    {n:17,s:"SÉQ 5",t:"Quelques comportements affectant la santé reproductive",c:1,d:1},
+    {n:18,s:"SÉQ 5",t:"VIH/Sida et grossesse",c:1,d:1},
+    {n:19,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:20,s:"SÉQ 5",t:"L'assainissement de l'habitat",c:1,d:1},
+    {n:21,s:"SÉQ 6",t:"Les déchets ménagers",c:1,d:1},
+    {n:22,s:"SÉQ 6",t:"La pollution par les déchets ménagers",c:1,d:1},
+    {n:23,s:"SÉQ 6",t:"Concept de biotechnologie et applications",c:1,d:1},
+    {n:24,s:"SÉQ 6",t:"La production du biogaz",c:1,d:1},
+    {n:25,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TERM_CTI": [
-    {n:1,s:"SÃ‰Q 1",t:"Cellule en microscopie optique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Cellule en microscopie Ã©lectronique",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Ã‰changes d'eau : l'osmose et la dialyse",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Ã‰changes de substances dissoutes",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Ã‰changes de particules",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"Structure des acides nuclÃ©iques",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"L'Ã©tude de la biosynthÃ¨se des protÃ©ines",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Structure, rÃ´le des gonades et mÃ©iose",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"GamÃ©togenÃ¨se et fÃ©condation",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:11,s:"SÃ‰Q 3",t:"Formes allÃ©liques et brassage interchromosomique (mono)",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Brassage interchromosomique (dihybridisme)",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Brassage intrachromosomique",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"HÃ©rÃ©ditÃ© autosomique",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"HÃ©rÃ©ditÃ© gonosomique et mutations",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 4",t:"Le tissu nerveux",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"Mise en Ã©vidence du potentiel de repos et d'action",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"La conduction du message nerveux",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"La notion de synapse",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"L'origine des cellules immunitaires",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Les mÃ©canismes de la rÃ©ponse non spÃ©cifique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"La rÃ©ponse Ã  mÃ©diation humorale",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Les maladies auto-immunes",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"Le VIH/Sida et ses consÃ©quences",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:27,s:"SÃ‰Q 6",t:"RÃ©gulation des hormones sexuelles chez l'homme",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"RÃ©gulation des hormones sexuelles chez la femme",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"L'infertilitÃ©",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"La glycÃ©mie : facteurs de variation",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"La glycÃ©mie : consÃ©quences",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"La pression artÃ©rielle : mesure",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"La pression artÃ©rielle : consÃ©quences",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SÃ‰Q 7",t:"DÃ©finitions et classification des catastrophes",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"La gestion des catastrophes",c:1,d:1},
-    {n:37,s:"SÃ‰Q 8",t:"Transformation des fruits : cas de la mangue",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Transformation des fruits : cas de la tomate",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Ã‰nergies renouvelables : biocarburants",c:1,d:1},
-    {n:40,s:"SÃ‰Q 8",t:"Ã‰nergies renouvelables : biocarburants (suite)",c:1,d:1},
-    {n:41,s:"SÃ‰Q 9",t:"Valorisation des dÃ©chets papiers",c:1,d:1},
-    {n:42,s:"SÃ‰Q 9",t:"Valorisation des dÃ©chets plastiques",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Cellule en microscopie optique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Cellule en microscopie électronique",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Échanges d'eau : l'osmose et la dialyse",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Échanges de substances dissoutes",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Échanges de particules",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"Structure des acides nucléiques",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"L'étude de la biosynthèse des protéines",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Structure, rôle des gonades et méiose",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"Gamétogenèse et fécondation",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:11,s:"SÉQ 3",t:"Formes alléliques et brassage interchromosomique (mono)",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Brassage interchromosomique (dihybridisme)",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Brassage intrachromosomique",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Hérédité autosomique",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Hérédité gonosomique et mutations",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 4",t:"Le tissu nerveux",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Mise en évidence du potentiel de repos et d'action",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"La conduction du message nerveux",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"La notion de synapse",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"L'origine des cellules immunitaires",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Les mécanismes de la réponse non spécifique",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"La réponse à médiation humorale",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Les maladies auto-immunes",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Le VIH/Sida et ses conséquences",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:27,s:"SÉQ 6",t:"Régulation des hormones sexuelles chez l'homme",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Régulation des hormones sexuelles chez la femme",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"L'infertilité",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"La glycémie : facteurs de variation",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"La glycémie : conséquences",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"La pression artérielle : mesure",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"La pression artérielle : conséquences",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SÉQ 7",t:"Définitions et classification des catastrophes",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"La gestion des catastrophes",c:1,d:1},
+    {n:37,s:"SÉQ 8",t:"Transformation des fruits : cas de la mangue",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Transformation des fruits : cas de la tomate",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Énergies renouvelables : biocarburants",c:1,d:1},
+    {n:40,s:"SÉQ 8",t:"Énergies renouvelables : biocarburants (suite)",c:1,d:1},
+    {n:41,s:"SÉQ 9",t:"Valorisation des déchets papiers",c:1,d:1},
+    {n:42,s:"SÉQ 9",t:"Valorisation des déchets plastiques",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TERM_A": [
-    {n:1,s:"SÃ‰Q 1",t:"Cellule en microscopie optique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Organisation de la cellule en microscopie Ã©lectronique",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Principaux organites cellulaires et leurs rÃ´les",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 1",t:"Structure des acides nuclÃ©iques et duplication",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (Ã©tapes)",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (relation)",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"De la diploÃ¯die Ã  l'haploÃ¯die : les Ã©tapes de la mÃ©iose",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"NÃ©cessitÃ© de la mÃ©iose dans la pÃ©rennisation",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:12,s:"SÃ‰Q 3",t:"Absorption intestinale",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Devenir et rÃ´le des Ã©lÃ©ments absorbÃ©s",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"Sort des rÃ©sidus de la digestion",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:16,s:"SÃ‰Q 4",t:"Constituants du sang et leurs rÃ´les",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"Milieu intÃ©rieur",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"NÃ©cessitÃ© du maintien de la constance",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Importance de l'Ã©limination urinaire",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SÃ‰Q 5",t:"RÃ´le du systÃ¨me nerveux dans les relations",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Comportements psychosociaux",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:24,s:"SÃ‰Q 5",t:"Grossesse",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"StÃ©rilitÃ©",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"La procrÃ©ation mÃ©dicalement assistÃ©e",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:28,s:"SÃ‰Q 6",t:"Dysfonctionnements du systÃ¨me immunitaire",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Le VIH-Sida et consÃ©quences socioculturelles",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:31,s:"SÃ‰Q 7",t:"DÃ©finition et classification des catastrophes",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"La gestion des catastrophes",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:34,s:"SÃ‰Q 7",t:"Transformation et conservation des fruits : la mangue",c:1,d:1},
-    {n:35,s:"SÃ‰Q 7",t:"Transformation et conservation des fruits : la tomate",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:37,s:"SÃ‰Q 8",t:"Valorisation des dÃ©chets papiers",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Valorisation des dÃ©chets plastiques",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Cellule en microscopie optique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Organisation de la cellule en microscopie électronique",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Principaux organites cellulaires et leurs rôles",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 1",t:"Structure des acides nucléiques et duplication",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (étapes)",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (relation)",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"De la diploïdie à l'haploïdie : les étapes de la méiose",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Nécessité de la méiose dans la pérennisation",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:12,s:"SÉQ 3",t:"Absorption intestinale",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Devenir et rôle des éléments absorbés",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Sort des résidus de la digestion",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:16,s:"SÉQ 4",t:"Constituants du sang et leurs rôles",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Milieu intérieur",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Nécessité du maintien de la constance",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Importance de l'élimination urinaire",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SÉQ 5",t:"Rôle du système nerveux dans les relations",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Comportements psychosociaux",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:24,s:"SÉQ 5",t:"Grossesse",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Stérilité",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"La procréation médicalement assistée",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:28,s:"SÉQ 6",t:"Dysfonctionnements du système immunitaire",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Le VIH-Sida et conséquences socioculturelles",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:31,s:"SÉQ 7",t:"Définition et classification des catastrophes",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"La gestion des catastrophes",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:34,s:"SÉQ 7",t:"Transformation et conservation des fruits : la mangue",c:1,d:1},
+    {n:35,s:"SÉQ 7",t:"Transformation et conservation des fruits : la tomate",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:37,s:"SÉQ 8",t:"Valorisation des déchets papiers",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Valorisation des déchets plastiques",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "SIX": [
-    {n:1,s:"SÃ‰Q 1",t:"Influence du climat sur la production vÃ©gÃ©tale",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Influence du sol sur la production vÃ©gÃ©tale",c:1,d:1},
-    {n:3,s:"SÃ‰Q 2",t:"Multiplication par voie sexuÃ©e des plantes",c:1,d:1},
-    {n:4,s:"SÃ‰Q 2",t:"Multiplication vÃ©gÃ©tative",c:1,d:1},
-    {n:5,s:"SÃ‰Q 2",t:"RÃ´le de la reproduction dans l'amÃ©lioration",c:1,d:1},
-    {n:6,s:"SÃ‰Q 3",t:"Sols et production vÃ©gÃ©tale (compost)",c:1,d:1},
-    {n:7,s:"SÃ‰Q 3",t:"Moyens de lutte contre les parasites",c:1,d:1},
-    {n:8,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 4",t:"RÃ´le des microorganismes : fermentations",c:1,d:1},
-    {n:10,s:"SÃ‰Q 4",t:"Transformation de quelques produits agricoles",c:1,d:1},
-    {n:11,s:"SÃ‰Q 4",t:"Technique d'extraction d'une huile vÃ©gÃ©tale",c:1,d:1},
-    {n:12,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SÃ‰Q 5",t:"Les caractÃ©ristiques de la matiÃ¨re",c:1,d:1},
-    {n:14,s:"SÃ‰Q 5",t:"Mesure et calcul de quelques caractÃ©ristiques",c:1,d:1},
-    {n:15,s:"SÃ‰Q 5",t:"Les propriÃ©tÃ©s physiques de la matiÃ¨re",c:1,d:1},
-    {n:16,s:"SÃ‰Q 5",t:"Les propriÃ©tÃ©s chimiques de la matiÃ¨re",c:1,d:1},
-    {n:17,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:18,s:"SÃ‰Q 6",t:"Notion d'Ã©nergie",c:1,d:1},
-    {n:19,s:"SÃ‰Q 6",t:"Formes et sources d'Ã©nergie",c:1,d:1},
-    {n:20,s:"SÃ‰Q 7",t:"Ã‰nergie et environnement",c:1,d:1},
-    {n:21,s:"SÃ‰Q 7",t:"Les modes de transferts de chaleur",c:1,d:1},
-    {n:22,s:"SÃ‰Q 8",t:"Notion de circuit Ã©lectrique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 9",t:"La lumiÃ¨re",c:1,d:1},
-    {n:24,s:"SÃ‰Q 10",t:"Ã‰nergie mÃ©canique",c:1,d:1},
-    {n:25,s:"SÃ‰Q 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:26,s:"SÃ‰Q 11",t:"La pubertÃ©, la fÃ©condation et la grossesse",c:1,d:1},
-    {n:27,s:"SÃ‰Q 11",t:"Les grossesses prÃ©coces",c:1,d:1},
-    {n:28,s:"SÃ‰Q 11",t:"Les pratiques culturelles nÃ©fastes",c:1,d:1},
-    {n:29,s:"SÃ‰Q 11",t:"Les IST et le VIH/SIDA",c:1,d:1},
-    {n:30,s:"SÃ‰Q 11",t:"HygiÃ¨ne des organes reproducteurs",c:1,d:1},
-    {n:31,s:"SÃ‰Q 11",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:32,s:"SÃ‰Q 12",t:"Les diffÃ©rentes catÃ©gories d'aliments",c:1,d:1},
-    {n:33,s:"SÃ‰Q 12",t:"Les maladies nutritionnelles de carence",c:1,d:1},
-    {n:34,s:"SÃ‰Q 12",t:"Les maladies nutritionnelles de l'excÃ¨s",c:1,d:1},
-    {n:35,s:"SÃ‰Q 12",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SÃ‰Q 13",t:"L'eau dans l'environnement",c:1,d:1},
-    {n:37,s:"SÃ‰Q 13",t:"La pollution de l'eau",c:1,d:1},
-    {n:38,s:"SÃ‰Q 13",t:"Lutte contre la pollution des eaux",c:1,d:1},
-    {n:39,s:"SÃ‰Q 13",t:"Les diffÃ©rents usages de l'eau",c:1,d:1},
-    {n:40,s:"SÃ‰Q 13",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:41,s:"SÃ‰Q 14",t:"La pollution des sols",c:1,d:1},
-    {n:42,s:"SÃ‰Q 14",t:"Les moyens de lutte contre la pollution des sols",c:1,d:1},
-    {n:43,s:"SÃ‰Q 14",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:44,s:"SÃ‰Q 15",t:"Les plantes mÃ©dicinales",c:1,d:1},
-    {n:45,s:"SÃ‰Q 15",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:46,s:"SÃ‰Q 16",t:"Technologie : dÃ©finition et dÃ©marche",c:1,d:1},
-    {n:47,s:"SÃ‰Q 17",t:"Objet technique",c:1,d:1},
-    {n:48,s:"SÃ‰Q 18",t:"Cahier des charges",c:1,d:1},
-    {n:49,s:"SÃ‰Q 19",t:"Notion de projet",c:1,d:1},
-    {n:50,s:"SÃ‰Q 19",t:"Exemple : fabrication d'un filtre",c:1,d:1},
-    {n:51,s:"SÃ‰Q 19",t:"Exemple : crÃ©ation d'un jardin potager",c:1,d:1},
-    {n:52,s:"SÃ‰Q 19",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Influence du climat sur la production végétale",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Influence du sol sur la production végétale",c:1,d:1},
+    {n:3,s:"SÉQ 2",t:"Multiplication par voie sexuée des plantes",c:1,d:1},
+    {n:4,s:"SÉQ 2",t:"Multiplication végétative",c:1,d:1},
+    {n:5,s:"SÉQ 2",t:"Rôle de la reproduction dans l'amélioration",c:1,d:1},
+    {n:6,s:"SÉQ 3",t:"Sols et production végétale (compost)",c:1,d:1},
+    {n:7,s:"SÉQ 3",t:"Moyens de lutte contre les parasites",c:1,d:1},
+    {n:8,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 4",t:"Rôle des microorganismes : fermentations",c:1,d:1},
+    {n:10,s:"SÉQ 4",t:"Transformation de quelques produits agricoles",c:1,d:1},
+    {n:11,s:"SÉQ 4",t:"Technique d'extraction d'une huile végétale",c:1,d:1},
+    {n:12,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SÉQ 5",t:"Les caractéristiques de la matière",c:1,d:1},
+    {n:14,s:"SÉQ 5",t:"Mesure et calcul de quelques caractéristiques",c:1,d:1},
+    {n:15,s:"SÉQ 5",t:"Les propriétés physiques de la matière",c:1,d:1},
+    {n:16,s:"SÉQ 5",t:"Les propriétés chimiques de la matière",c:1,d:1},
+    {n:17,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:18,s:"SÉQ 6",t:"Notion d'énergie",c:1,d:1},
+    {n:19,s:"SÉQ 6",t:"Formes et sources d'énergie",c:1,d:1},
+    {n:20,s:"SÉQ 7",t:"Énergie et environnement",c:1,d:1},
+    {n:21,s:"SÉQ 7",t:"Les modes de transferts de chaleur",c:1,d:1},
+    {n:22,s:"SÉQ 8",t:"Notion de circuit électrique",c:1,d:1},
+    {n:23,s:"SÉQ 9",t:"La lumière",c:1,d:1},
+    {n:24,s:"SÉQ 10",t:"Énergie mécanique",c:1,d:1},
+    {n:25,s:"SÉQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:26,s:"SÉQ 11",t:"La puberté, la fécondation et la grossesse",c:1,d:1},
+    {n:27,s:"SÉQ 11",t:"Les grossesses précoces",c:1,d:1},
+    {n:28,s:"SÉQ 11",t:"Les pratiques culturelles néfastes",c:1,d:1},
+    {n:29,s:"SÉQ 11",t:"Les IST et le VIH/SIDA",c:1,d:1},
+    {n:30,s:"SÉQ 11",t:"Hygiène des organes reproducteurs",c:1,d:1},
+    {n:31,s:"SÉQ 11",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:32,s:"SÉQ 12",t:"Les différentes catégories d'aliments",c:1,d:1},
+    {n:33,s:"SÉQ 12",t:"Les maladies nutritionnelles de carence",c:1,d:1},
+    {n:34,s:"SÉQ 12",t:"Les maladies nutritionnelles de l'excès",c:1,d:1},
+    {n:35,s:"SÉQ 12",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SÉQ 13",t:"L'eau dans l'environnement",c:1,d:1},
+    {n:37,s:"SÉQ 13",t:"La pollution de l'eau",c:1,d:1},
+    {n:38,s:"SÉQ 13",t:"Lutte contre la pollution des eaux",c:1,d:1},
+    {n:39,s:"SÉQ 13",t:"Les différents usages de l'eau",c:1,d:1},
+    {n:40,s:"SÉQ 13",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:41,s:"SÉQ 14",t:"La pollution des sols",c:1,d:1},
+    {n:42,s:"SÉQ 14",t:"Les moyens de lutte contre la pollution des sols",c:1,d:1},
+    {n:43,s:"SÉQ 14",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:44,s:"SÉQ 15",t:"Les plantes médicinales",c:1,d:1},
+    {n:45,s:"SÉQ 15",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:46,s:"SÉQ 16",t:"Technologie : définition et démarche",c:1,d:1},
+    {n:47,s:"SÉQ 17",t:"Objet technique",c:1,d:1},
+    {n:48,s:"SÉQ 18",t:"Cahier des charges",c:1,d:1},
+    {n:49,s:"SÉQ 19",t:"Notion de projet",c:1,d:1},
+    {n:50,s:"SÉQ 19",t:"Exemple : fabrication d'un filtre",c:1,d:1},
+    {n:51,s:"SÉQ 19",t:"Exemple : création d'un jardin potager",c:1,d:1},
+    {n:52,s:"SÉQ 19",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "CINQ": [
-    {n:1,s:"SÃ‰Q 1",t:"Influence de l'espace vital et compÃ©tition",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Reproduction sexuÃ©e des animaux",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:4,s:"SÃ‰Q 1",t:"SÃ©lection des espÃ¨ces et reproduction croisÃ©e",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Lutte contre les parasites des animaux",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"La transformation du lait en fromage et beurre",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"La transformation de la viande en saucisse",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Le fumage, le sÃ©chage, le saumurage",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:10,s:"SÃ‰Q 2",t:"Notions de masse volumique et de densitÃ©",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:12,s:"SÃ‰Q 3",t:"La vaporisation et la condensation",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"La solidification, la liquÃ©faction, la sublimation",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"DÃ©finitions, exemples de mÃ©langes",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"SÃ©paration des constituants d'un mÃ©lange",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 4",t:"Position d'un mobile dans un repÃ¨re",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"RelativitÃ© du mouvement et trajectoire",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Notions de vitesse moyenne et instantanÃ©e",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Diagrammes des espaces et des vitesses",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:22,s:"SÃ‰Q 5",t:"Les comportements Ã©mergents nÃ©fastes",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Le VIH/Sida",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:25,s:"SÃ‰Q 5",t:"Rations alimentaires Ã©quilibrÃ©es",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"DÃ©finition et germes impliquÃ©s (intoxications)",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"Les rÃ¨gles d'hygiÃ¨ne alimentaire",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:29,s:"SÃ‰Q 6",t:"L'air et les polluants atmosphÃ©riques",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"Causes et consÃ©quences de l'effet de serre",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Localisation et protection de la couche d'ozone",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:33,s:"SÃ‰Q 7",t:"Origines et types de roches sÃ©dimentaires",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"IntÃ©rÃªts des roches sÃ©dimentaires",c:1,d:1},
-    {n:35,s:"SÃ‰Q 7",t:"Relation entre propriÃ©tÃ©s et utilisation",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:37,s:"SÃ‰Q 8",t:"Recensement des espÃ¨ces animales",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Classification sommaire et causes de disparition",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:40,s:"SÃ‰Q 8",t:"Ã‰tude d'un objet technique",c:1,d:1},
-    {n:41,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:42,s:"SÃ‰Q 9",t:"Ã‰levage des poulets",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"Ã‰levage du tilapia",c:1,d:1},
-    {n:44,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Influence de l'espace vital et compétition",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Reproduction sexuée des animaux",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:4,s:"SÉQ 1",t:"Sélection des espèces et reproduction croisée",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Lutte contre les parasites des animaux",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"La transformation du lait en fromage et beurre",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"La transformation de la viande en saucisse",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Le fumage, le séchage, le saumurage",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:10,s:"SÉQ 2",t:"Notions de masse volumique et de densité",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:12,s:"SÉQ 3",t:"La vaporisation et la condensation",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"La solidification, la liquéfaction, la sublimation",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Définitions, exemples de mélanges",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Séparation des constituants d'un mélange",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 4",t:"Position d'un mobile dans un repère",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Relativité du mouvement et trajectoire",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Notions de vitesse moyenne et instantanée",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Diagrammes des espaces et des vitesses",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:22,s:"SÉQ 5",t:"Les comportements émergents néfastes",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Le VIH/Sida",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:25,s:"SÉQ 5",t:"Rations alimentaires équilibrées",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Définition et germes impliqués (intoxications)",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"Les règles d'hygiène alimentaire",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:29,s:"SÉQ 6",t:"L'air et les polluants atmosphériques",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"Causes et conséquences de l'effet de serre",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Localisation et protection de la couche d'ozone",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:33,s:"SÉQ 7",t:"Origines et types de roches sédimentaires",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Intérêts des roches sédimentaires",c:1,d:1},
+    {n:35,s:"SÉQ 7",t:"Relation entre propriétés et utilisation",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:37,s:"SÉQ 8",t:"Recensement des espèces animales",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Classification sommaire et causes de disparition",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:40,s:"SÉQ 8",t:"Étude d'un objet technique",c:1,d:1},
+    {n:41,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:42,s:"SÉQ 9",t:"Élevage des poulets",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Élevage du tilapia",c:1,d:1},
+    {n:44,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "QUATRE": [
-    {n:1,s:"SÃ‰Q 1",t:"Les besoins nutritifs des vÃ©gÃ©taux",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Les besoins nutritifs des animaux",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"La production de la matiÃ¨re vÃ©gÃ©tale",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"La production de la matiÃ¨re animale",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:6,s:"SÃ‰Q 2",t:"Recensement des espÃ¨ces et notion de biodiversitÃ©",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Diminution de la biodiversitÃ©",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"Les organes de l'appareil moteur",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Accidents des muscles et secourisme",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Accidents des os et articulations",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"RÃ´le de l'alimentation sur l'appareil moteur",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:14,s:"SÃ‰Q 3",t:"La peau : structure, rÃ´le et fonctions",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"Maladies liÃ©es au dÃ©capage de la peau",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:17,s:"SÃ‰Q 4",t:"Organisation sommaire du systÃ¨me nerveux",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"La fatigue nerveuse",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"Les toxicomanies",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SÃ‰Q 5",t:"Organisation de l'appareil digestif",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"RÃ´le de l'appareil digestif",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Importance et hygiÃ¨ne de la digestion",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Les maladies par excÃ¨s et par carence",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"Les maladies du pÃ©ril fÃ©cal",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:27,s:"SÃ‰Q 6",t:"Ã‰tude de quelques IST",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Le VIH/SIDA",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:30,s:"SÃ‰Q 6",t:"Les diffÃ©rentes phases d'une Ã©ruption volcanique",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Les diffÃ©rents types de dynamisme volcanique",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"Du magma aux roches volcaniques",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"Les types de risques volcaniques",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SÃ‰Q 7",t:"Quelques exemples d'Ã©nergies fossiles",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Le pÃ©trole",c:1,d:1},
-    {n:37,s:"SÃ‰Q 8",t:"Les Ã©nergies fossiles et le dÃ©veloppement durable",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:39,s:"SÃ‰Q 8",t:"Les ressources miniÃ¨res du Cameroun",c:1,d:1},
-    {n:40,s:"SÃ‰Q 8",t:"Gestion des ressources miniÃ¨res",c:1,d:1},
-    {n:41,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:42,s:"SÃ‰Q 9",t:"BiodiversitÃ© dans un Ã©cosystÃ¨me aquatique",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"ActivitÃ©s humaines dÃ©truisant les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:44,s:"SÃ‰Q 9",t:"Restauration et conservation de la biodiversitÃ©",c:1,d:1},
-    {n:45,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Les besoins nutritifs des végétaux",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Les besoins nutritifs des animaux",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"La production de la matière végétale",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"La production de la matière animale",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:6,s:"SÉQ 2",t:"Recensement des espèces et notion de biodiversité",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Diminution de la biodiversité",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"Les organes de l'appareil moteur",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Accidents des muscles et secourisme",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Accidents des os et articulations",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Rôle de l'alimentation sur l'appareil moteur",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:14,s:"SÉQ 3",t:"La peau : structure, rôle et fonctions",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Maladies liées au décapage de la peau",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:17,s:"SÉQ 4",t:"Organisation sommaire du système nerveux",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"La fatigue nerveuse",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"Les toxicomanies",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SÉQ 5",t:"Organisation de l'appareil digestif",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Rôle de l'appareil digestif",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Importance et hygiène de la digestion",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Les maladies par excès et par carence",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Les maladies du péril fécal",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:27,s:"SÉQ 6",t:"Étude de quelques IST",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Le VIH/SIDA",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:30,s:"SÉQ 6",t:"Les différentes phases d'une éruption volcanique",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Les différents types de dynamisme volcanique",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"Du magma aux roches volcaniques",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"Les types de risques volcaniques",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SÉQ 7",t:"Quelques exemples d'énergies fossiles",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Le pétrole",c:1,d:1},
+    {n:37,s:"SÉQ 8",t:"Les énergies fossiles et le développement durable",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:39,s:"SÉQ 8",t:"Les ressources minières du Cameroun",c:1,d:1},
+    {n:40,s:"SÉQ 8",t:"Gestion des ressources minières",c:1,d:1},
+    {n:41,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:42,s:"SÉQ 9",t:"Biodiversité dans un écosystème aquatique",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Activités humaines détruisant les écosystèmes",c:1,d:1},
+    {n:44,s:"SÉQ 9",t:"Restauration et conservation de la biodiversité",c:1,d:1},
+    {n:45,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TROIS": [
-    {n:1,s:"SÃ‰Q 1",t:"Ressemblances entre les individus",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"DiffÃ©rences entre les individus",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Localisation de l'information gÃ©nÃ©tique",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Nature de l'information gÃ©nÃ©tique : chromosome et ADN",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Nature de l'information gÃ©nÃ©tique : chromosomes humains",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"Les gÃ¨nes humains",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"GÃ¨nes et diversitÃ© humaine (groupes sanguins)",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:9,s:"SÃ‰Q 2",t:"DiffÃ©rents groupes de microorganismes",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Mode de vie des microbes : reproduction",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Mode de vie des microbes : nutrition et respiration",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Contamination par les microorganismes",c:1,d:1},
-    {n:13,s:"SÃ‰Q 3",t:"Pratiques pour Ã©viter la contamination",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"La rÃ©ponse immunitaire non spÃ©cifique (peau, muqueuses)",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"La rÃ©ponse immunitaire non spÃ©cifique (phagocytose)",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"La rÃ©ponse immunitaire spÃ©cifique",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:18,s:"SÃ‰Q 4",t:"La multiplication du VIH",c:1,d:1},
-    {n:19,s:"SÃ‰Q 4",t:"VIH/SIDA : phases, prÃ©vention et traitement",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:21,s:"SÃ‰Q 5",t:"AntibiothÃ©rapie et sÃ©rothÃ©rapie",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"VaccinothÃ©rapie",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:24,s:"SÃ‰Q 5",t:"SiÃ¨ge de la circulation : les vaisseaux",c:1,d:1},
-    {n:25,s:"SÃ‰Q 5",t:"SiÃ¨ge de la circulation : le cÅ“ur",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"HygiÃ¨ne de la circulation : hÃ©morragies",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"HygiÃ¨ne de la circulation : maladies cardiovasculaires",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Soins de premiers secours (AVC, hÃ©morragie)",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Anatomie de l'Å“il, anomalies et maladies",c:1,d:1},
-    {n:30,s:"SÃ‰Q 6",t:"HygiÃ¨ne de la vision",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:32,s:"SÃ‰Q 7",t:"Un exemple d'endÃ©mie : le paludisme",c:1,d:1},
-    {n:33,s:"SÃ‰Q 7",t:"Quelques exemples d'Ã©pidÃ©mies",c:1,d:1},
-    {n:34,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:35,s:"SÃ‰Q 7",t:"Manifestations et origine des sÃ©ismes",c:1,d:1},
-    {n:36,s:"SÃ‰Q 8",t:"Localisation des sÃ©ismes",c:1,d:1},
-    {n:37,s:"SÃ‰Q 8",t:"Causes des risques liÃ©s aux mouvements de terrain",c:1,d:1},
-    {n:38,s:"SÃ‰Q 8",t:"Causes : action mÃ©canique de l'eau",c:1,d:1},
-    {n:39,s:"SÃ‰Q 8",t:"Techniques de prÃ©vention des accidents",c:1,d:1},
-    {n:40,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:41,s:"SÃ‰Q 9",t:"BiodiversitÃ© dans les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:42,s:"SÃ‰Q 9",t:"ActivitÃ©s humaines dÃ©truisant les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:43,s:"SÃ‰Q 9",t:"Restauration et conservation de la biodiversitÃ©",c:1,d:1},
-    {n:44,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Ressemblances entre les individus",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Différences entre les individus",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Localisation de l'information génétique",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Nature de l'information génétique : chromosome et ADN",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Nature de l'information génétique : chromosomes humains",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"Les gènes humains",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Gènes et diversité humaine (groupes sanguins)",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:9,s:"SÉQ 2",t:"Différents groupes de microorganismes",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Mode de vie des microbes : reproduction",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Mode de vie des microbes : nutrition et respiration",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Contamination par les microorganismes",c:1,d:1},
+    {n:13,s:"SÉQ 3",t:"Pratiques pour éviter la contamination",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"La réponse immunitaire non spécifique (peau, muqueuses)",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"La réponse immunitaire non spécifique (phagocytose)",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"La réponse immunitaire spécifique",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:18,s:"SÉQ 4",t:"La multiplication du VIH",c:1,d:1},
+    {n:19,s:"SÉQ 4",t:"VIH/SIDA : phases, prévention et traitement",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:21,s:"SÉQ 5",t:"Antibiothérapie et sérothérapie",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Vaccinothérapie",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:24,s:"SÉQ 5",t:"Siège de la circulation : les vaisseaux",c:1,d:1},
+    {n:25,s:"SÉQ 5",t:"Siège de la circulation : le cœur",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Hygiène de la circulation : hémorragies",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"Hygiène de la circulation : maladies cardiovasculaires",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Soins de premiers secours (AVC, hémorragie)",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Anatomie de l'œil, anomalies et maladies",c:1,d:1},
+    {n:30,s:"SÉQ 6",t:"Hygiène de la vision",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:32,s:"SÉQ 7",t:"Un exemple d'endémie : le paludisme",c:1,d:1},
+    {n:33,s:"SÉQ 7",t:"Quelques exemples d'épidémies",c:1,d:1},
+    {n:34,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:35,s:"SÉQ 7",t:"Manifestations et origine des séismes",c:1,d:1},
+    {n:36,s:"SÉQ 8",t:"Localisation des séismes",c:1,d:1},
+    {n:37,s:"SÉQ 8",t:"Causes des risques liés aux mouvements de terrain",c:1,d:1},
+    {n:38,s:"SÉQ 8",t:"Causes : action mécanique de l'eau",c:1,d:1},
+    {n:39,s:"SÉQ 8",t:"Techniques de prévention des accidents",c:1,d:1},
+    {n:40,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:41,s:"SÉQ 9",t:"Biodiversité dans les écosystèmes",c:1,d:1},
+    {n:42,s:"SÉQ 9",t:"Activités humaines détruisant les écosystèmes",c:1,d:1},
+    {n:43,s:"SÉQ 9",t:"Restauration et conservation de la biodiversité",c:1,d:1},
+    {n:44,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "SEC_C": [
-    {n:1,s:"SÃ‰Q 1",t:"La cellule chlorophyllienne, usine photosynthÃ©tique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"L'influence de certains facteurs sur la production vÃ©gÃ©tale",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Les plantes performantes",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Les sociÃ©tÃ©s des fourmis, termites, abeilles",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:6,s:"SÃ‰Q 2",t:"DÃ©finition de la notion de plan d'organisation",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"DÃ©duction de la notion d'homologie, analogie",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Liens de parentÃ© entre Homme et autres espÃ¨ces",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"La transmission de l'information gÃ©nÃ©tique : mitose",c:1,d:1},
-    {n:10,s:"SÃ‰Q 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Ã‰changes gazeux respiratoires",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (1)",c:1,d:1},
-    {n:14,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (2)",c:1,d:1},
-    {n:15,s:"SÃ‰Q 3",t:"Structure et rÃ´le de l'appareil urinaire",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Insuffisances rÃ©nales",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"DÃ©finition, mÃ©canisme, causes des allergies",c:1,d:1},
-    {n:18,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:19,s:"SÃ‰Q 4",t:"Complications des allergies",c:1,d:1},
-    {n:20,s:"SÃ‰Q 4",t:"La filariose lymphatique et l'onchocercose",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"La dracunculose et la tÃ©niase",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Les schistosomiases et l'ulcÃ¨re de Buruli",c:1,d:1},
-    {n:23,s:"SÃ‰Q 5",t:"La fiÃ¨vre jaune",c:1,d:1},
-    {n:24,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:25,s:"SÃ‰Q 5",t:"Situation de la planÃ¨te Terre",c:1,d:1},
-    {n:26,s:"SÃ‰Q 6",t:"Le rÃ©chauffement climatique",c:1,d:1},
-    {n:27,s:"SÃ‰Q 6",t:"La mangrove et l'Ã©cosystÃ¨me aquatique",c:1,d:1},
-    {n:28,s:"SÃ‰Q 6",t:"Restauration et conservation de la biodiversitÃ©",c:1,d:1},
-    {n:29,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:30,s:"SÃ‰Q 6",t:"Les dÃ©chets biodÃ©gradables et non biodÃ©gradables",c:1,d:1},
-    {n:31,s:"SÃ‰Q 7",t:"Le gÃ©nie gÃ©nÃ©tique",c:1,d:1},
-    {n:32,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"La cellule chlorophyllienne, usine photosynthétique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"L'influence de certains facteurs sur la production végétale",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Les plantes performantes",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Les sociétés des fourmis, termites, abeilles",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:6,s:"SÉQ 2",t:"Définition de la notion de plan d'organisation",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Déduction de la notion d'homologie, analogie",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Liens de parenté entre Homme et autres espèces",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"La transmission de l'information génétique : mitose",c:1,d:1},
+    {n:10,s:"SÉQ 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Échanges gazeux respiratoires",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SÉQ 3",t:"Variations des paramètres physiologiques (1)",c:1,d:1},
+    {n:14,s:"SÉQ 3",t:"Variations des paramètres physiologiques (2)",c:1,d:1},
+    {n:15,s:"SÉQ 3",t:"Structure et rôle de l'appareil urinaire",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Insuffisances rénales",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Définition, mécanisme, causes des allergies",c:1,d:1},
+    {n:18,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:19,s:"SÉQ 4",t:"Complications des allergies",c:1,d:1},
+    {n:20,s:"SÉQ 4",t:"La filariose lymphatique et l'onchocercose",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"La dracunculose et la téniase",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Les schistosomiases et l'ulcère de Buruli",c:1,d:1},
+    {n:23,s:"SÉQ 5",t:"La fièvre jaune",c:1,d:1},
+    {n:24,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:25,s:"SÉQ 5",t:"Situation de la planète Terre",c:1,d:1},
+    {n:26,s:"SÉQ 6",t:"Le réchauffement climatique",c:1,d:1},
+    {n:27,s:"SÉQ 6",t:"La mangrove et l'écosystème aquatique",c:1,d:1},
+    {n:28,s:"SÉQ 6",t:"Restauration et conservation de la biodiversité",c:1,d:1},
+    {n:29,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:30,s:"SÉQ 6",t:"Les déchets biodégradables et non biodégradables",c:1,d:1},
+    {n:31,s:"SÉQ 7",t:"Le génie génétique",c:1,d:1},
+    {n:32,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "SEC_A": [
-    {n:1,s:"SÃ‰Q 1",t:"Cellule chlorophyllienne, usine photosynthÃ©tique",c:1,d:1},
-    {n:2,s:"SÃ‰Q 1",t:"Cellule chlorophyllienne et approvisionnement",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"L'influence de certains facteurs sur la production",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:5,s:"SÃ‰Q 2",t:"Les plantes performantes",c:1,d:1},
-    {n:6,s:"SÃ‰Q 2",t:"La transmission de l'information gÃ©nÃ©tique",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:8,s:"SÃ‰Q 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
-    {n:9,s:"SÃ‰Q 3",t:"Ã‰changes gazeux respiratoires",c:1,d:1},
-    {n:10,s:"SÃ‰Q 3",t:"HygiÃ¨ne de l'appareil respiratoire",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (1)",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Variations des paramÃ¨tres physiologiques (2)",c:1,d:1},
-    {n:13,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:14,s:"SÃ‰Q 4",t:"Structure et rÃ´le de l'appareil urinaire",c:1,d:1},
-    {n:15,s:"SÃ‰Q 4",t:"Insuffisances rÃ©nales",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Cycles sexuels",c:1,d:1},
-    {n:17,s:"SÃ‰Q 5",t:"Formation des gamÃ¨tes et fÃ©condation",c:1,d:1},
-    {n:18,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:19,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration (suite)",c:1,d:0},
-    {n:20,s:"SÃ‰Q 5",t:"Les comportements Ã  risque et le VIH/Sida",c:1,d:1},
-    {n:21,s:"SÃ‰Q 6",t:"CaractÃ©ristiques de la planÃ¨te Terre",c:1,d:1},
-    {n:22,s:"SÃ‰Q 6",t:"Le rÃ©chauffement climatique",c:1,d:1},
-    {n:23,s:"SÃ‰Q 6",t:"La mangrove",c:1,d:1},
-    {n:24,s:"SÃ‰Q 6",t:"ActivitÃ©s humaines dÃ©truisant les Ã©cosystÃ¨mes",c:1,d:1},
-    {n:25,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:26,s:"SÃ‰Q 7",t:"Les Ã©tapes du gÃ©nie gÃ©nÃ©tique",c:1,d:1},
-    {n:27,s:"SÃ‰Q 7",t:"Un exemple d'application du gÃ©nie gÃ©nÃ©tique",c:1,d:1},
-    {n:28,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
+    {n:1,s:"SÉQ 1",t:"Cellule chlorophyllienne, usine photosynthétique",c:1,d:1},
+    {n:2,s:"SÉQ 1",t:"Cellule chlorophyllienne et approvisionnement",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"L'influence de certains facteurs sur la production",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:5,s:"SÉQ 2",t:"Les plantes performantes",c:1,d:1},
+    {n:6,s:"SÉQ 2",t:"La transmission de l'information génétique",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:8,s:"SÉQ 2",t:"Structure de l'appareil respiratoire",c:1,d:1},
+    {n:9,s:"SÉQ 3",t:"Échanges gazeux respiratoires",c:1,d:1},
+    {n:10,s:"SÉQ 3",t:"Hygiène de l'appareil respiratoire",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Variations des paramètres physiologiques (1)",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Variations des paramètres physiologiques (2)",c:1,d:1},
+    {n:13,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:14,s:"SÉQ 4",t:"Structure et rôle de l'appareil urinaire",c:1,d:1},
+    {n:15,s:"SÉQ 4",t:"Insuffisances rénales",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Cycles sexuels",c:1,d:1},
+    {n:17,s:"SÉQ 5",t:"Formation des gamètes et fécondation",c:1,d:1},
+    {n:18,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:19,s:"SÉQ 5",t:"Apprentissage de l'intégration (suite)",c:1,d:0},
+    {n:20,s:"SÉQ 5",t:"Les comportements à risque et le VIH/Sida",c:1,d:1},
+    {n:21,s:"SÉQ 6",t:"Caractéristiques de la planète Terre",c:1,d:1},
+    {n:22,s:"SÉQ 6",t:"Le réchauffement climatique",c:1,d:1},
+    {n:23,s:"SÉQ 6",t:"La mangrove",c:1,d:1},
+    {n:24,s:"SÉQ 6",t:"Activités humaines détruisant les écosystèmes",c:1,d:1},
+    {n:25,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:26,s:"SÉQ 7",t:"Les étapes du génie génétique",c:1,d:1},
+    {n:27,s:"SÉQ 7",t:"Un exemple d'application du génie génétique",c:1,d:1},
+    {n:28,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
   ],
   "TERM_C": [
-    {n:1,s:"SÃ‰Q 1",t:"Prise de contact ; prÃ©sentation du programme ; Ã©valuation diagnostique",c:1,d:0},
-    {n:2,s:"SÃ‰Q 1",t:"Cellule en microscopie optique",c:1,d:1},
-    {n:3,s:"SÃ‰Q 1",t:"Organisation de la cellule en microscopie Ã©lectronique",c:1,d:1},
-    {n:4,s:"SÃ‰Q 1",t:"Principaux organites cellulaires et leurs rÃ´les",c:1,d:1},
-    {n:5,s:"SÃ‰Q 1",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:6,s:"SÃ‰Q 2",t:"Structure des acides nuclÃ©iques et duplication de l'ADN",c:1,d:1},
-    {n:7,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (Ã©tapes, localisation, acteurs et produits)",c:1,d:1},
-    {n:8,s:"SÃ‰Q 2",t:"Ã‰tude de la biosynthÃ¨se des protÃ©ines (la relation entre la protÃ©ine et le caractÃ¨re)",c:1,d:1},
-    {n:9,s:"SÃ‰Q 2",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:10,s:"SÃ‰Q 3",t:"De la diploÃ¯die Ã  l'haploÃ¯die : les Ã©tapes de la mÃ©iose",c:1,d:1},
-    {n:11,s:"SÃ‰Q 3",t:"NÃ©cessitÃ© de la mÃ©iose dans la pÃ©rennisation de l'espÃ¨ce",c:1,d:1},
-    {n:12,s:"SÃ‰Q 3",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:13,s:"SÃ‰Q 3",t:"Ã‰valuation / Correction, remise des copies et remÃ©diations",c:1,d:0},
-    {n:14,s:"SÃ‰Q 4",t:"Absorption intestinale : dÃ©finition et troubles y affÃ©rents",c:1,d:1},
-    {n:15,s:"SÃ‰Q 4",t:"Devenir et le rÃ´le des Ã©lÃ©ments absorbÃ©s",c:1,d:1},
-    {n:16,s:"SÃ‰Q 4",t:"Sort des rÃ©sidus de la digestion : Ã©limination des dÃ©chets",c:1,d:1},
-    {n:17,s:"SÃ‰Q 4",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:18,s:"SÃ‰Q 5",t:"Constituants du sang et leurs rÃ´les",c:1,d:1},
-    {n:19,s:"SÃ‰Q 5",t:"Milieu intÃ©rieur",c:1,d:1},
-    {n:20,s:"SÃ‰Q 5",t:"NÃ©cessitÃ© du maintien de la constance du milieu intÃ©rieur",c:1,d:1},
-    {n:21,s:"SÃ‰Q 5",t:"Importance de l'Ã©limination urinaire",c:1,d:1},
-    {n:22,s:"SÃ‰Q 5",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:23,s:"SÃ‰Q 6",t:"RÃ´le du systÃ¨me nerveux dans les relations interpersonnelles",c:1,d:1},
-    {n:24,s:"SÃ‰Q 6",t:"Comportements psychosociaux dans la gestion d'un malade contagieux et d'une Ã©pidÃ©mie",c:1,d:1},
-    {n:25,s:"SÃ‰Q 6",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:26,s:"SÃ‰Q 7",t:"Grossesse",c:1,d:1},
-    {n:27,s:"SÃ‰Q 7",t:"StÃ©rilitÃ©",c:1,d:1},
-    {n:28,s:"SÃ‰Q 7",t:"La procrÃ©ation mÃ©dicalement assistÃ©e",c:1,d:1},
-    {n:29,s:"SÃ‰Q 7",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:30,s:"SÃ‰Q 8",t:"Dysfonctionnements du systÃ¨me immunitaire : les maladies auto-immunes",c:1,d:1},
-    {n:31,s:"SÃ‰Q 8",t:"Le VIH-Sida et consÃ©quences socioculturelles",c:1,d:1},
-    {n:32,s:"SÃ‰Q 8",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:33,s:"SÃ‰Q 9",t:"DÃ©finition et classification des catastrophes",c:1,d:1},
-    {n:34,s:"SÃ‰Q 9",t:"La gestion des catastrophes (prÃ©vision, prÃ©diction, prÃ©vention)",c:1,d:1},
-    {n:35,s:"SÃ‰Q 9",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:36,s:"SÃ‰Q 10",t:"Transformation et conservation de fruits : cas de la mangue",c:1,d:1},
-    {n:37,s:"SÃ‰Q 10",t:"Transformation et conservation de fruits : cas de la tomate",c:1,d:1},
-    {n:38,s:"SÃ‰Q 10",t:"Apprentissage de l'intÃ©gration",c:1,d:0},
-    {n:39,s:"SÃ‰Q 11",t:"Valorisation des dÃ©chets papiers et plastiques",c:1,d:1},
+    {n:1,s:"SÉQ 1",t:"Prise de contact ; présentation du programme ; évaluation diagnostique",c:1,d:0},
+    {n:2,s:"SÉQ 1",t:"Cellule en microscopie optique",c:1,d:1},
+    {n:3,s:"SÉQ 1",t:"Organisation de la cellule en microscopie électronique",c:1,d:1},
+    {n:4,s:"SÉQ 1",t:"Principaux organites cellulaires et leurs rôles",c:1,d:1},
+    {n:5,s:"SÉQ 1",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:6,s:"SÉQ 2",t:"Structure des acides nucléiques et duplication de l'ADN",c:1,d:1},
+    {n:7,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (étapes, localisation, acteurs et produits)",c:1,d:1},
+    {n:8,s:"SÉQ 2",t:"Étude de la biosynthèse des protéines (la relation entre la protéine et le caractère)",c:1,d:1},
+    {n:9,s:"SÉQ 2",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:10,s:"SÉQ 3",t:"De la diploïdie à l'haploïdie : les étapes de la méiose",c:1,d:1},
+    {n:11,s:"SÉQ 3",t:"Nécessité de la méiose dans la pérennisation de l'espèce",c:1,d:1},
+    {n:12,s:"SÉQ 3",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:13,s:"SÉQ 3",t:"Évaluation / Correction, remise des copies et remédiations",c:1,d:0},
+    {n:14,s:"SÉQ 4",t:"Absorption intestinale : définition et troubles y afférents",c:1,d:1},
+    {n:15,s:"SÉQ 4",t:"Devenir et le rôle des éléments absorbés",c:1,d:1},
+    {n:16,s:"SÉQ 4",t:"Sort des résidus de la digestion : élimination des déchets",c:1,d:1},
+    {n:17,s:"SÉQ 4",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:18,s:"SÉQ 5",t:"Constituants du sang et leurs rôles",c:1,d:1},
+    {n:19,s:"SÉQ 5",t:"Milieu intérieur",c:1,d:1},
+    {n:20,s:"SÉQ 5",t:"Nécessité du maintien de la constance du milieu intérieur",c:1,d:1},
+    {n:21,s:"SÉQ 5",t:"Importance de l'élimination urinaire",c:1,d:1},
+    {n:22,s:"SÉQ 5",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:23,s:"SÉQ 6",t:"Rôle du système nerveux dans les relations interpersonnelles",c:1,d:1},
+    {n:24,s:"SÉQ 6",t:"Comportements psychosociaux dans la gestion d'un malade contagieux et d'une épidémie",c:1,d:1},
+    {n:25,s:"SÉQ 6",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:26,s:"SÉQ 7",t:"Grossesse",c:1,d:1},
+    {n:27,s:"SÉQ 7",t:"Stérilité",c:1,d:1},
+    {n:28,s:"SÉQ 7",t:"La procréation médicalement assistée",c:1,d:1},
+    {n:29,s:"SÉQ 7",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:30,s:"SÉQ 8",t:"Dysfonctionnements du système immunitaire : les maladies auto-immunes",c:1,d:1},
+    {n:31,s:"SÉQ 8",t:"Le VIH-Sida et conséquences socioculturelles",c:1,d:1},
+    {n:32,s:"SÉQ 8",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:33,s:"SÉQ 9",t:"Définition et classification des catastrophes",c:1,d:1},
+    {n:34,s:"SÉQ 9",t:"La gestion des catastrophes (prévision, prédiction, prévention)",c:1,d:1},
+    {n:35,s:"SÉQ 9",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:36,s:"SÉQ 10",t:"Transformation et conservation de fruits : cas de la mangue",c:1,d:1},
+    {n:37,s:"SÉQ 10",t:"Transformation et conservation de fruits : cas de la tomate",c:1,d:1},
+    {n:38,s:"SÉQ 10",t:"Apprentissage de l'intégration",c:1,d:0},
+    {n:39,s:"SÉQ 11",t:"Valorisation des déchets papiers et plastiques",c:1,d:1},
   ],
 };
 
 function ProgrammePage() {
-  // Vue Animatrice â€” Suivi programme global
-  // Utilise le contexte AppContext (donnÃ©es partagÃ©es avec tout AppLayout)
+  // Vue Animatrice — Suivi programme global
+  // Utilise le contexte AppContext (données partagées avec tout AppLayout)
   const {data} = useApp();
 
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
       <Spinner size={28} color={C.green}/>
-      <div style={{marginTop:12,fontSize:13}}>Chargement des donnÃ©esâ€¦</div>
+      <div style={{marginTop:12,fontSize:13}}>Chargement des données…</div>
     </div>
   );
 
   return <EnseignantsPage/>;
 }
 
-// const EP_SLOTS: dÃ©fini globalement ligne ~4092
-// constante dÃ©finie globalement
+// const EP_SLOTS: défini globalement ligne ~4092
+// constante définie globalement
 
-// [DEDUPLIQUÃ‰] const ENS_COLORS = { mbassam:"#1a6b3c",boubam:"#c0392b",douniaroud:"#2980b9",hayatouh:"#16a085",aissatous:"#8e44ad",essambas:"#d35400",koffa:"#27ae60",mawiyak:"#e67e22",sadjot:"#2c3e50",sylvie:"#c8a951" };
-// const getColor = id => ENS_COLORS[id] || "#1a6b3c"; â€” dÃ©fini globalement
-// getIni: dÃ©fini globalement
+// [DEDUPLIQUÉ] const ENS_COLORS = { mbassam:"#1a6b3c",boubam:"#c0392b",douniaroud:"#2980b9",hayatouh:"#16a085",aissatous:"#8e44ad",essambas:"#d35400",koffa:"#27ae60",mawiyak:"#e67e22",sadjot:"#2c3e50",sylvie:"#c8a951" };
+// const getColor = id => ENS_COLORS[id] || "#1a6b3c"; — défini globalement
+// getIni: défini globalement
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PALETTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// const C: rÃ©fÃ©rence au bloc global ci-dessus
+// ═══════════════════════════════════════════════════
+// const C: référence au bloc global ci-dessus
 
 const STATUT_CONFIG = {
-  attente:  { label:"En attente",  emoji:"â³", color:C.orange,  bg:C.orangePale, border:C.orangeBorder },
-  validee:  { label:"ValidÃ©e",     emoji:"âœ…", color:C.green,   bg:C.greenPale,  border:C.greenBorder  },
-  rejetee:  { label:"RejetÃ©e",     emoji:"âŒ", color:C.red,     bg:C.redPale,    border:C.redBorder    },
-  vide:     { label:"Non soumise", emoji:"â—‹",  color:C.txtLight,bg:"#f8fafc",    border:C.border       },
+  attente:  { label:"En attente",  emoji:"⏳", color:C.orange,  bg:C.orangePale, border:C.orangeBorder },
+  validee:  { label:"Validée",     emoji:"✅", color:C.green,   bg:C.greenPale,  border:C.greenBorder  },
+  rejetee:  { label:"Rejetée",     emoji:"❌", color:C.red,     bg:C.redPale,    border:C.redBorder    },
+  vide:     { label:"Non soumise", emoji:"○",  color:C.txtLight,bg:"#f8fafc",    border:C.border       },
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // COMPOSANTS UI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // EpSpinner: utilise Spinner global
 
-// (composant Ep dÃ©dupliquÃ©)
+// (composant Ep dédupliqué)
 
-// (composant Ep dÃ©dupliquÃ©)
+// (composant Ep dédupliqué)
 
 const StatutBadge = ({ statut }) => {
   const cfg = STATUT_CONFIG[statut] || STATUT_CONFIG.vide;
   return <Pill ch={`${cfg.emoji} ${cfg.label}`} color={cfg.color} bg={cfg.bg}/>;
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // CHARGEMENT INITIAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 async function loadData() {
   await syncElevesImport();
   const [epreuves, users, classes, prog, notes, absences] = await Promise.all([
@@ -4332,9 +4332,9 @@ async function loadData() {
   return { epreuves: eps, users: usersMap, classes: classes||[], prog: progIndex, notes: notesIndex, absences: absIndex };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // GRILLE DE COUVERTURE (vue animateur)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 function GrilleCouverture({ classes, epreuves, onCardClick }) {
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:18 }}>
@@ -4348,13 +4348,13 @@ function GrilleCouverture({ classes, epreuves, onCardClick }) {
             <div style={{ padding:"10px 14px",background:"#f8fafc",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
                 <span style={{ fontSize:13,fontWeight:800,color:C.txt }}>{cl.code}</span>
-                <span style={{ fontSize:11,color:C.txtMuted,marginLeft:8 }}>{cl.effectif} Ã©lÃ¨ves</span>
+                <span style={{ fontSize:11,color:C.txtMuted,marginLeft:8 }}>{cl.effectif} élèves</span>
               </div>
               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                 <div style={{ width:80,height:5,background:"#e2e8f0",borderRadius:3,overflow:"hidden" }}>
                   <div style={{ height:"100%",width:`${Math.min(100, Math.round(nb/total*100))}%`,background:nb===total?C.green:nb>0?C.orange:C.border,borderRadius:3,transition:"width .5s" }}/>
                 </div>
-                <span style={{ fontSize:11,fontWeight:700,color:nb===total?C.green:C.txtMuted }}>{nb}/{total} validÃ©es</span>
+                <span style={{ fontSize:11,fontWeight:700,color:nb===total?C.green:C.txtMuted }}>{nb}/{total} validées</span>
               </div>
             </div>
             {/* Slots */}
@@ -4382,9 +4382,9 @@ function GrilleCouverture({ classes, epreuves, onCardClick }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CARTE Ã‰PREUVE (animateur â€” avec actions)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// CARTE ÉPREUVE (animateur — avec actions)
+// ═══════════════════════════════════════════════════
 function EpreuveCard({ ep, users, onAction, isAdmin }) {
   const [comment, setComment] = useState("");
   const [sendingCom, setSendingCom] = useState(false);
@@ -4410,22 +4410,22 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
     <div style={{ background:C.white,borderRadius:12,border:`1.5px solid ${cfg.border}`,overflow:"hidden",animation:"fadeUp .3s ease" }}>
       {/* Header */}
       <div style={{ padding:"14px 16px",background:cfg.bg,borderBottom:`1px solid ${cfg.border}`,display:"flex",alignItems:"flex-start",gap:12 }}>
-        {/* IcÃ´ne type */}
+        {/* Icône type */}
         <div style={{ width:42,height:42,borderRadius:10,background:ep.type==="pdf"?C.redPale:C.bluePale,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>
-          {ep.type==="pdf"?"ðŸ“•":"ðŸ“˜"}
+          {ep.type==="pdf"?"📕":"📘"}
         </div>
         {/* Infos */}
         <div style={{ flex:1,minWidth:0 }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.txt }}>
-            {ep.trim}Â·{ep.num} â€” {ep.classe} Â· SVTEEHB
+            {ep.trim}·{ep.num} — {ep.classe} · SVTEEHB
           </div>
           <div style={{ display:"flex",flexWrap:"wrap",gap:10,marginTop:5 }}>
             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
               <Avatar ens={ens} size={20} fontSize={8}/>
               <span style={{ fontSize:12,color:C.txtMuted }}>{ens.nom}</span>
             </div>
-            <span style={{ fontSize:12,color:C.txtMuted }}>ðŸ“… {fmtDateFr(ep.soumis)}</span>
-            {ep.fichier && <span style={{ fontSize:12,color:C.txtMuted }}>ðŸ“„ {ep.fichier}</span>}
+            <span style={{ fontSize:12,color:C.txtMuted }}>📅 {fmtDateFr(ep.soumis)}</span>
+            {ep.fichier && <span style={{ fontSize:12,color:C.txtMuted }}>📄 {ep.fichier}</span>}
             {ep.taille && <span style={{ fontSize:12,color:C.txtMuted }}>{ep.taille}</span>}
           </div>
         </div>
@@ -4437,35 +4437,35 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
         <div style={{ padding:"12px 16px",display:"flex",gap:8,borderBottom:`1px solid ${C.border}`,background:"rgba(255,255,255,.7)" }}>
           <button onClick={() => handleAction("validee")} disabled={!!actioning}
             style={{ flex:1,padding:"9px",background:actioning==="validee"?C.green:`linear-gradient(135deg,${C.greenDark},${C.greenLight})`,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:actioning?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:7 }}>
-            {actioning==="validee" ? <><Spinner s={14}/>Validationâ€¦</> : "âœ“ Valider"}
+            {actioning==="validee" ? <><Spinner s={14}/>Validation…</> : "✓ Valider"}
           </button>
           <button onClick={() => handleAction("rejetee")} disabled={!!actioning}
             style={{ flex:1,padding:"9px",background:actioning==="rejetee"?C.red:C.redPale,color:actioning==="rejetee"?"#fff":C.red,border:`1.5px solid ${C.redBorder}`,borderRadius:9,fontSize:13,fontWeight:700,cursor:actioning?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:7 }}>
-            {actioning==="rejetee" ? <><Spinner size={14} color={C.red}/>Rejetâ€¦</> : "âœ— Rejeter"}
+            {actioning==="rejetee" ? <><Spinner size={14} color={C.red}/>Rejet…</> : "✗ Rejeter"}
           </button>
           {ep.stockPath ? (
             <button onClick={() => window.open(sb.fileUrl(ep.stockPath), "_blank")}
               style={{ padding:"9px 14px",background:"#f8fafc",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",color:C.txtMuted,fontFamily:"inherit",whiteSpace:"nowrap" }}>
-              ðŸ‘ï¸ PrÃ©visualiser
+              👁️ Prévisualiser
             </button>
           ) : (
-            <span title="Le fichier n'a pas pu Ãªtre envoyÃ© lors de la soumission" style={{ padding:"9px 12px",background:C.redPale,border:`1.5px solid ${C.redBorder}`,borderRadius:9,fontSize:12,fontWeight:700,color:C.red,whiteSpace:"nowrap" }}>
-              âš ï¸ Fichier manquant
+            <span title="Le fichier n'a pas pu être envoyé lors de la soumission" style={{ padding:"9px 12px",background:C.redPale,border:`1.5px solid ${C.redBorder}`,borderRadius:9,fontSize:12,fontWeight:700,color:C.red,whiteSpace:"nowrap" }}>
+              ⚠️ Fichier manquant
             </span>
           )}
         </div>
       )}
 
-      {/* Bouton prÃ©visualisation seul (validÃ©e / rejetÃ©e) */}
+      {/* Bouton prévisualisation seul (validée / rejetée) */}
       {isAdmin && ep.statut !== "attente" && (
         <div style={{ padding:"10px 16px",borderBottom:`1px solid ${C.border}` }}>
           {ep.stockPath ? (
             <button onClick={() => window.open(sb.fileUrl(ep.stockPath), "_blank")}
               style={{ padding:"7px 14px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",color:C.txtMuted,fontFamily:"inherit" }}>
-              ðŸ‘ï¸ PrÃ©visualiser / Imprimer
+              👁️ Prévisualiser / Imprimer
             </button>
           ) : (
-            <span style={{ fontSize:12,fontWeight:700,color:C.red }}>âš ï¸ Fichier manquant â€” non envoyÃ© lors de la soumission</span>
+            <span style={{ fontSize:12,fontWeight:700,color:C.red }}>⚠️ Fichier manquant — non envoyé lors de la soumission</span>
           )}
         </div>
       )}
@@ -4474,7 +4474,7 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
       {ep.commentaires.length > 0 && (
         <div style={{ padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:8 }}>
           <div style={{ fontSize:11,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:2 }}>
-            {isAdmin ? "Ã‰changes" : "Retour de l'animatrice"}
+            {isAdmin ? "Échanges" : "Retour de l'animatrice"}
           </div>
           {ep.commentaires.map((c, i) => (
             <div key={i} style={{ display:"flex",gap:9 }}>
@@ -4496,7 +4496,7 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
       {/* Zone commentaire */}
       <div style={{ padding:"12px 16px",display:"flex",gap:8,alignItems:"flex-end" }}>
         <textarea value={comment} onChange={e=>setComment(e.target.value)}
-          placeholder="Ajouter un commentaireâ€¦"
+          placeholder="Ajouter un commentaire…"
           rows={1} onInput={e=>{ e.target.style.height="auto"; e.target.style.height=e.target.scrollHeight+"px"; }}
           style={{ flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,fontSize:12,color:C.txt,fontFamily:"inherit",resize:"none",outline:"none",lineHeight:1.4,background:"#f8fafc",transition:"border .2s" }}
           onFocus={e=>{ e.target.style.borderColor=C.green; e.target.style.background=C.white; }}
@@ -4504,16 +4504,16 @@ function EpreuveCard({ ep, users, onAction, isAdmin }) {
           onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleComment();} }}/>
         <button onClick={handleComment} disabled={!comment.trim()||sendingCom}
           style={{ padding:"9px 14px",background:comment.trim()?C.green:"#e2e8f0",color:comment.trim()?"#fff":C.txtLight,border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:comment.trim()?"pointer":"not-allowed",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center",gap:6 }}>
-          {sendingCom ? <Spinner size={14}/> : "âž¤"}
+          {sendingCom ? <Spinner size={14}/> : "➤"}
         </button>
       </div>
     </div>
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // FORMULAIRE DE SOUMISSION (enseignant)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 function FormSoumission({ user, onSubmit }) {
   const [file, setFile] = useState(null);
   const [classe, setClasse] = useState(user.classes?.[0] || "");
@@ -4554,11 +4554,11 @@ function FormSoumission({ user, onSubmit }) {
   return (
     <div style={{ background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden" }}>
       <div style={{ padding:"14px 16px",background:"#f8fafc",borderBottom:`1px solid ${C.border}` }}>
-        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>ðŸ“¤ Soumettre une Ã©preuve</h3>
-        <p style={{ margin:"3px 0 0",fontSize:12,color:C.txtMuted }}>L'animatrice sera notifiÃ©e automatiquement</p>
+        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>📤 Soumettre une épreuve</h3>
+        <p style={{ margin:"3px 0 0",fontSize:12,color:C.txtMuted }}>L'animatrice sera notifiée automatiquement</p>
       </div>
       <div style={{ padding:"18px 16px",display:"flex",flexDirection:"column",gap:14 }}>
-        {/* SÃ©lecteurs */}
+        {/* Sélecteurs */}
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10 }}>
           <div>
             <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Classe</label>
@@ -4575,7 +4575,7 @@ function FormSoumission({ user, onSubmit }) {
             </select>
           </div>
           <div>
-            <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Ã‰preuve</label>
+            <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Épreuve</label>
             <select value={num} onChange={e=>setNum(e.target.value)}
               style={{ width:"100%",padding:"9px 11px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,color:C.txt,background:C.white,fontFamily:"inherit",outline:"none",cursor:"pointer" }}>
               {slots.map(s=><option key={s.ep} value={s.ep}>{s.label}</option>)}
@@ -4591,14 +4591,14 @@ function FormSoumission({ user, onSubmit }) {
             onDrop={handleDrop}
             onClick={()=>fileRef.current?.click()}
             style={{ border:`2px dashed ${dragging?C.green:C.border}`,borderRadius:11,padding:"28px 20px",textAlign:"center",cursor:"pointer",background:dragging?C.greenPale:"#f8fafc",transition:"all .2s" }}>
-            <div style={{ fontSize:32,marginBottom:8 }}>ðŸ“Ž</div>
-            <div style={{ fontSize:13,fontWeight:700,color:C.txt }}>DÃ©poser le fichier ici</div>
-            <div style={{ fontSize:12,color:C.txtMuted,marginTop:3 }}>ou cliquer pour parcourir â€” PDF, Word, image â€” max 10 Mo</div>
+            <div style={{ fontSize:32,marginBottom:8 }}>📎</div>
+            <div style={{ fontSize:13,fontWeight:700,color:C.txt }}>Déposer le fichier ici</div>
+            <div style={{ fontSize:12,color:C.txtMuted,marginTop:3 }}>ou cliquer pour parcourir — PDF, Word, image — max 10 Mo</div>
             <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style={{ display:"none" }} onChange={e=>handleFile(e.target.files[0])}/>
           </div>
         ) : (
           <div style={{ background:C.greenPale,border:`1.5px solid ${C.greenBorder}`,borderRadius:11,padding:"12px 14px",display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ fontSize:22,flexShrink:0 }}>{file.name.endsWith(".pdf")?"ðŸ“•":"ðŸ“˜"}</div>
+            <div style={{ fontSize:22,flexShrink:0 }}>{file.name.endsWith(".pdf")?"📕":"📘"}</div>
             <div style={{ flex:1,minWidth:0 }}>
               <div style={{ fontSize:13,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{file.name}</div>
               <div style={{ fontSize:11,color:C.txtMuted }}>{(file.size/1024).toFixed(0)} Ko</div>
@@ -4609,8 +4609,8 @@ function FormSoumission({ user, onSubmit }) {
 
         {/* Note facultative */}
         <div>
-          <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Note Ã  l'animatrice (optionnel)</label>
-          <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="Informations complÃ©mentaires, consignes, contexteâ€¦"
+          <label style={{ display:"block",fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:C.txtMuted,marginBottom:4 }}>Note à l'animatrice (optionnel)</label>
+          <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="Informations complémentaires, consignes, contexte…"
             style={{ width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:12,color:C.txt,fontFamily:"inherit",resize:"vertical",outline:"none",background:"#f8fafc",transition:"border .2s" }}
             onFocus={e=>{ e.target.style.borderColor=C.green; e.target.style.background=C.white; }}
             onBlur={e=>{ e.target.style.borderColor=C.border; e.target.style.background="#f8fafc"; }}/>
@@ -4619,16 +4619,16 @@ function FormSoumission({ user, onSubmit }) {
         {/* Bouton */}
         <button onClick={submit} disabled={!file||submitting}
           style={{ width:"100%",padding:"12px",background:file&&!submitting?`linear-gradient(135deg,${C.greenDark},${C.greenLight})`:"#e2e8f0",color:file&&!submitting?"#fff":C.txtLight,border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:file&&!submitting?"pointer":"not-allowed",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:9 }}>
-          {submitting ? <><Spinner/>Envoi en coursâ€¦</> : "ðŸ“¤ Soumettre Ã  l'animatrice"}
+          {submitting ? <><Spinner/>Envoi en cours…</> : "📤 Soumettre à l'animatrice"}
         </button>
       </div>
     </div>
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// VUE ANIMATEUR COMPLÃˆTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// VUE ANIMATEUR COMPLÈTE
+// ═══════════════════════════════════════════════════
 function EpViewAdmin({ data, setData, showToast }) {
   const {isMobile} = useDevice();
   const [activeTab, setActiveTab] = useState("pending");
@@ -4651,7 +4651,7 @@ function EpViewAdmin({ data, setData, showToast }) {
       ep.statut = statut;
       const ok = await sb.rpc("update_epreuve_statut", { p_id: ep.id, p_statut: statut });
       if (ok) {
-        showToast(statut==="validee" ? "âœ… Ã‰preuve validÃ©e â€” enseignant notifiÃ©" : "âš ï¸ Ã‰preuve rejetÃ©e â€” enseignant notifiÃ©", true);
+        showToast(statut==="validee" ? "✅ Épreuve validée — enseignant notifié" : "⚠️ Épreuve rejetée — enseignant notifié", true);
       }
     }
     if (commentaire) {
@@ -4659,7 +4659,7 @@ function EpViewAdmin({ data, setData, showToast }) {
       const nouveauCommentaire = { av:"AS", col:C.gold, aut:"Sylvie", txt:commentaire, date:now };
       ep.commentaires.push(nouveauCommentaire);
       await sb.rpc("add_epreuve_commentaire", { p_id: ep.id, p_commentaire: nouveauCommentaire });
-      showToast("ðŸ’¬ Commentaire envoyÃ©", true);
+      showToast("💬 Commentaire envoyé", true);
     }
     setData(prev => ({ ...prev, epreuves: eps }));
     if (selectedEp?.id === epId) setSelectedEp(eps.find(e => e.id === epId));
@@ -4667,8 +4667,8 @@ function EpViewAdmin({ data, setData, showToast }) {
 
   const tabs = [
     { id:"pending",   label:"En attente",  count:pending.length,   color:C.orange },
-    { id:"validated", label:"ValidÃ©es",     count:validated.length, color:C.green  },
-    { id:"rejected",  label:"RejetÃ©es",     count:rejected.length,  color:C.red    },
+    { id:"validated", label:"Validées",     count:validated.length, color:C.green  },
+    { id:"rejected",  label:"Rejetées",     count:rejected.length,  color:C.red    },
     { id:"grille",    label:"Grille globale",count:null,            color:C.blue   },
   ];
 
@@ -4676,14 +4676,14 @@ function EpViewAdmin({ data, setData, showToast }) {
 
   return (
     <div style={{ display:"grid",gridTemplateColumns:"1fr 380px",gap:16,alignItems:"start" }}>
-      {/* Gauche â€” liste */}
+      {/* Gauche — liste */}
       <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
         {/* Stats */}
         <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:10 }}>
           {[
             { label:"En attente", val:pending.length,   col:C.orange, bg:C.orangePale },
-            { label:"ValidÃ©es",   val:validated.length, col:C.green,  bg:C.greenPale  },
-            { label:"RejetÃ©es",   val:rejected.length,  col:C.red,    bg:C.redPale    },
+            { label:"Validées",   val:validated.length, col:C.green,  bg:C.greenPale  },
+            { label:"Rejetées",   val:rejected.length,  col:C.red,    bg:C.redPale    },
             { label:"Total",      val:(data?.epreuves||[]).length, col:C.blue, bg:C.bluePale },
           ].map((s,i)=>(
             <div key={i} style={{ background:s.bg,borderRadius:10,border:`1px solid ${s.col}20`,padding:"12px 14px" }}>
@@ -4724,10 +4724,10 @@ function EpViewAdmin({ data, setData, showToast }) {
             {currentList.length === 0 ? (
               <div style={{ textAlign:"center",padding:"40px",color:C.txtMuted,background:C.white,borderRadius:12,border:`1px solid ${C.border}` }}>
                 <div style={{ fontSize:32,marginBottom:8 }}>
-                  {activeTab==="pending"?"ðŸ“­":activeTab==="validated"?"âœ…":"ðŸ“‹"}
+                  {activeTab==="pending"?"📭":activeTab==="validated"?"✅":"📋"}
                 </div>
                 <div style={{ fontSize:13,fontWeight:600 }}>
-                  {activeTab==="pending"?"Aucune Ã©preuve en attente":activeTab==="validated"?"Aucune Ã©preuve validÃ©e":"Aucune Ã©preuve rejetÃ©e"}
+                  {activeTab==="pending"?"Aucune épreuve en attente":activeTab==="validated"?"Aucune épreuve validée":"Aucune épreuve rejetée"}
                 </div>
               </div>
             ) : (
@@ -4739,21 +4739,21 @@ function EpViewAdmin({ data, setData, showToast }) {
         )}
       </div>
 
-      {/* Droite â€” dÃ©tail sÃ©lectionnÃ© */}
+      {/* Droite — détail sélectionné */}
       <div style={{ position:"sticky",top:70 }}>
         {selectedEp ? (
           <div>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-              <h3 style={{ margin:0,fontSize:13,fontWeight:700,color:C.txt }}>DÃ©tail de l'Ã©preuve</h3>
-              <button onClick={()=>setSelectedEp(null)} style={{ padding:"4px 9px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:7,color:C.txtMuted,fontSize:11,cursor:"pointer",fontFamily:"inherit" }}>âœ• Fermer</button>
+              <h3 style={{ margin:0,fontSize:13,fontWeight:700,color:C.txt }}>Détail de l'épreuve</h3>
+              <button onClick={()=>setSelectedEp(null)} style={{ padding:"4px 9px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:7,color:C.txtMuted,fontSize:11,cursor:"pointer",fontFamily:"inherit" }}>✕ Fermer</button>
             </div>
             <EpreuveCard ep={(data?.epreuves||[]).find(e=>e.id===selectedEp.id)||selectedEp} users={data?.users||{}} onAction={handleAction} isAdmin={true}/>
           </div>
         ) : (
           <div style={{ background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:"28px 20px",textAlign:"center",color:C.txtMuted }}>
-            <div style={{ fontSize:32,marginBottom:10 }}>ðŸ‘†</div>
-            <div style={{ fontSize:13,fontWeight:600,marginBottom:5 }}>SÃ©lectionner une Ã©preuve</div>
-            <div style={{ fontSize:12 }}>Cliquez sur une carte de la grille ou d'une Ã©preuve pour voir le dÃ©tail et agir</div>
+            <div style={{ fontSize:32,marginBottom:10 }}>👆</div>
+            <div style={{ fontSize:13,fontWeight:600,marginBottom:5 }}>Sélectionner une épreuve</div>
+            <div style={{ fontSize:12 }}>Cliquez sur une carte de la grille ou d'une épreuve pour voir le détail et agir</div>
           </div>
         )}
       </div>
@@ -4761,9 +4761,9 @@ function EpViewAdmin({ data, setData, showToast }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// VUE ENSEIGNANT COMPLÃˆTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// VUE ENSEIGNANT COMPLÈTE
+// ═══════════════════════════════════════════════════
 function EpViewTeacher({ user, data, setData, showToast }) {
   const {isMobile} = useDevice();
   const mesEpreuves = (data?.epreuves||[]).filter(e => e.ens_id === user.id || e.ens === user.id);
@@ -4779,7 +4779,7 @@ function EpViewTeacher({ user, data, setData, showToast }) {
     const nouveauCommentaire = { av:user.ini, col:user.col, aut:getNomCourt(user.nom), txt:commentaire, date:now };
     ep.commentaires.push(nouveauCommentaire);
     await sb.rpc("add_epreuve_commentaire", { p_id: ep.id, p_commentaire: nouveauCommentaire });
-    showToast("ðŸ’¬ Message envoyÃ© Ã  l'animatrice", true);
+    showToast("💬 Message envoyé à l'animatrice", true);
     setData(prev => ({ ...prev, epreuves: eps }));
   }, [data?.epreuves||[], user]);
 
@@ -4787,25 +4787,25 @@ function EpViewTeacher({ user, data, setData, showToast }) {
     if (ok && ep) {
       setData(prev => ({ ...prev, epreuves: [ep, ...prev.epreuves] }));
       if (uploadFailed) {
-        showToast("âš ï¸ Fiche enregistrÃ©e mais le FICHIER n'a pas pu Ãªtre envoyÃ© â€” rÃ©essayez ou contactez l'animatrice", false);
+        showToast("⚠️ Fiche enregistrée mais le FICHIER n'a pas pu être envoyé — réessayez ou contactez l'animatrice", false);
       } else {
-        showToast("âœ… Ã‰preuve soumise â€” animatrice notifiÃ©e", true);
+        showToast("✅ Épreuve soumise — animatrice notifiée", true);
       }
     } else {
-      showToast("âš ï¸ Erreur lors de la soumission", false);
+      showToast("⚠️ Erreur lors de la soumission", false);
     }
   };
 
   return (
     <div style={{ display:"grid",gridTemplateColumns:"1fr 340px",gap:16,alignItems:"start" }}>
-      {/* Gauche â€” mes Ã©preuves */}
+      {/* Gauche — mes épreuves */}
       <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
         {/* Stats */}
         <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(3,1fr)",gap:10 }}>
           {[
             { label:"En attente",   val:pending.length,   col:C.orange, bg:C.orangePale },
-            { label:"ValidÃ©es",     val:validated.length, col:C.green,  bg:C.greenPale  },
-            { label:"Ã€ corriger",   val:rejected.length,  col:C.red,    bg:C.redPale    },
+            { label:"Validées",     val:validated.length, col:C.green,  bg:C.greenPale  },
+            { label:"À corriger",   val:rejected.length,  col:C.red,    bg:C.redPale    },
           ].map((s,i)=>(
             <div key={i} style={{ background:s.bg,borderRadius:10,border:`1px solid ${s.col}20`,padding:"12px 14px" }}>
               <div style={{ fontSize:10,color:s.col,fontWeight:700,marginBottom:4 }}>{s.label}</div>
@@ -4814,21 +4814,21 @@ function EpViewTeacher({ user, data, setData, showToast }) {
           ))}
         </div>
 
-        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>ðŸ“‹ Mes Ã©preuves soumises</h3>
+        <h3 style={{ margin:0,fontSize:14,fontWeight:700,color:C.txt }}>📋 Mes épreuves soumises</h3>
 
         {mesEpreuves.length === 0 ? (
           <div style={{ textAlign:"center",padding:"40px",color:C.txtMuted,background:C.white,borderRadius:12,border:`1px solid ${C.border}` }}>
-            <div style={{ fontSize:32,marginBottom:8 }}>ðŸ“­</div>
-            <div style={{ fontSize:13,fontWeight:600 }}>Aucune Ã©preuve soumise</div>
-            <div style={{ fontSize:12,marginTop:4 }}>Utilisez le formulaire ci-contre pour soumettre votre premiÃ¨re Ã©preuve</div>
+            <div style={{ fontSize:32,marginBottom:8 }}>📭</div>
+            <div style={{ fontSize:13,fontWeight:600 }}>Aucune épreuve soumise</div>
+            <div style={{ fontSize:12,marginTop:4 }}>Utilisez le formulaire ci-contre pour soumettre votre première épreuve</div>
           </div>
         ) : (
           <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-            {/* RejetÃ©es en premier â€” action requise */}
+            {/* Rejetées en premier — action requise */}
             {rejected.length > 0 && (
               <div style={{ background:C.redPale,border:`1px solid ${C.redBorder}`,borderRadius:10,padding:"10px 14px",marginBottom:4 }}>
-                <div style={{ fontSize:12,fontWeight:700,color:C.red }}>âš ï¸ {rejected.length} Ã©preuve{rejected.length>1?"s":""} rejetÃ©e{rejected.length>1?"s":""} â€” action requise</div>
-                <div style={{ fontSize:11,color:C.txtMuted,marginTop:2 }}>Consultez les commentaires et soumettez une version corrigÃ©e</div>
+                <div style={{ fontSize:12,fontWeight:700,color:C.red }}>⚠️ {rejected.length} épreuve{rejected.length>1?"s":""} rejetée{rejected.length>1?"s":""} — action requise</div>
+                <div style={{ fontSize:11,color:C.txtMuted,marginTop:2 }}>Consultez les commentaires et soumettez une version corrigée</div>
               </div>
             )}
             {mesEpreuves.map(ep => (
@@ -4838,16 +4838,16 @@ function EpViewTeacher({ user, data, setData, showToast }) {
         )}
       </div>
 
-      {/* Droite â€” formulaire */}
+      {/* Droite — formulaire */}
       <div style={{ position:"sticky",top:70 }}>
         <FormSoumission user={user} onSubmit={onSubmit}/>
         {/* Grille slots */}
         <div style={{ marginTop:14,background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:"14px 16px" }}>
-          <h4 style={{ margin:"0 0 12px",fontSize:13,fontWeight:700,color:C.txt }}>ðŸ“Š Mes slots d'Ã©preuves</h4>
+          <h4 style={{ margin:"0 0 12px",fontSize:13,fontWeight:700,color:C.txt }}>📊 Mes slots d'épreuves</h4>
           <div style={{ display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(2,1fr)",gap:7 }}>
             {EP_SLOTS.map((slot,i) => {
               const submitted = mesEpreuves.filter(e => e.trim===slot.trim && e.num===slot.ep);
-              // On prend la plus rÃ©cente
+              // On prend la plus récente
               const ep = submitted.sort((a,b)=>b.soumis?.localeCompare(a.soumis)||0)[0];
               const st = ep?.statut || "vide";
               const cfg = STATUT_CONFIG[st];
@@ -4869,9 +4869,9 @@ function EpViewTeacher({ user, data, setData, showToast }) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PAGE PRINCIPALE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 
 function EpreuvesPage() {
   const {user, data, setData, showToast} = useApp();
@@ -4880,46 +4880,46 @@ function EpreuvesPage() {
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
       <Spinner size={28} color={C.green}/>
-      <div style={{marginTop:12,fontSize:13}}>Chargementâ€¦</div>
+      <div style={{marginTop:12,fontSize:13}}>Chargement…</div>
     </div>
   );
 
   if (isAdmin) return <EpViewAdmin data={data} setData={setData} showToast={showToast}/>;
 
-  // Vue enseignant â€” utiliser l'utilisateur connectÃ©
+  // Vue enseignant — utiliser l'utilisateur connecté
   const ens = user;
   return <EpViewTeacher user={ens} data={data} setData={setData} showToast={showToast}/>;
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PALETTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// const C: rÃ©fÃ©rence au bloc global ci-dessus
+// ═══════════════════════════════════════════════════
+// const C: référence au bloc global ci-dessus
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CHARGEMENT DONNÃ‰ES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// loadData: dÃ©finie globalement (charge classes, users, prog_suivi, epreuves, edt_exceptions)
+// ═══════════════════════════════════════════════════
+// CHARGEMENT DONNÉES
+// ═══════════════════════════════════════════════════
+// loadData: définie globalement (charge classes, users, prog_suivi, epreuves, edt_exceptions)
 
-// progDocMeta: dÃ©finie globalement dans le header
+// progDocMeta: définie globalement dans le header
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GÃ‰NÃ‰RATION HTML DOCUMENT OFFICIEL MINESEC
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// GÉNÉRATION HTML DOCUMENT OFFICIEL MINESEC
+// ═══════════════════════════════════════════════════
 function enteteOfficiel(titre, sousTitre, dept) {
   return `
   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;border-bottom:2px solid #1a6b3c;padding-bottom:10px">
     <div style="text-align:center;font-size:9px;line-height:1.5;width:45%">
       <div style="font-weight:bold">REPUBLIQUE DU CAMEROUN</div>
-      <div style="font-style:italic">Paix â€“ Travail â€“ Patrie</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-style:italic">Paix – Travail – Patrie</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>MINISTERE DES ENSEIGNEMENTS SECONDAIRES</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTION GENERALE DES ENSEIGNEMENTS</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTION DE PEDAGOGIE CHARGEE DE L'ENSEIGNEMENT DES SCIENCES</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div style="font-weight:bold">SECTION : ${dept || "SVTEEHB"}</div>
     </div>
     <div style="text-align:center;width:10%;display:flex;flex-direction:column;align-items:center;gap:6px">
@@ -4927,35 +4927,35 @@ function enteteOfficiel(titre, sousTitre, dept) {
     </div>
     <div style="text-align:center;font-size:9px;line-height:1.5;width:45%">
       <div style="font-weight:bold">REPUBLIC OF CAMEROON</div>
-      <div style="font-style:italic">Peace â€“ Work â€“ Fatherland</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-style:italic">Peace – Work – Fatherland</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>MINISTRY OF SECONDARY EDUCATION</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTORATE GENERAL OF EDUCATION</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div>INSPECTORATE OF PEDAGOGY IN CHARGE OF THE TEACHING OF SCIENCES</div>
-      <div style="font-size:7px">â€“ â€“ â€“ â€“ â€“ â€“</div>
+      <div style="font-size:7px">– – – – – –</div>
       <div style="font-weight:bold">SECTION : LESEEHB</div>
     </div>
   </div>
   <h2 style="text-align:center;font-size:13px;font-weight:900;text-transform:uppercase;border:2px solid #222;padding:7px;margin:8px 0;letter-spacing:.04em">${titre}</h2>
   ${sousTitre ? `<p style="text-align:center;font-size:10px;color:#444;margin:0 0 8px">${sousTitre}</p>` : ""}
-  <div style="text-align:center;font-size:9px;margin-bottom:2px">Ã‰tablissement : LycÃ©e de Kakatare &nbsp;|&nbsp; Discipline : SVTEEHB &nbsp;|&nbsp; AnnÃ©e scolaire : 2025-2026</div>`;
+  <div style="text-align:center;font-size:9px;margin-bottom:2px">Établissement : Lycée de Kakatare &nbsp;|&nbsp; Discipline : SVTEEHB &nbsp;|&nbsp; Année scolaire : 2025-2026</div>`;
 }
 
-// Fiche de suivi pÃ©dagogique (vue animatrice par enseignant)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// genFicheSuivi â€” Fiche de Suivi PÃ©dagogique MINESEC officielle
-// Source modÃ¨le : Modele_de_FP.pdf â€” MINESEC-DRES/EXTREME-NORD
-// Structure : identique au modÃ¨le officiel â€” toutes colonnes prÃ©sentes
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex = {}, absencesIndex = {}, deptNom = "SVTEEHB", animateurNom = "â€”") {
-  const periode = TRIM_LABELS[trim] || "AnnÃ©e complÃ¨te";
+// Fiche de suivi pédagogique (vue animatrice par enseignant)
+// ═══════════════════════════════════════════════════════════════════
+// genFicheSuivi — Fiche de Suivi Pédagogique MINESEC officielle
+// Source modèle : Modele_de_FP.pdf — MINESEC-DRES/EXTREME-NORD
+// Structure : identique au modèle officiel — toutes colonnes présentes
+// ═══════════════════════════════════════════════════════════════════
+function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex = {}, absencesIndex = {}, deptNom = "SVTEEHB", animateurNom = "—") {
+  const periode = TRIM_LABELS[trim] || "Année complète";
   const nbSem   = trim === "ANN" ? 36 : 12;
   const dateJour = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
-  const evalLabel = trim === "ANN" ? "NÂ° 1 Â· 2 Â· 3 Â· 4 Â· 5 Â· 6" : trim === "T1" ? "NÂ° 1 et 2" : trim === "T2" ? "NÂ° 3 et 4" : "NÂ° 5 et 6";
+  const evalLabel = trim === "ANN" ? "N° 1 · 2 · 3 · 4 · 5 · 6" : trim === "T1" ? "N° 1 et 2" : trim === "T2" ? "N° 3 et 4" : "N° 5 et 6";
 
-  // â”€â”€ Calcul des lignes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Calcul des lignes ────────────────────────────────────────────
   const statsObs = [];
   const rows = classes.map((cl,idx) => {
     const eleves = ELEVES_DB[cl] || [];
@@ -4964,12 +4964,12 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const total = eleves.length;
     const code = resolveProgCode(cl);
     const meta = code ? PROG_META[code] : null;
-    if (!meta) return `<tr><td style="font-weight:700;padding:3px 4px;text-align:center;font-size:7.5pt;background:#f0f0f0;border:1px solid #999">${cl}</td><td colspan="22" style="border:1px solid #999;padding:3px;text-align:center;color:#999;font-style:italic;font-size:7pt">Programme non mappÃ©</td></tr>`;
+    if (!meta) return `<tr><td style="font-weight:700;padding:3px 4px;text-align:center;font-size:7.5pt;background:#f0f0f0;border:1px solid #999">${cl}</td><td colspan="22" style="border:1px solid #999;padding:3px;text-align:center;color:#999;font-style:italic;font-size:7pt">Programme non mappé</td></tr>`;
 
     const key    = `${enseignant.id}||${cl}`;
     const faites = progIndex[key] || [];
     const leconsCodeAll = LECONS_DATA[code]||[];
-    const tdLeconsAll = leconsCodeAll.filter(l=>/intÃ©gration/i.test(l.t));
+    const tdLeconsAll = leconsCodeAll.filter(l=>/intégration/i.test(l.t));
 
     let lp = meta.lpRef, tpP = meta.tp?.length||0, tdP = tdLeconsAll.length;
     if (trim !== "ANN") {
@@ -4989,7 +4989,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const tdFait = trim==="ANN"
       ? tdLeconsAll.filter(l=>faites.includes(l.n)).length
       : tdLeconsAll.filter(l=>{ const r=getTrimRange(code,trim); return faites.includes(l.n)&&r&&l.n>=r[0]&&l.n<=r[1]; }).length;
-    // Nombre prÃ©vu/fait total = TP + TD (activitÃ©s d'intÃ©gration, obligatoires)
+    // Nombre prévu/fait total = TP + TD (activités d'intégration, obligatoires)
     const tpTdP  = tpP + tdP;
     const tpTdFT = tpFT + tdFait;
     const tauxTP = tpTdP>0 ? Math.min(100, Math.round(tpTdFT/tpTdP*100)) : 0;
@@ -4997,7 +4997,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const hFaites = Math.round(lfTrim * (meta.hd/meta.lpRef));
     const tauxHD = hDues>0 ? Math.min(100, Math.round(hFaites/hDues*100)) : 0;
 
-    // Utilisation des ressources digitalisÃ©es â€” depuis prog_suivi clÃ© "||dig"
+    // Utilisation des ressources digitalisées — depuis prog_suivi clé "||dig"
     const digFaites = progIndex[`${key}||dig`] || [];
     const leconsCode = LECONS_DATA[code]||[];
     const digRange = trim!=="ANN" ? getTrimRange(code,trim) : null;
@@ -5008,7 +5008,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const ldFait = leconsDigitalisables.filter(l=>digFaites.includes(l.n)).length;
     const tauxLD = ldTot>0 ? Math.min(100, Math.round(ldFait/ldTot*100)) : 0;
 
-    // Taux de rÃ©ussite depuis notes
+    // Taux de réussite depuis notes
     const getN = (eid, t, e) => { const v = (notesIndex[`${cl}||${t}-${e}`]||{})[eid]; return (v===undefined||v===""||v===null) ? null : +v; };
     const moyTrimEl = (eid, t) => { const e1=getN(eid,t,"E1"), e2=getN(eid,t,"E2"); if(e1===null&&e2===null) return null; if(e1!==null&&e2!==null) return (e1+e2)/2; return e1!==null?e1:e2; };
     const trimsToAvg = trim==="ANN" ? ["T1","T2","T3"] : [trim];
@@ -5021,10 +5021,10 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     const pctG = mG.length>0?Math.round(mG.filter(n=>n>=10).length/mG.length*100):null;
     const pctF = mF.length>0?Math.round(mF.filter(n=>n>=10).length/mF.length*100):null;
 
-    // Taux d'AssiduitÃ© (TA) â€” formule exacte de la lÃ©gende (2) :
-    // A = Volume horaire HEBDOMADAIRE Ã— Effectif, Ã©tendu sur nbSem semaines de la pÃ©riode
-    // B = Total des heures d'absence enregistrÃ©es sur la pÃ©riode
-    // PrÃ©sences enregistrÃ©es par DATE (indÃ©pendant du cahier de texte)
+    // Taux d'Assiduité (TA) — formule exacte de la légende (2) :
+    // A = Volume horaire HEBDOMADAIRE × Effectif, étendu sur nbSem semaines de la période
+    // B = Total des heures d'absence enregistrées sur la période
+    // Présences enregistrées par DATE (indépendant du cahier de texte)
     const moisDansTrim = (dateStr, tr) => {
       if (tr === "ANN") return true;
       const mois = parseInt((dateStr||"").split("-")[1], 10);
@@ -5038,15 +5038,15 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
       .filter(k=>k.startsWith(absPrefix))
       .map(k=>k.slice(absPrefix.length))
       .filter(d=>moisDansTrim(d, trim));
-    const heuresParSeance = lp>0 ? (meta.vh*nbSem)/lp : 0; // 1 sÃ©ance â‰ˆ (vhÃ—semaines pÃ©riode)/leÃ§ons prÃ©vues
+    const heuresParSeance = lp>0 ? (meta.vh*nbSem)/lp : 0; // 1 séance ≈ (vh×semaines période)/leçons prévues
     let heuresAbsTotal = 0;
     datesAvecDonnees.forEach(d=>{
       const abs = absencesIndex[`${absPrefix}${d}`]||[];
       heuresAbsTotal += abs.length * heuresParSeance;
     });
     const seancesAvecDonnees = datesAvecDonnees.length;
-    // A = capacitÃ© d'heures pour les SÃ‰ANCES RÃ‰ELLEMENT RENSEIGNÃ‰ES uniquement
-    // (et non toute l'annÃ©e â€” sinon 1 seule journÃ©e notÃ©e dilue le taux vers 100%)
+    // A = capacité d'heures pour les SÉANCES RÉELLEMENT RENSEIGNÉES uniquement
+    // (et non toute l'année — sinon 1 seule journée notée dilue le taux vers 100%)
     const heuresPossibles = total * heuresParSeance * seancesAvecDonnees;
     const tauxAssiduite = (seancesAvecDonnees>0 && heuresPossibles>0)
       ? Math.max(0, Math.min(100, Math.round((heuresPossibles - heuresAbsTotal) * 100 / heuresPossibles)))
@@ -5055,7 +5055,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 
     // Couleurs taux
     const col = v => v>=75?"#16a34a":v>=50?"#92400e":"#991b1b";
-    const pct = (v,sfx="%") => v!==null?`<span style="color:${col(v)};font-weight:700">${v}${sfx}</span>`:"â€”";
+    const pct = (v,sfx="%") => v!==null?`<span style="color:${col(v)};font-weight:700">${v}${sfx}</span>`:"—";
     const bgRow = idx%2===0?"#ffffff":"#f9f9f9";
     const td = `style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;background:${bgRow}"`;
     const tdG = `style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:8pt;font-weight:700;background:#f0f0f0"`;
@@ -5064,44 +5064,44 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     return `<tr>
       <td ${tdG}>${cl}</td>
       <td ${td}>${g}</td><td ${td}>${f}</td><td ${td} style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;font-weight:700;background:${bgRow}">${total}</td>
-      <td ${td}>${seancesAvecDonnees>0?Math.round(heuresPossibles):"â€”"}</td><td ${td}>${heuresFaitesAssidu!==null?heuresFaitesAssidu:"â€”"}</td><td ${td}>${tauxAssiduite!==null?pct(tauxAssiduite):'<span style="color:#999;font-style:italic;font-size:6.5pt">N/D</span>'}</td>
+      <td ${td}>${seancesAvecDonnees>0?Math.round(heuresPossibles):"—"}</td><td ${td}>${heuresFaitesAssidu!==null?heuresFaitesAssidu:"—"}</td><td ${td}>${tauxAssiduite!==null?pct(tauxAssiduite):'<span style="color:#999;font-style:italic;font-size:6.5pt">N/D</span>'}</td>
       <td ${td}>${lp}</td><td ${td}><strong>${lfTrim}</strong></td><td ${td}>${pct(tauxLP)}</td>
       <td ${td}>${ldTot}</td><td ${td}><strong>${ldFait}</strong></td><td ${td}>${pct(tauxLD)}</td>
       <td ${td}>${hDues}</td><td ${td}>${hFaites}</td><td ${td}>${pct(tauxHD)}</td>
       <td ${td}>${tpTdP}</td><td ${td}>${tpTdFT}</td><td ${td}>${pct(tauxTP)}</td>
-      <td ${td}>${pctG!==null?pct(pctG):"â€”"}</td><td ${td}>${pctF!==null?pct(pctF):"â€”"}</td><td ${td}>${tauxReuss!==null?pct(tauxReuss):"â€”"}</td>
-      <td ${td} style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;font-weight:700;background:${bgRow}">${moyClasse!==null?moyClasse:"â€”"}</td>
+      <td ${td}>${pctG!==null?pct(pctG):"—"}</td><td ${td}>${pctF!==null?pct(pctF):"—"}</td><td ${td}>${tauxReuss!==null?pct(tauxReuss):"—"}</td>
+      <td ${td} style="border:1px solid #aaa;padding:2px 3px;text-align:center;font-size:7.5pt;font-weight:700;background:${bgRow}">${moyClasse!==null?moyClasse:"—"}</td>
     </tr>`;
   }).join("");
 
-  // â”€â”€ Constats automatiques (brouillon â€” Ã  complÃ©ter par l'enseignant) â”€â”€
+  // ── Constats automatiques (brouillon — à compléter par l'enseignant) ──
   function genObservations(stats) {
     const difficultes = [];
     const suggestions = [];
     stats.forEach(s => {
       if (s.tauxLP !== null && s.tauxLP < 50) {
-        difficultes.push(`${s.cl} : couverture du programme Ã  ${s.tauxLP}% â€” nettement sous l'objectif (75%)`);
-        suggestions.push(`${s.cl} : envisager un rattrapage accÃ©lÃ©rÃ© ou revoir le rythme de progression`);
+        difficultes.push(`${s.cl} : couverture du programme à ${s.tauxLP}% — nettement sous l'objectif (75%)`);
+        suggestions.push(`${s.cl} : envisager un rattrapage accéléré ou revoir le rythme de progression`);
       }
       if (s.tauxTP !== null && s.tauxTP < 40) {
-        difficultes.push(`${s.cl} : faible exÃ©cution des TP/TD (${s.tauxTP}%)`);
+        difficultes.push(`${s.cl} : faible exécution des TP/TD (${s.tauxTP}%)`);
       }
       if (s.tauxAssiduite !== null && s.tauxAssiduite < 85) {
-        difficultes.push(`${s.cl} : taux d'assiduitÃ© de ${s.tauxAssiduite}% â€” absences Ã  surveiller`);
+        difficultes.push(`${s.cl} : taux d'assiduité de ${s.tauxAssiduite}% — absences à surveiller`);
       }
       if (s.pctG !== null && s.pctF !== null && Math.abs(s.pctG - s.pctF) >= 25) {
-        difficultes.push(`${s.cl} : Ã©cart de rÃ©ussite important entre garÃ§ons (${s.pctG}%) et filles (${s.pctF}%)`);
-        suggestions.push(`${s.cl} : analyser les causes de l'Ã©cart de rÃ©ussite entre genres`);
+        difficultes.push(`${s.cl} : écart de réussite important entre garçons (${s.pctG}%) et filles (${s.pctF}%)`);
+        suggestions.push(`${s.cl} : analyser les causes de l'écart de réussite entre genres`);
       }
       if (s.moyClasse !== null && s.moyClasse < 8) {
-        difficultes.push(`${s.cl} : moyenne gÃ©nÃ©rale faible (${s.moyClasse}/20)`);
+        difficultes.push(`${s.cl} : moyenne générale faible (${s.moyClasse}/20)`);
       }
     });
     return { difficultes: difficultes.slice(0,5), suggestions: suggestions.slice(0,4) };
   }
   const obs = genObservations(statsObs);
-  const ligneObs = (txt) => `&nbsp;&nbsp;&nbsp;â€”&nbsp;&nbsp;${txt}<br>`;
-  const blancObs = () => `&nbsp;&nbsp;&nbsp;â€”&nbsp;&nbsp;&nbsp;<span style="color:#bbb">_______________________________________________</span><br>`;
+  const ligneObs = (txt) => `&nbsp;&nbsp;&nbsp;—&nbsp;&nbsp;${txt}<br>`;
+  const blancObs = () => `&nbsp;&nbsp;&nbsp;—&nbsp;&nbsp;&nbsp;<span style="color:#bbb">_______________________________________________</span><br>`;
   const difficultesHTML = obs.difficultes.length>0
     ? obs.difficultes.map(ligneObs).join("") + blancObs()
     : blancObs() + blancObs();
@@ -5109,7 +5109,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
     ? obs.suggestions.map(ligneObs).join("") + blancObs()
     : blancObs() + blancObs();
 
-  // â”€â”€ Infos heures hebdo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Infos heures hebdo ──────────────────────────────────────────
   const hHebdoTotal = classes.reduce((sum,cl) => { const code=resolveProgCode(cl); return sum + (code?(PROG_META[code]?.vh||0):0); }, 0);
   const hHebdoStr = `${hHebdoTotal}h / semaine`;
 
@@ -5120,7 +5120,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Times New Roman", Times, serif; font-size: 9pt; color: #000; background: #fff; }
 
-  /* â”€â”€ EN-TÃŠTE BILINGUE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── EN-TÊTE BILINGUE ─────────────────────────────── */
   .entete { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 4px; margin-bottom: 0; }
   .col-fr, .col-en { width: 42%; font-size: 8pt; line-height: 1.55; text-align: center; }
   .pays { font-weight: 900; font-size: 9.5pt; text-transform: uppercase; letter-spacing: .03em; }
@@ -5128,36 +5128,36 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   .logo-zone { width: 14%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
   .logo-zone img { width: 64px; height: 64px; object-fit: contain; }
 
-  /* â”€â”€ BLOC TITRE (tableau grisÃ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── BLOC TITRE (tableau grisé) ───────────────────── */
   .titre-tbl { width: 100%; border-collapse: collapse; margin-top: 4px; }
   .titre-tbl td { background: #bbbbbb; border: 1.5px solid #999; text-align: center; padding: 5px 8px 4px; }
   .titre-principal { font-size: 13pt; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; text-decoration: underline; color: #333333; }
   .titre-annee { font-size: 10pt; font-weight: 700; letter-spacing: .06em; margin-top: 2px; color: #333333; }
   .titre-minesec { font-size: 8pt; font-style: italic; font-weight: 700; letter-spacing: .04em; margin-top: 2px; color: #333333; }
 
-  /* â”€â”€ TABLEAU IDENTITÃ‰ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── TABLEAU IDENTITÉ ─────────────────────────────── */
   .ident-tbl { width: 100%; border-collapse: collapse; margin-top: 6px; }
   .ident-tbl td { border: 1px solid #bbbbbb; background: #f4f4f4; padding: 5px 7px; font-size: 8.5pt; vertical-align: middle; }
   .il { font-style: italic; color: #666666; }
   .iv { font-weight: 700; color: #333333; border-bottom: 1px solid #777; display: inline-block; min-width: 40px; }
 
-  /* â”€â”€ TABLEAU PRINCIPAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── TABLEAU PRINCIPAL ────────────────────────────── */
   .main-tbl { width: 100%; border-collapse: collapse; margin-top: 6px; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; }
   .main-tbl th, .main-tbl td { border: 1px solid #aaa; padding: 2px 3px; text-align: center; vertical-align: middle; line-height: 1.25; }
   .th-l1 { background: #bbbbbb; font-size: 7pt; font-weight: 700; color: #333; }
   .th-l2 { background: #cecece; font-size: 6.5pt; font-weight: 700; color: #333; }
   .th-l3 { background: #e4e4e4; font-size: 6pt; font-weight: 700; color: #000; }
 
-  /* â”€â”€ LÃ‰GENDE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── LÉGENDE ──────────────────────────────────────── */
   .legende-tbl { width: 100%; border-collapse: collapse; margin-top: 4px; }
   .legende-tbl td { border: 1px solid #aaa; padding: 4px 8px; font-family: Arial, sans-serif; font-size: 6.5pt; line-height: 1.7; vertical-align: top; }
 
-  /* â”€â”€ OBSERVATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── OBSERVATIONS ─────────────────────────────────── */
   .obs-tbl { width: 100%; border-collapse: collapse; margin-top: 0; }
   .obs-tbl td { border: 1px solid #aaa; padding: 5px 9px; font-family: Arial, sans-serif; font-size: 7.5pt; }
   .obs-label { font-weight: 700; text-decoration: underline; color: #666; }
 
-  /* â”€â”€ SIGNATURES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── SIGNATURES ───────────────────────────────────── */
   .sigs-tbl { width: 100%; border-collapse: collapse; margin-top: 0; }
   .sigs-tbl td { border: 1px solid #aaa; padding: 8px 12px 12px; font-family: Arial, sans-serif; font-size: 8pt; }
   .sig-titre { font-weight: 700; text-transform: uppercase; color: #666; text-align: center; }
@@ -5165,10 +5165,10 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   .sig-lieu { font-style: italic; font-size: 7.5pt; text-align: right; margin-bottom: 2px; }
 </style></head><body>
 
-<!-- EN-TÃŠTE BILINGUE -->
+<!-- EN-TÊTE BILINGUE -->
 <div class="entete">
   <div class="col-fr">
-    <div class="pays">RÃ©publique du Cameroun</div>
+    <div class="pays">République du Cameroun</div>
     <div class="devise">Paix &ndash; Travail &ndash; Patrie</div>
   </div>
   <div class="logo-zone">
@@ -5183,34 +5183,34 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 <!-- BLOC TITRE -->
 <table class="titre-tbl">
   <tr><td>
-    <div class="titre-principal">Fiche de Suivi PÃ©dagogique de l'Enseignant(e)</div>
-    <div class="titre-annee">AnnÃ©e Scolaire : 2025 / 2026</div>
-    <div class="titre-minesec">MINESEC / DRES / EXTRÃŠME-NORD</div>
+    <div class="titre-principal">Fiche de Suivi Pédagogique de l'Enseignant(e)</div>
+    <div class="titre-annee">Année Scolaire : 2025 / 2026</div>
+    <div class="titre-minesec">MINESEC / DRES / EXTRÊME-NORD</div>
   </td></tr>
 </table>
 
-<!-- TABLEAU IDENTITÃ‰ -->
+<!-- TABLEAU IDENTITÉ -->
 <table class="ident-tbl">
   <tr>
-    <td style="width:33%"><span class="il">Ã‰tablissement : </span><span class="iv">LYCÃ‰E DE KAKATARE</span></td>
+    <td style="width:33%"><span class="il">Établissement : </span><span class="iv">LYCÉE DE KAKATARE</span></td>
     <td style="width:33%">
       <span class="il">Discipline : </span><span class="iv">${deptNom}</span>
       <span class="il" style="margin-left:8px">Grade : </span><span class="iv">PLEG</span>
     </td>
     <td style="width:34%">
-      <span class="il">AnciennetÃ© : </span><span class="iv" style="min-width:30px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-      <span class="il" style="margin-left:6px">QualitÃ© : </span><span class="iv">Fonctionnaire</span>
+      <span class="il">Ancienneté : </span><span class="iv" style="min-width:30px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+      <span class="il" style="margin-left:6px">Qualité : </span><span class="iv">Fonctionnaire</span>
     </td>
   </tr>
   <tr>
     <td><span class="il">Nom de l'enseignant(e) : </span><span class="iv">${enseignant.nom}</span></td>
-    <td><span class="il">Animateur pÃ©dagogique : </span><span class="iv">${animateurNom}</span></td>
+    <td><span class="il">Animateur pédagogique : </span><span class="iv">${animateurNom}</span></td>
     <td><span class="il">Nb h. hebdomadaires : </span><span class="iv">${hHebdoStr}</span></td>
   </tr>
   <tr>
-    <td><span class="il">PÃ©riode : </span><span class="iv">${periode}</span></td>
-    <td><span class="il">Ã‰valuation : </span><span class="iv">${evalLabel}</span></td>
-    <td><span class="il">TÃ©l. : </span><span class="iv" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
+    <td><span class="il">Période : </span><span class="iv">${periode}</span></td>
+    <td><span class="il">Évaluation : </span><span class="iv">${evalLabel}</span></td>
+    <td><span class="il">Tél. : </span><span class="iv" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
   </tr>
 </table>
 
@@ -5219,39 +5219,39 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   <colgroup>
     <col style="width:54px"><!-- classe -->
     <col style="width:17px"><col style="width:17px"><col style="width:18px"><!-- effectifs -->
-    <col style="width:20px"><col style="width:20px"><col style="width:20px"><!-- assiduitÃ© -->
-    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- prÃ©sentiel -->
-    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- digitalisÃ© -->
+    <col style="width:20px"><col style="width:20px"><col style="width:20px"><!-- assiduité -->
+    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- présentiel -->
+    <col style="width:18px"><col style="width:18px"><col style="width:18px"><!-- digitalisé -->
     <col style="width:20px"><col style="width:20px"><col style="width:20px"><!-- heures -->
     <col style="width:19px"><col style="width:19px"><col style="width:19px"><!-- TP/TD -->
-    <col style="width:18px"><col style="width:18px"><col style="width:20px"><!-- rÃ©ussite -->
-    <col style="width:28px"><!-- moy. gÃ©n. -->
+    <col style="width:18px"><col style="width:18px"><col style="width:20px"><!-- réussite -->
+    <col style="width:28px"><!-- moy. gén. -->
   </colgroup>
   <thead>
     <tr>
       <th class="th-l1" rowspan="3">Classes<br>tenues</th>
-      <th class="th-l1" colspan="3">Effectifs des Ã©lÃ¨ves</th>
-      <th class="th-l1" colspan="3">AssiduitÃ© des Ã©lÃ¨ves <sup>(Â²)</sup></th>
-      <th class="th-l1" colspan="6">Couverture des programmes/rÃ©fÃ©rentiels de formation (par rapport Ã  l'annÃ©e)</th>
-      <th class="th-l1" colspan="3">Couverture des heures<br>d'enseignement / annÃ©e</th>
-      <th class="th-l1" colspan="3">Taux d'exÃ©cution <sup>(Â³)</sup> des TPI/TD/DOSSIERS / annÃ©e</th>
-      <th class="th-l1" colspan="3">Taux de rÃ©ussite <sup>(â´)</sup> des Ã©lÃ¨ves (M â‰¥ 10)</th>
-      <th class="th-l1" rowspan="3">Moyenne GÃ©nÃ©rale<br>de la classe <sup>(âµ)</sup><br>/20</th>
+      <th class="th-l1" colspan="3">Effectifs des élèves</th>
+      <th class="th-l1" colspan="3">Assiduité des élèves <sup>(²)</sup></th>
+      <th class="th-l1" colspan="6">Couverture des programmes/référentiels de formation (par rapport à l'année)</th>
+      <th class="th-l1" colspan="3">Couverture des heures<br>d'enseignement / année</th>
+      <th class="th-l1" colspan="3">Taux d'exécution <sup>(³)</sup> des TPI/TD/DOSSIERS / année</th>
+      <th class="th-l1" colspan="3">Taux de réussite <sup>(⁴)</sup> des élèves (M ≥ 10)</th>
+      <th class="th-l1" rowspan="3">Moyenne Générale<br>de la classe <sup>(⁵)</sup><br>/20</th>
     </tr>
     <tr>
-      <th class="th-l2">GarÃ§.</th><th class="th-l2">Filles</th><th class="th-l2">Total</th>
-      <th class="th-l2">Heures<br>PrÃ©vues</th><th class="th-l2">Heures<br>Faites</th><th class="th-l2">Taux<br>(%)</th>
-      <th class="th-l2" colspan="3">En prÃ©sentiel</th>
-      <th class="th-l2" colspan="3">Utilisation des ressources<br>digitalisÃ©es (Distance Ã‰d. ou non)</th>
+      <th class="th-l2">Garç.</th><th class="th-l2">Filles</th><th class="th-l2">Total</th>
+      <th class="th-l2">Heures<br>Prévues</th><th class="th-l2">Heures<br>Faites</th><th class="th-l2">Taux<br>(%)</th>
+      <th class="th-l2" colspan="3">En présentiel</th>
+      <th class="th-l2" colspan="3">Utilisation des ressources<br>digitalisées (Distance Éd. ou non)</th>
       <th class="th-l2">Heures<br>Dues</th><th class="th-l2">Heures<br>Faites</th><th class="th-l2">Taux<br>(%)</th>
-      <th class="th-l2">Nbre<br>PrÃ©vu</th><th class="th-l2">Nbre<br>Fait</th><th class="th-l2">Taux<br>(%)</th>
-      <th class="th-l2">%<br>GarÃ§.</th><th class="th-l2">%<br>Filles</th><th class="th-l2">%<br>Total</th>
+      <th class="th-l2">Nbre<br>Prévu</th><th class="th-l2">Nbre<br>Fait</th><th class="th-l2">Taux<br>(%)</th>
+      <th class="th-l2">%<br>Garç.</th><th class="th-l2">%<br>Filles</th><th class="th-l2">%<br>Total</th>
     </tr>
     <tr>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
-      <th class="th-l3">LeÃ§ons<br>PrÃ©vues</th><th class="th-l3">LeÃ§ons<br>Faites</th><th class="th-l3">Taux (%)</th>
-      <th class="th-l3">LeÃ§ons<br>PrÃ©vues</th><th class="th-l3">LeÃ§ons<br>Faites</th><th class="th-l3">Taux (%)</th>
+      <th class="th-l3">Leçons<br>Prévues</th><th class="th-l3">Leçons<br>Faites</th><th class="th-l3">Taux (%)</th>
+      <th class="th-l3">Leçons<br>Prévues</th><th class="th-l3">Leçons<br>Faites</th><th class="th-l3">Taux (%)</th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
       <th class="th-l3"></th><th class="th-l3"></th><th class="th-l3"></th>
@@ -5260,24 +5260,24 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
   <tbody>${rows}</tbody>
 </table>
 
-<!-- LÃ‰GENDE -->
+<!-- LÉGENDE -->
 <table class="legende-tbl">
   <tr>
     <td style="width:50%">
       (1) Rayer la mention inutile.<br>
-      <strong>(2) Calcul du Taux d'AssiduitÃ© (TA) :</strong><br>
+      <strong>(2) Calcul du Taux d'Assiduité (TA) :</strong><br>
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TA = (A &minus; B) &times; 100 / A<br>
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = Volume horaire hebdomadaire &times; Effectif de la classe<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;B = Total des heures d'absence enregistrÃ©es dans la semaine<br>
-      <em>NB : Ce taux peut Ãªtre calculÃ© Ã  l'Ã©chelle du trimestre (12 semaines).</em>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;B = Total des heures d'absence enregistrées dans la semaine<br>
+      <em>NB : Ce taux peut être calculé à l'échelle du trimestre (12 semaines).</em>
     </td>
     <td style="width:50%">
-      <strong>(3) Taux d'exÃ©cution des TD/TP/Dossiers :</strong><br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre fait de TD+TP+Dossiers) &times; 100 / Nbre prÃ©vu de TD/TP/Dossiers<br><br>
-      <strong>(4) Taux de rÃ©ussite :</strong><br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre d'Ã©lÃ¨ves ayant M â‰¥ 10 par genre) &times; 100 / Effectif par genre Ã©valuÃ©<br><br>
-      <strong>(5) Moyenne gÃ©nÃ©rale de la classe :</strong><br>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Somme des notes de chaque Ã©lÃ¨ve / Nombre d'Ã©lÃ¨ves Ã©valuÃ©s
+      <strong>(3) Taux d'exécution des TD/TP/Dossiers :</strong><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre fait de TD+TP+Dossiers) &times; 100 / Nbre prévu de TD/TP/Dossiers<br><br>
+      <strong>(4) Taux de réussite :</strong><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Nbre d'élèves ayant M ≥ 10 par genre) &times; 100 / Effectif par genre évalué<br><br>
+      <strong>(5) Moyenne générale de la classe :</strong><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Somme des notes de chaque élève / Nombre d'élèves évalués
     </td>
   </tr>
 </table>
@@ -5285,11 +5285,11 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 <!-- OBSERVATIONS -->
 <table class="obs-tbl">
   <tr><td>
-    <span class="obs-label">Observations gÃ©nÃ©rales (difficultÃ©s rencontrÃ©es + suggestions pour amÃ©liorer les rÃ©sultats) :</span>
-    <span style="font-size:6.5pt;color:#0369a1;font-style:italic">â€” constats automatiques gÃ©nÃ©rÃ©s Ã  partir des donnÃ©es ci-dessus, Ã  vÃ©rifier et complÃ©ter â€”</span><br><br>
-    <strong>DifficultÃ©s rencontrÃ©es :</strong><br>
+    <span class="obs-label">Observations générales (difficultés rencontrées + suggestions pour améliorer les résultats) :</span>
+    <span style="font-size:6.5pt;color:#0369a1;font-style:italic">— constats automatiques générés à partir des données ci-dessus, à vérifier et compléter —</span><br><br>
+    <strong>Difficultés rencontrées :</strong><br>
     ${difficultesHTML}<br>
-    <strong>Suggestions pour amÃ©liorer les rÃ©sultats :</strong><br>
+    <strong>Suggestions pour améliorer les résultats :</strong><br>
     ${suggestionsHTML}
   </td></tr>
 </table>
@@ -5298,11 +5298,11 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 <table class="sigs-tbl">
   <tr>
     <td style="width:50%">
-      <div class="sig-titre">Visa de l'Animateur PÃ©dagogique</div>
-      <div class="sig-nom">AÃSSATOU SYLVIE</div>
+      <div class="sig-titre">Visa de l'Animateur Pédagogique</div>
+      <div class="sig-nom">AÏSSATOU SYLVIE</div>
     </td>
     <td style="width:50%">
-      <div class="sig-lieu">Fait Ã  Maroua, le _________________________</div>
+      <div class="sig-lieu">Fait à Maroua, le _________________________</div>
       <div class="sig-titre">Signature de l'Enseignant(e)</div>
       <div class="sig-nom">${enseignant.nom}</div>
     </td>
@@ -5317,25 +5317,25 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 
 
 // Fiche de compilation par niveau
-// Regroupement par niveau â€” structure exacte de la maquette de rÃ©fÃ©rence
-// UtilisÃ© par genCompilation (impression) ET exportCompilationExcel (export Excel)
+// Regroupement par niveau — structure exacte de la maquette de référence
+// Utilisé par genCompilation (impression) ET exportCompilationExcel (export Excel)
 const NIVEAUX_COMPIL = [
-  {label:"6Ã¨me",     salles:3, classes:["6Ã¨me 1","6Ã¨me 2","6Ã¨me 3"]},
-  {label:"5Ã¨me",     salles:3, classes:["5Ã¨me 1","5Ã¨me 2","5Ã¨me 3"]},
-  {label:"4Ã¨me",     salles:3, classes:["4Ã¨me ALL","4Ã¨me ARB","4Ã¨me CHN","4Ã¨me ESP","4Ã¨me ITA"]},
-  {label:"3Ã¨me",     salles:3, classes:["3Ã¨me ALL","3Ã¨me ARB","3Ã¨me CHN","3Ã¨me ESP","3Ã¨me ITA"]},
+  {label:"6ème",     salles:3, classes:["6ème 1","6ème 2","6ème 3"]},
+  {label:"5ème",     salles:3, classes:["5ème 1","5ème 2","5ème 3"]},
+  {label:"4ème",     salles:3, classes:["4ème ALL","4ème ARB","4ème CHN","4ème ESP","4ème ITA"]},
+  {label:"3ème",     salles:3, classes:["3ème ALL","3ème ARB","3ème CHN","3ème ESP","3ème ITA"]},
   {label:"2nde A4",  salles:2, classes:["2nde ALL","2nde ARB","2nde CHN","2nde ITA","2nde ESP"]},
   {label:"2nde C",   salles:1, classes:["2nde C"]},
-  {label:"1Ã¨re A4",  salles:3, classes:["1Ã¨re A4 ALL","1Ã¨re A4 ARB","1Ã¨re A4 ESP","1Ã¨re CHN","1Ã¨re ITA"]},
-  {label:"1Ã¨re S",   salles:1, classes:["1Ã¨re C","1Ã¨re Ti"]},
-  {label:"1Ã¨re D",   salles:1, classes:["1Ã¨re D"]},
+  {label:"1ère A4",  salles:3, classes:["1ère A4 ALL","1ère A4 ARB","1ère A4 ESP","1ère CHN","1ère ITA"]},
+  {label:"1ère S",   salles:1, classes:["1ère C","1ère Ti"]},
+  {label:"1ère D",   salles:1, classes:["1ère D"]},
   {label:"Tle A4",   salles:2, classes:["Tle A4 ALL","Tle A4 ARB","Tle A4 CHN","Tle A4 ESP","Tle A4 ITA"]},
   {label:"Tle S",    salles:1, classes:["Tle C","Tle Ti"]},
   {label:"Tle D",    salles:1, classes:["Tle D"]},
 ];
 
-// Calcule les statistiques complÃ¨tes d'une classe pour la Compilation
-// (programme, digitalisation, heures, TP, rÃ©ussite) â€” partagÃ© entre impression et export Excel
+// Calcule les statistiques complètes d'une classe pour la Compilation
+// (programme, digitalisation, heures, TP, réussite) — partagé entre impression et export Excel
 function calcClasseCompilation(cl, data, trim, nbSemP) {
   const prog = data?.prog||{};
   const notesIndex = data?.notes||{};
@@ -5351,7 +5351,7 @@ function calcClasseCompilation(cl, data, trim, nbSemP) {
         hd:0, hf:0, tauxHD:null, tpP:0, tpF:0, tauxTP:null, pctG:null, pctF:null, pctT:null, moy:null };
     }
 
-    // LeÃ§ons faites â€” agrÃ©gÃ©es tous enseignants confondus pour cette classe
+    // Leçons faites — agrégées tous enseignants confondus pour cette classe
     const allFaites = new Set();
     const allDig = new Set();
     Object.entries(prog).forEach(([key,arr])=>{
@@ -5382,7 +5382,7 @@ function calcClasseCompilation(cl, data, trim, nbSemP) {
     const tpF = tpPeriode.filter(n=>allFaites.has(n)).length;
     const tauxTP = tpP>0 ? Math.min(100, Math.round(tpF/tpP*100)) : null;
 
-    // RÃ©ussite â€” toutes Ã©valuations de cette classe sur la pÃ©riode
+    // Réussite — toutes évaluations de cette classe sur la période
     const trimsToAvg = trim==="ANN" ? ["T1","T2","T3"] : [trim];
     const getN = (eid,t,e) => { const v=(notesIndex[`${cl}||${t}-${e}`]||{})[eid]; return (v===undefined||v===""||v===null)?null:+v; };
     const moyTrimEl = (eid,t) => { const e1=getN(eid,t,"E1"), e2=getN(eid,t,"E2"); if(e1===null&&e2===null) return null; if(e1!==null&&e2!==null) return (e1+e2)/2; return e1!==null?e1:e2; };
@@ -5396,7 +5396,7 @@ function calcClasseCompilation(cl, data, trim, nbSemP) {
     return { cl, g, f, total, lp, lf, tauxLP, ldTot, ldFait, tauxLD, hd, hf, tauxHD, tpP, tpF, tauxTP, pctG, pctF, pctT, moy };
 }
 
-// Export Excel de la Compilation â€” rÃ©utilise exactement le mÃªme calcul que l'impression
+// Export Excel de la Compilation — réutilise exactement le même calcul que l'impression
 function exportCompilationExcel(data, trim = "ANN") {
   const nbSemP = trim === "ANN" ? 36 : 12;
   const exportRows = [];
@@ -5405,11 +5405,11 @@ function exportCompilationExcel(data, trim = "ANN") {
       const r = calcClasseCompilation(cl, data, trim, nbSemP);
       exportRows.push({
         "Niveau": niv.label, "Classe": r.cl, "Salles niveau": niv.salles,
-        "GarÃ§ons": r.g, "Filles": r.f, "Total Ã©lÃ¨ves": r.total,
-        "Couv. prÃ©sentiel (%)": r.tauxLP, "Couv. digitalisÃ© (%)": r.tauxLD,
-        "Couv. heures (%)": r.tauxHD, "TP prÃ©sentiel (%)": r.tauxTP,
-        "RÃ©ussite GarÃ§ons (%)": r.pctG, "RÃ©ussite Filles (%)": r.pctF, "RÃ©ussite Totale (%)": r.pctT,
-        "Moyenne gÃ©nÃ©rale": r.moy,
+        "Garçons": r.g, "Filles": r.f, "Total élèves": r.total,
+        "Couv. présentiel (%)": r.tauxLP, "Couv. digitalisé (%)": r.tauxLD,
+        "Couv. heures (%)": r.tauxHD, "TP présentiel (%)": r.tauxTP,
+        "Réussite Garçons (%)": r.pctG, "Réussite Filles (%)": r.pctF, "Réussite Totale (%)": r.pctT,
+        "Moyenne générale": r.moy,
       });
     });
   });
@@ -5417,12 +5417,12 @@ function exportCompilationExcel(data, trim = "ANN") {
 }
 
 function genCompilation(data, trim = "ANN") {
-  const periode = TRIM_LABELS[trim] || "AnnÃ©e complÃ¨te";
+  const periode = TRIM_LABELS[trim] || "Année complète";
   const nbSemP  = trim === "ANN" ? 36 : 12;
 
   const tauxColor = v => v===null ? "#94a3b8" : v>=75?"#16a34a":v>=50?"#e67e22":"#ef4444";
   const fmtPct = v => v===null ? "N/D" : `${v}%`;
-  const fmtMoy = v => v===null ? "â€”" : v;
+  const fmtMoy = v => v===null ? "—" : v;
 
   let grandG=0, grandF=0, grandT=0, grandSalles=0;
 
@@ -5435,7 +5435,7 @@ function genCompilation(data, trim = "ANN") {
     const tLP=avgTaux("tauxLP"), tLD=avgTaux("tauxLD"), tHD=avgTaux("tauxHD"), tTP=avgTaux("tauxTP"),
           tG=avgTaux("pctG"), tF=avgTaux("pctF"), tT=avgTaux("pctT");
     const moyVals = rows.map(r=>r.moy).filter(v=>v!==null).map(Number);
-    const moyNiv = moyVals.length>0 ? (moyVals.reduce((s,v)=>s+v,0)/moyVals.length).toFixed(2) : "â€”";
+    const moyNiv = moyVals.length>0 ? (moyVals.reduce((s,v)=>s+v,0)/moyVals.length).toFixed(2) : "—";
 
     const td = "padding:4px 6px;border:1px solid #ccc;text-align:center;font-size:8px";
     const rowsHTML = rows.map(r => `
@@ -5447,28 +5447,28 @@ function genCompilation(data, trim = "ANN") {
         <td style="${td};color:${tauxColor(r.tauxHD)};font-weight:700">${fmtPct(r.tauxHD)}</td>
         <td style="${td};color:${tauxColor(r.tauxTP)};font-weight:700">${fmtPct(r.tauxTP)}</td>
         <td style="${td};color:#94a3b8;font-style:italic">N/D</td>
-        <td style="${td}">${r.pctG===null?"â€”":r.pctG+"%"}</td>
-        <td style="${td}">${r.pctF===null?"â€”":r.pctF+"%"}</td>
-        <td style="${td};font-weight:700">${r.pctT===null?"â€”":r.pctT+"%"}</td>
+        <td style="${td}">${r.pctG===null?"—":r.pctG+"%"}</td>
+        <td style="${td}">${r.pctF===null?"—":r.pctF+"%"}</td>
+        <td style="${td};font-weight:700">${r.pctT===null?"—":r.pctT+"%"}</td>
         <td style="${td};font-weight:700">${fmtMoy(r.moy)}</td>
       </tr>`).join("");
 
     return `
     <h3 style="font-size:10px;font-weight:bold;margin:12px 0 3px;padding:5px 10px;background:#1a6b3c;color:#fff">
-      ${niv.label} â€” ${niv.salles} salle${niv.salles>1?"s":""} fonctionnelle${niv.salles>1?"s":""}
+      ${niv.label} — ${niv.salles} salle${niv.salles>1?"s":""} fonctionnelle${niv.salles>1?"s":""}
     </h3>
     <table style="width:100%;border-collapse:collapse;font-size:8px">
       <thead>
         <tr style="background:#dcfce7">
           <th rowspan="2" style="${td};background:#166534;color:#fff">Classe</th>
           <th colspan="3" style="${td};background:#166534;color:#fff">Effectifs</th>
-          <th style="${td};background:#166534;color:#fff">Couv.<br>prÃ©sentiel</th>
-          <th style="${td};background:#166534;color:#fff">Couv.<br>digitalisÃ©</th>
+          <th style="${td};background:#166534;color:#fff">Couv.<br>présentiel</th>
+          <th style="${td};background:#166534;color:#fff">Couv.<br>digitalisé</th>
           <th style="${td};background:#166534;color:#fff">Couv.<br>heures</th>
-          <th style="${td};background:#166534;color:#fff">TP<br>prÃ©sentiel</th>
-          <th style="${td};background:#166534;color:#fff">TP<br>digitalisÃ©</th>
-          <th colspan="3" style="${td};background:#166534;color:#fff">RÃ©ussite (%)</th>
-          <th style="${td};background:#166534;color:#fff">Moy.<br>GÃ©n.</th>
+          <th style="${td};background:#166534;color:#fff">TP<br>présentiel</th>
+          <th style="${td};background:#166534;color:#fff">TP<br>digitalisé</th>
+          <th colspan="3" style="${td};background:#166534;color:#fff">Réussite (%)</th>
+          <th style="${td};background:#166534;color:#fff">Moy.<br>Gén.</th>
         </tr>
         <tr style="background:#dcfce7">
           <th style="${td}">G</th><th style="${td}">F</th><th style="${td}">T</th>
@@ -5486,9 +5486,9 @@ function genCompilation(data, trim = "ANN") {
           <td style="${td};color:${tauxColor(tHD)}">${fmtPct(tHD)}</td>
           <td style="${td};color:${tauxColor(tTP)}">${fmtPct(tTP)}</td>
           <td style="${td};color:#94a3b8;font-style:italic">N/D</td>
-          <td style="${td}">${tG===null?"â€”":tG+"%"}</td>
-          <td style="${td}">${tF===null?"â€”":tF+"%"}</td>
-          <td style="${td}">${tT===null?"â€”":tT+"%"}</td>
+          <td style="${td}">${tG===null?"—":tG+"%"}</td>
+          <td style="${td}">${tF===null?"—":tF+"%"}</td>
+          <td style="${td}">${tT===null?"—":tT+"%"}</td>
           <td style="${td}">${moyNiv}</td>
         </tr>
       </tbody>
@@ -5505,41 +5505,41 @@ function genCompilation(data, trim = "ANN") {
 </style>
 </head>
 <body>
-  ${enteteOfficiel("FICHE DE COMPILATION PAR NIVEAU", `DÃ©partement SVTEEHB &nbsp;|&nbsp; ${periode}`)}
+  ${enteteOfficiel("FICHE DE COMPILATION PAR NIVEAU", `Département SVTEEHB &nbsp;|&nbsp; ${periode}`)}
   ${niveauxHTML}
   <table style="margin-top:10px;font-size:9px">
     <tr style="background:#166534;color:#fff;font-weight:800">
-      <td style="padding:6px 10px;border:1px solid #ccc">TOTAL GÃ‰NÃ‰RAL</td>
+      <td style="padding:6px 10px;border:1px solid #ccc">TOTAL GÉNÉRAL</td>
       <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandSalles} salles</td>
       <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandG} G</td>
       <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandF} F</td>
-      <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandT} Ã©lÃ¨ves</td>
+      <td style="padding:6px 10px;border:1px solid #ccc;text-align:center">${grandT} élèves</td>
     </tr>
   </table>
   <div style="margin-top:8px;font-size:7.5px;color:#666;font-style:italic">
-    "TP digitalisÃ©" : N/D â€” aucune donnÃ©e distincte entre TP en prÃ©sentiel et TP digitalisÃ© n'est actuellement collectÃ©e dans l'application.
+    "TP digitalisé" : N/D — aucune donnée distincte entre TP en présentiel et TP digitalisé n'est actuellement collectée dans l'application.
   </div>
   <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:30px;font-size:9px">
-    <div><div style="font-weight:bold;margin-bottom:10px">L'Animateur(trice) PÃ©dagogique</div><div style="border-top:1px solid #999;margin-top:30px;padding-top:4px">Signature &amp; Cachet</div></div>
+    <div><div style="font-weight:bold;margin-bottom:10px">L'Animateur(trice) Pédagogique</div><div style="border-top:1px solid #999;margin-top:30px;padding-top:4px">Signature &amp; Cachet</div></div>
     <div><div style="font-weight:bold;margin-bottom:10px">Le Proviseur</div><div style="border-top:1px solid #999;margin-top:30px;padding-top:4px">Signature &amp; Cachet</div></div>
   </div>
   <script>window.onload=()=>window.print();</script>
 </body>
 </html>`;
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// IMPRESSION VIA IFRAME CACHÃ‰ (mÃ©thode anti popup-blocker)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// printGuard: dÃ©clarÃ© globalement
+// ═══════════════════════════════════════════════════
+// IMPRESSION VIA IFRAME CACHÉ (méthode anti popup-blocker)
+// ═══════════════════════════════════════════════════
+// printGuard: déclaré globalement
 function imprimerHTML(html) {
   // Solution universelle mobile + desktop :
-  // Ouvrir dans un nouvel onglet â†’ le HTML contient window.onload=print
-  // qui dÃ©clenche automatiquement la boÃ®te d'impression
+  // Ouvrir dans un nouvel onglet → le HTML contient window.onload=print
+  // qui déclenche automatiquement la boîte d'impression
   const blob = new Blob([html], {type:"text/html;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const win = window.open(url, "_blank");
   if (!win) {
-    // Popup bloquÃ© â†’ fallback lien direct
+    // Popup bloqué → fallback lien direct
     const a = document.createElement("a");
     a.href = url; a.target = "_blank"; a.rel = "noopener";
     document.body.appendChild(a); a.click();
@@ -5549,9 +5549,9 @@ function imprimerHTML(html) {
   setTimeout(()=>URL.revokeObjectURL(url), 10000);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // COMPOSANTS UI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 const DocSp = ({ size=20, color=C.green }) => (
   <div style={{ width:size,height:size,border:`2px solid ${color}30`,borderTopColor:color,borderRadius:"50%",animation:"spin .7s linear infinite" }}/>
 );
@@ -5569,17 +5569,17 @@ const DocTaux = ({ taux }) => {
   return <DocPi ch={`${taux}%`} color={color}/>;
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// TABLEAU DE PRÃ‰VISUALISATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// TABLEAU DE PRÉVISUALISATION
+// ═══════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // CARTE DOCUMENT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PAGE PRINCIPALE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 
 function DocumentsPage() {
   const {isMobile} = useDevice();
@@ -5588,17 +5588,17 @@ function DocumentsPage() {
   const [docTab, setDocTab]     = useState("compilation"); // compilation | fiches | bilan
   const [trim, setTrim]         = useState("ANN");
   const [selEns, setSelEns]     = useState("all");
-  const [previewHtml, setPreviewHtml] = useState(null);  // HTML de l'aperÃ§u
+  const [previewHtml, setPreviewHtml] = useState(null);  // HTML de l'aperçu
   const [previewLabel, setPreviewLabel] = useState("");
   const iframeRef = useRef(null);
   const previewMainRef = useRef(null);
 
 
-  // Navigation ciblÃ©e depuis le Tableau de bord ("voir la fiche de cet enseignant")
+  // Navigation ciblée depuis le Tableau de bord ("voir la fiche de cet enseignant")
   useEffect(() => {
     if (!pendingFicheEns || !data) return;
     setDocTab("fiches");
-    aperÃ§uFicheEns(pendingFicheEns);
+    aperçuFicheEns(pendingFicheEns);
     setPendingFicheEns(null);
   }, [pendingFicheEns, data]);
 
@@ -5606,9 +5606,9 @@ function DocumentsPage() {
     setRefreshing(true);
     try {
       await refreshData();
-      showToast("âœ“ DonnÃ©es actualisÃ©es â€” fiches Ã  jour");
+      showToast("✓ Données actualisées — fiches à jour");
     } catch {
-      showToast("âš  Actualisation impossible â€” vÃ©rifiez la connexion", false);
+      showToast("⚠ Actualisation impossible — vérifiez la connexion", false);
     } finally {
       setRefreshing(false);
     }
@@ -5619,22 +5619,22 @@ function DocumentsPage() {
     const dId = e?.departement_id || 1;
     const deptNom = DEPARTEMENTS_LIST.find(d=>d.id===dId)?.nom || "SVTEEHB";
     const anim = Object.values(data?.users||{}).find(u=>(u.role==="animateur"||u.role==="animatrice") && (u.departement_id||1)===dId);
-    return { deptNom, animateurNom: anim?.nom || "â€”" };
+    return { deptNom, animateurNom: anim?.nom || "—" };
   };
 
-  // â”€â”€ AperÃ§u dans iframe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Aperçu dans iframe ────────────────────────────────────────────
   function afficherApercu(html, label) {
     setPreviewHtml(stripAutoPrint(html));
     setPreviewLabel(label);
-    // Injecter dans l'iframe aprÃ¨s le render
+    // Injecter dans l'iframe après le render
     setTimeout(() => {
       if (iframeRef.current) {
         const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
-        // Retirer le script d'impression auto pour l'aperÃ§u
+        // Retirer le script d'impression auto pour l'aperçu
         const htmlSansScript = html.replace(/<script>window\.onload.*?<\/script>/gs, "");
         doc.open(); doc.write(htmlSansScript); doc.close();
       }
-      // Sur mobile, faire dÃ©filer jusqu'Ã  l'aperÃ§u (situÃ© en dessous de la liste)
+      // Sur mobile, faire défiler jusqu'à l'aperçu (situé en dessous de la liste)
       if (isMobile && previewMainRef.current) {
         previewMainRef.current.scrollIntoView({ behavior:"smooth", block:"start" });
       }
@@ -5643,29 +5643,29 @@ function DocumentsPage() {
 
   const [selClasseParEns, setSelClasseParEns] = useState({}); // {ensId: "all" | code_classe}
 
-  function aperÃ§uFicheEns(ensId) {
+  function aperçuFicheEns(ensId) {
     if (!data) return;
     const ens = (data?.users||{})[ensId];
     if (!ens) return;
     const classeSel = selClasseParEns[ensId] || "all";
     const classesAGenerer = classeSel==="all" ? (ens.classes||[]) : [classeSel];
     const html = genFicheSuivi(ens, classesAGenerer, (data?.prog||{}), trim, (data?.notes||{}), (data?.absences||{}), ...Object.values(getDeptInfo(ens)));
-    afficherApercu(html, `Fiche â€” ${ens.nom}${classeSel==="all"?"":` â€” ${classeSel}`} â€” ${TRIM_LABELS[trim]||"AnnÃ©e"}`);
+    afficherApercu(html, `Fiche — ${ens.nom}${classeSel==="all"?"":` — ${classeSel}`} — ${TRIM_LABELS[trim]||"Année"}`);
   }
 
-  function aperÃ§uCompilation() {
+  function aperçuCompilation() {
     if (!data) return;
     const html = genCompilation(data, trim);
-    afficherApercu(html, `Compilation globale â€” ${TRIM_LABELS[trim]||"AnnÃ©e"}`);
+    afficherApercu(html, `Compilation globale — ${TRIM_LABELS[trim]||"Année"}`);
   }
 
-  function aperÃ§uBilan() {
+  function aperçuBilan() {
     if (!data) return;
     const html = genBilanTrimestre(trim, data);
-    afficherApercu(html, `Bilan trimestriel â€” ${TRIM_LABELS[trim]||"AnnÃ©e"}`);
+    afficherApercu(html, `Bilan trimestriel — ${TRIM_LABELS[trim]||"Année"}`);
   }
 
-  // â”€â”€ Impression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Impression ────────────────────────────────────────────────────
   function imprimerApercu() {
     if (!previewHtml) return;
     imprimerHTML(previewHtml);
@@ -5692,41 +5692,41 @@ function DocumentsPage() {
   return (
     <div style={{ display:"flex", flexDirection:"column", flex:1, minHeight:0, overflow:"hidden" }}>
 
-      {/* â”€â”€ Barre de contrÃ´le Documents (remplace l'ancien header propre) â”€â”€ */}
+      {/* ── Barre de contrôle Documents (remplace l'ancien header propre) ── */}
       <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding: isMobile?"10px 14px":"8px 20px", display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"stretch":"center", gap:10, flexShrink:0 }}>
         <button onClick={refreshDocsData} disabled={refreshing}
           style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6,
             padding: isMobile?"10px 12px":"6px 12px", background:"#eff6ff", border:"1px solid #bfdbfe",
             borderRadius:8, fontSize: isMobile?13:12, fontWeight:700, color:"#1e40af",
             cursor:refreshing?"not-allowed":"pointer", fontFamily:"inherit", flexShrink:0 }}>
-          {refreshing ? <><Spinner size={13} color="#1e40af"/> Actualisationâ€¦</> : <>ðŸ”„ Actualiser les donnÃ©es</>}
+          {refreshing ? <><Spinner size={13} color="#1e40af"/> Actualisation…</> : <>🔄 Actualiser les données</>}
         </button>
         {!isMobile && <div style={{ flex:1 }}/>}
-        {/* PÃ©riode */}
+        {/* Période */}
         <div style={{ display:"flex", flexDirection: isMobile?"column":"row", gap:8, alignItems: isMobile?"stretch":"center" }}>
-          {!isMobile && <span style={{ fontSize:11, color:C.txtMuted }}>PÃ©riode :</span>}
+          {!isMobile && <span style={{ fontSize:11, color:C.txtMuted }}>Période :</span>}
           <select value={trim} onChange={e=>setTrim(e.target.value)}
             style={{ padding: isMobile?"10px 12px":"5px 10px", border:`1px solid ${C.border}`, borderRadius:8, fontSize: isMobile?13:12, color:C.txt, background:C.white }}>
-            <option value="ANN">ðŸ“… AnnÃ©e complÃ¨te</option>
+            <option value="ANN">📅 Année complète</option>
             <option value="T1">Trimestre 1</option>
             <option value="T2">Trimestre 2</option>
             <option value="T3">Trimestre 3</option>
           </select>
 
-          {/* AperÃ§u si prÃ©sent : bouton imprimer */}
+          {/* Aperçu si présent : bouton imprimer */}
           {previewHtml && (
             <button onClick={imprimerApercu}
               style={{ padding: isMobile?"11px 14px":"6px 14px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:8, fontSize: isMobile?13:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, whiteSpace:"nowrap" }}>
-              ðŸ–¨ï¸ {isMobile?"Imprimer":"Imprimer ce document"}
+              🖨️ {isMobile?"Imprimer":"Imprimer ce document"}
             </button>
           )}
         </div>
       </div>
 
-      {/* â”€â”€ Layout 2 colonnes (desktop) / empilÃ© (mobile) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Layout 2 colonnes (desktop) / empilé (mobile) ──────────────── */}
       <div style={{ display:"flex", flexDirection: isMobile?"column":"row", flex:1, minHeight:0, overflow:"hidden" }}>
 
-        {/* â”€â”€ Panneau gauche â€” sÃ©lection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Panneau gauche — sélection ─────────────────────────────── */}
         <aside style={{
           width: isMobile?"100%":280, minWidth: isMobile?"auto":280,
           maxHeight: isMobile?"45vh":undefined,
@@ -5735,15 +5735,15 @@ function DocumentsPage() {
           overflowY:"auto", minHeight:0, padding: isMobile?12:16,
           display:"flex", flexDirection:"column", gap:12, background:C.white, flexShrink:0 }}>
 
-          <h2 style={{ fontSize:13, fontWeight:700, color:C.txt }}>ðŸ“‹ Choisir un document</h2>
+          <h2 style={{ fontSize:13, fontWeight:700, color:C.txt }}>📋 Choisir un document</h2>
 
-          {/* Onglets de catÃ©gorie de document */}
+          {/* Onglets de catégorie de document */}
           <div style={{ display:"flex", flexDirection: isMobile?"row":"column", gap:6,
             overflowX: isMobile?"auto":"visible" }}>
             {[
-              {id:"compilation", label:"ðŸ“Š Compilation annuelle", sub:"Vue par niveau, toutes classes"},
-              {id:"fiches",      label:"ðŸ‘¤ Fiches individuelles", sub:"Une fiche par enseignant"},
-              {id:"bilan",       label:"ðŸ“‹ Bilan trimestriel",    sub:"Classement par taux de couverture"},
+              {id:"compilation", label:"📊 Compilation annuelle", sub:"Vue par niveau, toutes classes"},
+              {id:"fiches",      label:"👤 Fiches individuelles", sub:"Une fiche par enseignant"},
+              {id:"bilan",       label:"📋 Bilan trimestriel",    sub:"Classement par taux de couverture"},
             ].map(t=>(
               <button key={t.id} onClick={()=>{ setDocTab(t.id); setPreviewHtml(null); setPreviewLabel(""); }}
                 style={{
@@ -5760,43 +5760,43 @@ function DocumentsPage() {
           {!data ? (
             <div style={{ textAlign:"center", padding:30, color:C.txtMuted }}>
               <Spinner size={20} color={C.green}/>
-              <div style={{ marginTop:8, fontSize:12 }}>Chargementâ€¦</div>
+              <div style={{ marginTop:8, fontSize:12 }}>Chargement…</div>
             </div>
           ) : (
             <>
-              {/* â”€â”€ Onglet : Compilation annuelle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* ── Onglet : Compilation annuelle ─────────────────── */}
               {docTab==="compilation" && (
                 <div style={{ background:C.greenPale, border:`1.5px solid ${C.greenBorder}`, borderRadius: isMobile?14:10, padding: isMobile?"14px 16px":"12px 14px" }}>
-                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:C.green, marginBottom:4 }}>ðŸ“Š Compilation globale</div>
+                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:C.green, marginBottom:4 }}>📊 Compilation globale</div>
                   <div style={{ fontSize: isMobile?11.5:11, color:C.txtMuted, marginBottom:10, lineHeight:1.5 }}>
-                    Toutes les classes Â· Tous les enseignants Â· Par niveau
+                    Toutes les classes · Tous les enseignants · Par niveau
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={aperÃ§uCompilation}
+                    <button onClick={aperçuCompilation}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:C.green }}>
-                      ðŸ‘ AperÃ§u
+                      👁 Aperçu
                     </button>
                     <button onClick={()=>imprimerHTML(genCompilation(data,trim))}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:C.green, border:"none", borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#fff" }}>
-                      ðŸ–¨ï¸ Imprimer
+                      🖨️ Imprimer
                     </button>
                   </div>
                   <button onClick={()=>{
                       const ok = exportCompilationExcel(data, trim);
-                      showToast(ok ? "âœ“ Fichier Excel tÃ©lÃ©chargÃ©" : "âš  Ã‰chec de l'export", ok);
+                      showToast(ok ? "✓ Fichier Excel téléchargé" : "⚠ Échec de l'export", ok);
                     }}
                     style={{ width:"100%", marginTop:8, padding: isMobile?"10px":"7px", background:"#f0fdf4", border:"1.5px solid #15803d", borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#15803d" }}>
-                    ðŸ“¥ Exporter Excel
+                    📥 Exporter Excel
                   </button>
                 </div>
               )}
 
-              {/* â”€â”€ Onglet : Fiches individuelles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* ── Onglet : Fiches individuelles ────────────────── */}
               {docTab==="fiches" && (
                 <div style={{ background:C.bluePale, border:`1.5px solid ${C.blue}30`, borderRadius:10, padding:"12px 14px" }}>
-                  <div style={{ fontSize:13, fontWeight:800, color:C.blue, marginBottom:4 }}>ðŸ‘¨â€ðŸ« Fiches individuelles</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:C.blue, marginBottom:4 }}>👨‍🏫 Fiches individuelles</div>
                   <div style={{ fontSize:11, color:C.txtMuted, marginBottom:10 }}>
-                    SÃ©lectionner un enseignant pour aperÃ§u ou impression directe
+                    Sélectionner un enseignant pour aperçu ou impression directe
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", gap: isMobile?8:6 }}>
                     {enseignants.map(ens => (
@@ -5824,43 +5824,43 @@ function DocumentsPage() {
                           </select>
                         )}
                         <div style={{display:"flex", gap:8}}>
-                          <button onClick={() => aperÃ§uFicheEns(ens.id)}
+                          <button onClick={() => aperçuFicheEns(ens.id)}
                             style={{ flex:1, padding: isMobile?"9px 10px":"6px 8px", background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius: isMobile?9:6, fontSize: isMobile?12:11, fontWeight:700, cursor:"pointer", color:C.green, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                            ðŸ‘ AperÃ§u
+                            👁 Aperçu
                           </button>
                           <button onClick={() => imprimerFicheEns(ens.id)}
                             style={{ flex:1, padding: isMobile?"9px 10px":"6px 8px", background:C.green, border:"none", borderRadius: isMobile?9:6, fontSize: isMobile?12:11, fontWeight:700, cursor:"pointer", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                            ðŸ–¨ï¸ Imprimer
+                            🖨️ Imprimer
                           </button>
                         </div>
                       </div>
                     ))}
                     {enseignants.length===0 && (
-                      <div style={{textAlign:"center", padding:20, color:C.txtLight, fontSize:12}}>Aucun enseignant trouvÃ©</div>
+                      <div style={{textAlign:"center", padding:20, color:C.txtLight, fontSize:12}}>Aucun enseignant trouvé</div>
                     )}
                   </div>
                   <button onClick={imprimerToutesFiches}
                     style={{ marginTop:10, width:"100%", padding:"8px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                    ðŸ–¨ï¸ Imprimer toutes les fiches
+                    🖨️ Imprimer toutes les fiches
                   </button>
                 </div>
               )}
 
-              {/* â”€â”€ Onglet : Bilan trimestriel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* ── Onglet : Bilan trimestriel ────────────────────── */}
               {docTab==="bilan" && (
                 <div style={{ background:"#fef3c7", border:`1.5px solid #fcd34d`, borderRadius: isMobile?14:10, padding: isMobile?"14px 16px":"12px 14px" }}>
-                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:"#92400e", marginBottom:4 }}>ðŸ“‹ Bilan trimestriel</div>
+                  <div style={{ fontSize: isMobile?14:13, fontWeight:800, color:"#92400e", marginBottom:4 }}>📋 Bilan trimestriel</div>
                   <div style={{ fontSize: isMobile?11.5:11, color:C.txtMuted, marginBottom:10, lineHeight:1.5 }}>
-                    Classement des enseignants par taux de couverture â€” alertes et objectifs atteints
+                    Classement des enseignants par taux de couverture — alertes et objectifs atteints
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={aperÃ§uBilan}
+                    <button onClick={aperçuBilan}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:C.white, border:`1px solid #fcd34d`, borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#92400e" }}>
-                      ðŸ‘ AperÃ§u
+                      👁 Aperçu
                     </button>
                     <button onClick={()=>imprimerHTML(genBilanTrimestre(trim,data))}
                       style={{ flex:1, padding: isMobile?"11px":"7px", background:"#d97706", border:"none", borderRadius: isMobile?10:8, fontSize: isMobile?12.5:11, fontWeight:700, cursor:"pointer", color:"#fff" }}>
-                      ðŸ–¨ï¸ Imprimer
+                      🖨️ Imprimer
                     </button>
                   </div>
                 </div>
@@ -5868,38 +5868,38 @@ function DocumentsPage() {
 
               {/* Note */}
               <div style={{ background:C.goldPale, border:`1px solid ${C.gold}40`, borderRadius:8, padding:"10px 12px", fontSize:10, color:C.txtMuted, lineHeight:1.6 }}>
-                â„¹ï¸ {isMobile
-                  ? <>L'aperÃ§u s'affiche <strong>juste en dessous</strong>. Cliquez <strong>ðŸ‘ AperÃ§u</strong> pour visualiser avant d'imprimer.</>
-                  : <>L'aperÃ§u s'affiche Ã  droite. Cliquez <strong>ðŸ‘ AperÃ§u</strong> pour visualiser avant d'imprimer.</>}
+                ℹ️ {isMobile
+                  ? <>L'aperçu s'affiche <strong>juste en dessous</strong>. Cliquez <strong>👁 Aperçu</strong> pour visualiser avant d'imprimer.</>
+                  : <>L'aperçu s'affiche à droite. Cliquez <strong>👁 Aperçu</strong> pour visualiser avant d'imprimer.</>}
               </div>
             </>
           )}
         </aside>
 
-        {/* â”€â”€ Panneau droit â€” aperÃ§u iframe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Panneau droit — aperçu iframe ──────────────────────────── */}
         <main ref={previewMainRef} style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
-          {/* Header aperÃ§u */}
+          {/* Header aperçu */}
           <div style={{ padding: isMobile?"10px 14px":"10px 20px", borderBottom:`1px solid ${C.border}`, display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, flexShrink:0, background:C.white }}>
             <div style={{ flex:1, minWidth:"60%" }}>
               <h3 style={{ margin:0, fontSize: isMobile?12.5:13, fontWeight:700, color:C.txt }}>
-                {previewHtml ? `ðŸ“„ ${previewLabel}` : "ðŸ“„ AperÃ§u du document"}
+                {previewHtml ? `📄 ${previewLabel}` : "📄 Aperçu du document"}
               </h3>
               <p style={{ margin:"2px 0 0", fontSize: isMobile?10.5:11, color:C.txtMuted }}>
                 {previewHtml
-                  ? (isMobile ? "Touchez ðŸ–¨ï¸ pour imprimer" : "Cliquez ðŸ–¨ï¸ dans la topbar pour imprimer ce document")
-                  : (isMobile ? "SÃ©lectionnez un document ci-dessus" : "SÃ©lectionnez un document dans le panneau gauche")}
+                  ? (isMobile ? "Touchez 🖨️ pour imprimer" : "Cliquez 🖨️ dans la topbar pour imprimer ce document")
+                  : (isMobile ? "Sélectionnez un document ci-dessus" : "Sélectionnez un document dans le panneau gauche")}
               </p>
             </div>
             {previewHtml && (
               <div style={{ display:"flex", gap:8 }}>
                 <button onClick={imprimerApercu}
                   style={{ padding: isMobile?"8px 13px":"6px 14px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, color:"#fff", border:"none", borderRadius:8, fontSize: isMobile?12:12, fontWeight:700, cursor:"pointer" }}>
-                  ðŸ–¨ï¸ Imprimer
+                  🖨️ Imprimer
                 </button>
                 <button onClick={()=>{ setPreviewHtml(null); setPreviewLabel(""); }}
                   style={{ padding: isMobile?"8px 11px":"6px 12px", background:C.white, border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, color:C.txtMuted, cursor:"pointer" }}>
-                  âœ• Fermer
+                  ✕ Fermer
                 </button>
               </div>
             )}
@@ -5910,7 +5910,7 @@ function DocumentsPage() {
             {previewHtml ? (
               <iframe
                 ref={iframeRef}
-                title="AperÃ§u document MINESEC"
+                title="Aperçu document MINESEC"
                 style={{
                   width:"100%", height:"100%",
                   border:"none", borderRadius:8,
@@ -5920,12 +5920,12 @@ function DocumentsPage() {
               />
             ) : (
               <div style={{ textAlign:"center", color:C.txtLight }}>
-                <div style={{ fontSize:56, marginBottom:16 }}>ðŸ“„</div>
+                <div style={{ fontSize:56, marginBottom:16 }}>📄</div>
                 <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:8 }}>
-                  Aucun aperÃ§u sÃ©lectionnÃ©
+                  Aucun aperçu sélectionné
                 </div>
                 <div style={{ fontSize:12, color:C.txtMuted, maxWidth:320 }}>
-                  Cliquez sur <strong>ðŸ‘ AperÃ§u</strong> Ã  cÃ´tÃ© d'un document pour le visualiser ici avant de l'imprimer.
+                  Cliquez sur <strong>👁 Aperçu</strong> à côté d'un document pour le visualiser ici avant de l'imprimer.
                 </div>
               </div>
             )}
@@ -5936,16 +5936,16 @@ function DocumentsPage() {
   );
 }
 
-// getNowInfo: dÃ©finie globalement
+// getNowInfo: définie globalement
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // PALETTE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// const C: rÃ©fÃ©rence au bloc global ci-dessus
+// ═══════════════════════════════════════════════════
+// const C: référence au bloc global ci-dessus
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 // COMPOSANTS UI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
 const EdtSp = ({ size=18, color=C.green }) => (
   <span style={{ width:size,height:size,border:`2px solid ${color}30`,borderTopColor:color,borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite",flexShrink:0 }}/>
 );
@@ -5960,15 +5960,16 @@ const EdtToast = ({ msg, ok }) => (
   </div>
 );
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// 5. MON EMPLOI DU TEMPS â€” classes de l'enseignant uniquement
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════════════════════════
+// 5. MON EMPLOI DU TEMPS — classes de l'enseignant uniquement
+// ══════════════════════════════════════════════════════════════════════
 function MonEdtPage() {
   const {user} = useApp();
   const {jk: nowJk, hi: nowHi} = getNowInfo();
   const ensId = user?.id;
   const edtRt = buildEdtRuntime(data?.exceptions||{}, data?.edtBase||{});
   const edt   = edtRt[ensId] || {};
+
   // Classes SVTEEHB de cet enseignant
   const classesDansEDT = new Set();
   Object.values(edt).forEach(jour=>jour.forEach(cl=>{if(cl)classesDansEDT.add(cl);}));
@@ -5978,12 +5979,12 @@ function MonEdtPage() {
 
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
         <div>
-          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>ðŸ—“ Mon emploi du temps SVTEEHB</h2>
-          <p style={{fontSize:11, color:C.txtMuted, margin:"4px 0 0"}}>{user?.nom} Â· {(user?.classes||[]).length} classe{(user?.classes||[]).length>1?"s":""} Â· 2025â€“2026</p>
+          <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>🗓 Mon emploi du temps SVTEEHB</h2>
+          <p style={{fontSize:11, color:C.txtMuted, margin:"4px 0 0"}}>{user?.nom} · {(user?.classes||[]).length} classe{(user?.classes||[]).length>1?"s":""} · 2025–2026</p>
         </div>
         {nowJk && nowHi>=0 && edt[nowJk]?.[nowHi] && (
           <div style={{background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:9, padding:"8px 14px", textAlign:"center"}}>
-            <div style={{fontSize:9, color:C.green, fontWeight:700, marginBottom:2}}>ðŸŸ¢ EN COURS</div>
+            <div style={{fontSize:9, color:C.green, fontWeight:700, marginBottom:2}}>🟢 EN COURS</div>
             <div style={{fontSize:14, fontWeight:800, color:C.green}}>{edt[nowJk]?.[nowHi]}</div>
           </div>
         )}
@@ -6029,10 +6030,10 @@ function MonEdtPage() {
         </table>
       </div>
 
-      {/* RÃ©sumÃ© des classes SVTEEHB */}
+      {/* Résumé des classes SVTEEHB */}
       {classesDansEDT.size > 0 && (
         <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px"}}>
-          <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:10}}>ðŸ“š Classes SVTEEHB enseignÃ©es</div>
+          <div style={{fontSize:12, fontWeight:700, color:C.txt, marginBottom:10}}>📚 Classes SVTEEHB enseignées</div>
           <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
             {[...classesDansEDT].map(cl=>(
               <div key={cl} style={{padding:"6px 12px", borderRadius:20, background:getColor(ensId)+"15", border:`1px solid ${getColor(ensId)}40`, color:getColor(ensId), fontSize:12, fontWeight:700}}>
@@ -6048,9 +6049,9 @@ function MonEdtPage() {
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GRILLE EDT D'UN ENSEIGNANT (admin, avec Ã©dition au clic)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════
+// GRILLE EDT D'UN ENSEIGNANT (admin, avec édition au clic)
+// ═══════════════════════════════════════════════════
 function buildEdtRuntime(exceptions = {}, edtBase = {}) {
   const copy = {};
   const useBase = Object.keys(edtBase).length > 0;
@@ -6152,7 +6153,7 @@ function genEdtHTML(ens, edtRt) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>EDT ${ens.nom}</title></head>
   <body style="font-family:Arial,sans-serif;padding:20px">
     ${enteteOfficiel("EMPLOI DU TEMPS", ens.nom, DEPARTEMENTS_LIST.find(d=>d.id===(ens.departement_id||1))?.nom)}
-    <h3 style="text-align:center;margin:14px 0;font-size:13px">Emploi du temps â€” ${ens.nom}</h3>
+    <h3 style="text-align:center;margin:14px 0;font-size:13px">Emploi du temps — ${ens.nom}</h3>
     <table style="width:100%;border-collapse:collapse">
       <thead><tr><th style="padding:6px;border:1px solid #ccc;background:#1a6b3c;color:#fff;font-size:9px">Heures</th>${headerCols}</tr></thead>
       <tbody>${rows}</tbody>
@@ -6167,7 +6168,7 @@ function EdtPage() {
   const [selEns, setSelEns] = useState(()=> Object.keys(EDT_REEL)[0]||null);
   const [selCl, setSelCl] = useState(null);
   const [editMode, setEditMode] = useState(false);
-  const [edtGrid, setEdtGrid] = useState(null); // copie de travail {L:[8],Ma:[8],Me:[8],J:[8],V:[8]} pendant l'Ã©dition
+  const [edtGrid, setEdtGrid] = useState(null); // copie de travail {L:[8],Ma:[8],Me:[8],J:[8],V:[8]} pendant l'édition
   const [edtJourMobile, setEdtJourMobile] = useState("L");
   const [saving, setSaving] = useState(false);
 
@@ -6212,7 +6213,7 @@ function EdtPage() {
     });
   };
 
-  // Retire une classe de TOUS ses crÃ©neaux en un clic (pas besoin de chercher case par case)
+  // Retire une classe de TOUS ses créneaux en un clic (pas besoin de chercher case par case)
   const retirerClasseDeEdt = (classe) => {
     setEdtGrid(prev => {
       const next = {};
@@ -6231,8 +6232,8 @@ function EdtPage() {
     const classesAjoutees = classesDansEdt.filter(cl => !classesActuelles.includes(cl));
     const classesRetirees = classesActuelles.filter(cl => !classesDansEdt.includes(cl));
 
-    // DÃ©tection de conflit : une classe ajoutÃ©e est-elle dÃ©jÃ  assignÃ©e Ã  un AUTRE enseignant ?
-    // (Ã©vite qu'une mÃªme classe se retrouve chez deux enseignants Ã  la fois)
+    // Détection de conflit : une classe ajoutée est-elle déjà assignée à un AUTRE enseignant ?
+    // (évite qu'une même classe se retrouve chez deux enseignants à la fois)
     const conflits = [];
     classesAjoutees.forEach(cl => {
       enseignants.forEach(autre => {
@@ -6240,25 +6241,25 @@ function EdtPage() {
       });
     });
     if (conflits.length > 0) {
-      const liste = conflits.map(c => `â€¢ ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
+      const liste = conflits.map(c => `• ${c.classe} (actuellement chez ${getNomCourt(c.autreEns.nom)})`).join("\n");
       const continuer = window.confirm(
-        `${conflits.length>1?"Ces classes sont":"Cette classe est"} dÃ©jÃ  assignÃ©e(s) Ã  un autre enseignant :\n\n${liste}\n\n`+
-        `Continuer va la/les retirer de l'autre enseignant (classes assignÃ©es + son EDT) pour la/les transfÃ©rer Ã  ${getNomCourt(ensActuel?.nom)}.\n\nContinuer ?`
+        `${conflits.length>1?"Ces classes sont":"Cette classe est"} déjà assignée(s) à un autre enseignant :\n\n${liste}\n\n`+
+        `Continuer va la/les retirer de l'autre enseignant (classes assignées + son EDT) pour la/les transférer à ${getNomCourt(ensActuel?.nom)}.\n\nContinuer ?`
       );
       if (!continuer) return;
     }
 
     setSaving(true);
-    // Remplacement complet et propre : admin_set_edt_slots rÃ©Ã©crit (upsert) les 40 crÃ©neaux
-    // en une fois â€” plus besoin de purge prÃ©alable, l'upsert couvre dÃ©jÃ  toutes les positions.
+    // Remplacement complet et propre : admin_set_edt_slots réécrit (upsert) les 40 créneaux
+    // en une fois — plus besoin de purge préalable, l'upsert couvre déjà toutes les positions.
     const rows = [];
     JKEYS.forEach(jk => { (edtGrid[jk]||[]).forEach((lbl, hi) => { rows.push({ slot:`${jk}-${hi}`, lbl: lbl||"" }); }); });
     const ok = await sb.rpc("admin_set_edt_slots", { p_ens_id: selEns, p_slots: rows });
 
     let cascadeOk = true;
 
-    // Nettoyage chez les enseignants en conflit : retirer la classe transfÃ©rÃ©e de leurs
-    // classes assignÃ©es ET de tous leurs crÃ©neaux EDT correspondants.
+    // Nettoyage chez les enseignants en conflit : retirer la classe transférée de leurs
+    // classes assignées ET de tous leurs créneaux EDT correspondants.
     if (ok && conflits.length > 0) {
       const parAutreEns = {};
       conflits.forEach(c => { (parAutreEns[c.autreEns.id] ||= []).push(c.classe); });
@@ -6272,8 +6273,8 @@ function EdtPage() {
           await sb.rpc("admin_set_edt_slots", { p_ens_id: autreId, p_slots: slotsAEffacer.map(slot=>({ slot, lbl:"" })) });
         }
         // Cascade identique aux autres points de retrait de classe (cf. resoudreConflit,
-        // ModalEnsForm) : pas de progression/suivi digital fantÃ´me chez le perdant du conflit.
-        // NettoyÃ©e seulement si le retrait de classe a rÃ©ellement rÃ©ussi (rOk).
+        // ModalEnsForm) : pas de progression/suivi digital fantôme chez le perdant du conflit.
+        // Nettoyée seulement si le retrait de classe a réellement réussi (rOk).
         const rOk = await sb.rpc("admin_set_teacher_classes", { p_id: autreId, p_classes: nouvellesClassesAutre });
         if (rOk) {
           for (const cl of classesAEnlever) {
@@ -6286,17 +6287,17 @@ function EdtPage() {
       }
     }
 
-    // Cascade bidirectionnelle habituelle : les "classes assignÃ©es" de selEns deviennent
+    // Cascade bidirectionnelle habituelle : les "classes assignées" de selEns deviennent
     // exactement le reflet du contenu de son EDT (ajouts ET retraits).
     // sb.patchRow (PATCH) et non sb.upsert : on ne modifie QUE la colonne "classes", sans
     // exiger les autres colonnes NOT NULL (nom, role) qu'un upsert/INSERT imposerait.
     if (ok && (classesAjoutees.length > 0 || classesRetirees.length > 0)) {
       const rOk = await sb.rpc("admin_set_teacher_classes", { p_id: selEns, p_classes: classesDansEdt });
       if (!rOk) cascadeOk = false;
-      // Cascade prog_suivi pour selEns lui-mÃªme : une classe retirÃ©e de son EDT (donc de ses
-      // classes assignÃ©es) ne doit pas garder de progression/suivi digital fantÃ´me.
-      // GardÃ©e derriÃ¨re "ok" : si la sauvegarde EDT elle-mÃªme a Ã©chouÃ©, le retrait de classe
-      // n'a pas rÃ©ellement eu lieu, donc rien Ã  nettoyer cÃ´tÃ© progression.
+      // Cascade prog_suivi pour selEns lui-même : une classe retirée de son EDT (donc de ses
+      // classes assignées) ne doit pas garder de progression/suivi digital fantôme.
+      // Gardée derrière "ok" : si la sauvegarde EDT elle-même a échoué, le retrait de classe
+      // n'a pas réellement eu lieu, donc rien à nettoyer côté progression.
       if (rOk) {
         for (const cl of classesRetirees) {
           await sb.rpc("admin_delete_prog_by_classe", { p_ens_id: selEns, p_classe: cl });
@@ -6307,28 +6308,28 @@ function EdtPage() {
 
     setSaving(false);
     const messages = [];
-    if (classesAjoutees.length>0) messages.push(`${classesAjoutees.join(", ")} ajoutÃ©e(s)`);
-    if (classesRetirees.length>0) messages.push(`${classesRetirees.join(", ")} retirÃ©e(s)`);
-    if (conflits.length>0) messages.push(`transfÃ©rÃ©e(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
+    if (classesAjoutees.length>0) messages.push(`${classesAjoutees.join(", ")} ajoutée(s)`);
+    if (classesRetirees.length>0) messages.push(`${classesRetirees.join(", ")} retirée(s)`);
+    if (conflits.length>0) messages.push(`transférée(s) depuis ${[...new Set(conflits.map(c=>getNomCourt(c.autreEns.nom)))].join(", ")}`);
     if (ok && cascadeOk) {
       showToast(messages.length>0
-        ? `âœ“ Emploi du temps enregistrÃ© Â· ${messages.join(" Â· ")}`
-        : "âœ“ Emploi du temps enregistrÃ©", true);
+        ? `✓ Emploi du temps enregistré · ${messages.join(" · ")}`
+        : "✓ Emploi du temps enregistré", true);
       setEditMode(false); setEdtGrid(null);
       await refreshData?.();
     } else if (ok && !cascadeOk) {
-      showToast(`âš  EDT enregistrÃ©, mais la mise Ã  jour des classes assignÃ©es a Ã©chouÃ© â€” vÃ©rifie manuellement dans "GÃ©rer enseignants"`, false);
+      showToast(`⚠ EDT enregistré, mais la mise à jour des classes assignées a échoué — vérifie manuellement dans "Gérer enseignants"`, false);
       setEditMode(false); setEdtGrid(null);
       await refreshData?.();
     } else {
-      showToast("âš  Ã‰chec de l'enregistrement â€” vÃ©rifiez la connexion", false);
+      showToast("⚠ Échec de l'enregistrement — vérifiez la connexion", false);
     }
   };
 
   if (!data) return (
     <div style={{ padding:"60px", textAlign:"center", color:C.txtMuted }}>
       <Spinner size={28} color={C.green}/>
-      <div style={{ marginTop:12, fontSize:13 }}>Chargementâ€¦</div>
+      <div style={{ marginTop:12, fontSize:13 }}>Chargement…</div>
     </div>
   );
 
@@ -6336,14 +6337,14 @@ function EdtPage() {
 
   return (
     <div style={{ padding: isMobile?14:20, display:"flex", flexDirection:"column", gap:16 }}>
-      {saving && <Pill ch="ðŸ”„ Sauvegardeâ€¦" color={C.blue}/>}
+      {saving && <Pill ch="🔄 Sauvegarde…" color={C.blue}/>}
 
       {/* Onglets */}
       <div style={{ display:"flex", gap: isMobile?5:8, background:"#f1f5f9", padding:5, borderRadius:10, overflowX:"auto" }}>
         {[
-          {id:"maintenant",    label:"ðŸŸ¢ Maintenant"},
-          {id:"parEnseignant", label:"ðŸ‘¤ Par enseignant"},
-          {id:"parClasse",     label:"ðŸ« Par classe"},
+          {id:"maintenant",    label:"🟢 Maintenant"},
+          {id:"parEnseignant", label:"👤 Par enseignant"},
+          {id:"parClasse",     label:"🏫 Par classe"},
         ].map(o=>(
           <button key={o.id} onClick={()=>setOnglet(o.id)}
             style={{ flex:1, padding: isMobile?"9px 6px":"10px", borderRadius:7, border:"none", whiteSpace:"nowrap",
@@ -6355,16 +6356,16 @@ function EdtPage() {
         ))}
       </div>
 
-      {/* â”€â”€ Onglet Maintenant : qui enseigne en ce moment â”€â”€ */}
+      {/* ── Onglet Maintenant : qui enseigne en ce moment ── */}
       {onglet==="maintenant" && (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {!nowJk ? (
             <div style={{ background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:30, textAlign:"center", color:C.txtMuted }}>
-              ðŸ“… Pas de cours le week-end
+              📅 Pas de cours le week-end
             </div>
           ) : enseignants.filter(ens=>edtRt[ens.id]?.[nowJk]?.[nowHi]).length===0 ? (
             <div style={{ background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:30, textAlign:"center", color:C.txtMuted }}>
-              ðŸ• Aucun cours SVTEEHB en ce moment
+              🕐 Aucun cours SVTEEHB en ce moment
             </div>
           ) : enseignants.filter(ens=>edtRt[ens.id]?.[nowJk]?.[nowHi]).map(ens=>(
             <div key={ens.id} style={{ display:"flex", alignItems:"center", gap:12, background:C.white, borderRadius:12, border:`1.5px solid ${C.greenBorder}`, padding:"12px 16px" }}>
@@ -6381,7 +6382,7 @@ function EdtPage() {
         </div>
       )}
 
-      {/* â”€â”€ Onglet Par enseignant â”€â”€ */}
+      {/* ── Onglet Par enseignant ── */}
       {onglet==="parEnseignant" && (
         <>
           <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
@@ -6400,14 +6401,14 @@ function EdtPage() {
               <button onClick={entrerModeEdition}
                 style={{ alignSelf:"flex-start", padding:"9px 16px", background:C.greenPale, border:`1.5px solid ${C.greenBorder}`, borderRadius:9,
                   fontSize:12.5, fontWeight:700, color:C.green, cursor:"pointer", fontFamily:"inherit" }}>
-                âœŽ Modifier l'emploi du temps de {getNomCourt(ensActuel.nom)}
+                ✎ Modifier l'emploi du temps de {getNomCourt(ensActuel.nom)}
               </button>
             </>
           )}
           {ensActuel && editMode && (
             <div style={{ background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 18px", display:"flex", flexDirection:"column", gap:12 }}>
               <p style={{ fontSize:11.5, color:C.txtMuted, margin:0, lineHeight:1.5 }}>
-                Cette modification Ã©crase entiÃ¨rement l'EDT de {getNomCourt(ensActuel.nom)} dans Supabase â€” plus besoin de toucher au code pour une nouvelle annÃ©e scolaire.
+                Cette modification écrase entièrement l'EDT de {getNomCourt(ensActuel.nom)} dans Supabase — plus besoin de toucher au code pour une nouvelle année scolaire.
               </p>
               {isMobile ? (
                 <>
@@ -6424,7 +6425,7 @@ function EdtPage() {
                       <label style={{ fontSize:10.5, fontWeight:700, color:C.txtMuted }}>{h}</label>
                       <select value={edtGrid[edtJourMobile][hi]||""} onChange={e=>setEdtCell(edtJourMobile,hi,e.target.value)}
                         style={{ width:"100%", padding:"10px 12px", border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:"inherit", background:C.white }}>
-                        <option value="">â€” Libre â€”</option>
+                        <option value="">— Libre —</option>
                         {toutesClasses.map(cl=><option key={cl} value={cl}>{cl}</option>)}
                       </select>
                     </div>
@@ -6447,7 +6448,7 @@ function EdtPage() {
                             <td key={jk} style={{ padding:"4px 6px" }}>
                               <select value={edtGrid[jk][hi]||""} onChange={e=>setEdtCell(jk,hi,e.target.value)}
                                 style={{ width:"100%", padding:"6px 8px", border:`1px solid ${C.border}`, borderRadius:7, fontSize:11, fontFamily:"inherit", background:C.white }}>
-                                <option value="">â€”</option>
+                                <option value="">—</option>
                                 {toutesClasses.map(cl=><option key={cl} value={cl}>{cl}</option>)}
                               </select>
                             </td>
@@ -6466,8 +6467,8 @@ function EdtPage() {
                     {classesDansEdtGrid.map(cl=>(
                       <span key={cl} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"5px 10px", borderRadius:20, background:C.redPale, border:`1px solid ${C.redBorder}`, fontSize:11.5, fontWeight:700, color:C.red }}>
                         {cl}
-                        <button onClick={()=>retirerClasseDeEdt(cl)} title={`Retirer ${cl} de tous ses crÃ©neaux`} type="button"
-                          style={{ background:"none", border:"none", cursor:"pointer", color:C.red, fontSize:14, padding:0, lineHeight:1, fontWeight:900 }}>Ã—</button>
+                        <button onClick={()=>retirerClasseDeEdt(cl)} title={`Retirer ${cl} de tous ses créneaux`} type="button"
+                          style={{ background:"none", border:"none", cursor:"pointer", color:C.red, fontSize:14, padding:0, lineHeight:1, fontWeight:900 }}>×</button>
                       </span>
                     ))}
                   </div>
@@ -6482,7 +6483,7 @@ function EdtPage() {
                 <button onClick={handleSaveEdt} disabled={saving}
                   style={{ flex:2, padding:"10px 18px", background:saving?"#94a3b8":`linear-gradient(135deg,${C.greenDark},${C.green})`,
                     border:"none", borderRadius:9, fontSize:13, fontWeight:700, color:"#fff", cursor:saving?"not-allowed":"pointer", fontFamily:"inherit" }}>
-                  {saving ? "Enregistrementâ€¦" : "âœ“ Enregistrer l'emploi du temps"}
+                  {saving ? "Enregistrement…" : "✓ Enregistrer l'emploi du temps"}
                 </button>
               </div>
             </div>
@@ -6490,7 +6491,7 @@ function EdtPage() {
         </>
       )}
 
-      {/* â”€â”€ Onglet Par classe â”€â”€ */}
+      {/* ── Onglet Par classe ── */}
       {onglet==="parClasse" && (
         <>
           <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4 }}>
@@ -6507,7 +6508,7 @@ function EdtPage() {
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
                 <thead>
                   <tr style={{ background:"#fafbfc" }}>
-                    <th style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:"#64748b", fontWeight:700, textTransform:"uppercase" }}>CrÃ©neau</th>
+                    <th style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:"#64748b", fontWeight:700, textTransform:"uppercase" }}>Créneau</th>
                     <th style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:"#64748b", fontWeight:700, textTransform:"uppercase" }}>Enseignant</th>
                   </tr>
                 </thead>
@@ -6516,7 +6517,7 @@ function EdtPage() {
                     JKEYS.flatMap((jk,ji)=>HEURES.map((h,hi)=>({ens,jk,ji,hi,h})).filter(x=>edtRt[ens.id]?.[jk]?.[x.hi]===selCl))
                   ).map((x,i)=>(
                     <tr key={i} style={{ borderTop:`1px solid ${C.border}` }}>
-                      <td style={{ padding:"9px 14px" }}>{JOURS[x.ji]} Â· {x.h}</td>
+                      <td style={{ padding:"9px 14px" }}>{JOURS[x.ji]} · {x.h}</td>
                       <td style={{ padding:"9px 14px", display:"flex", alignItems:"center", gap:8 }}>
                         <Avatar ens={x.ens} size={20} fontSize={8}/>
                         {getNomCourt(x.ens.nom)}
@@ -6534,103 +6535,103 @@ function EdtPage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// NAVIGATION & LAYOUT â€” Composants partagÃ©s
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// NAVIGATION & LAYOUT — Composants partagés
+// ═══════════════════════════════════════════════════════════════════
 
 const NAV_ADMIN = [
-  {id:"dashboard",   emoji:"ðŸ ", label:"Tableau de bord"},
-  {id:"enseignants", emoji:"ðŸ‘¥", label:"Enseignants"},
-  {id:"eleves",      emoji:"ðŸŽ“", label:"Ã‰lÃ¨ves"},
-  {id:"programme",   emoji:"ðŸ“Š", label:"Suivi programme",  sub:"Vue synthÃ©tique"},
-  {id:"epreuves",    emoji:"ðŸ“‹", label:"Ã‰preuves"},
-  {id:"edt",         emoji:"ðŸ“…", label:"Emploi du temps"},
-  {id:"documents",   emoji:"ðŸ“„", label:"Documents"},
-  {id:"gestion-annuelle", emoji:"ðŸ”„", label:"Gestion annuelle", sub:"Import Ã©lÃ¨ves"},
+  {id:"dashboard",   emoji:"🏠", label:"Tableau de bord"},
+  {id:"enseignants", emoji:"👥", label:"Enseignants"},
+  {id:"eleves",      emoji:"🎓", label:"Élèves"},
+  {id:"programme",   emoji:"📊", label:"Suivi programme",  sub:"Vue synthétique"},
+  {id:"epreuves",    emoji:"📋", label:"Épreuves"},
+  {id:"edt",         emoji:"📅", label:"Emploi du temps"},
+  {id:"documents",   emoji:"📄", label:"Documents"},
+  {id:"gestion-annuelle", emoji:"🔄", label:"Gestion annuelle", sub:"Import élèves"},
 ];
 
 const NAV_TEACHER = [
-  {id:"dashboard",    emoji:"ðŸ ", label:"Tableau de bord"},
-  {id:"mes-classes",  emoji:"ðŸ‘¨â€ðŸ«", label:"Mes classes"},
-  {id:"cahier",       emoji:"ðŸ“–", label:"Cahier de texte"},
-  {id:"programme",    emoji:"ðŸ“Š", label:"Mon programme"},
-  {id:"epreuves",     emoji:"ðŸ“‹", label:"Ã‰preuves"},
-  {id:"edt-teacher",  emoji:"ðŸ“…", label:"Mon emploi du temps"},
+  {id:"dashboard",    emoji:"🏠", label:"Tableau de bord"},
+  {id:"mes-classes",  emoji:"👨‍🏫", label:"Mes classes"},
+  {id:"cahier",       emoji:"📖", label:"Cahier de texte"},
+  {id:"programme",    emoji:"📊", label:"Mon programme"},
+  {id:"epreuves",     emoji:"📋", label:"Épreuves"},
+  {id:"edt-teacher",  emoji:"📅", label:"Mon emploi du temps"},
 ];
 
-const NAV_PROVISEUR = [...NAV_ADMIN, {id:"departements", emoji:"ðŸ›ï¸", label:"DÃ©partements", sub:"MatiÃ¨res Â· Animateurs"}];
+const NAV_PROVISEUR = [...NAV_ADMIN, {id:"departements", emoji:"🏛️", label:"Départements", sub:"Matières · Animateurs"}];
 const NAV_CENSEUR = NAV_ADMIN.filter(n=>n.id!=="enseignants" && n.id!=="gestion-annuelle");
 
-// â”€â”€ Structures groupÃ©es â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Structures groupées ──────────────────────────────────────────
 const NAV_PROVISEUR_GROUPS = [
-  { section:"", items:[{id:"dashboard",emoji:"ðŸ ",label:"Tableau de bord"}] },
-  { section:"ACTEURS & PÃ‰DAGOGIE", items:[
-    {id:"enseignants", emoji:"ðŸ‘¥", label:"Enseignants"},
-    {id:"eleves",      emoji:"ðŸŽ“", label:"Ã‰lÃ¨ves"},
-    {id:"departements",emoji:"ðŸ›ï¸", label:"DÃ©partements & MatiÃ¨res", expandable:true,
-      sub:[{emoji:"ðŸŒ¿",label:"SVT"},{emoji:"ðŸ“",label:"MathÃ©matiques"},{emoji:"âš—ï¸",label:"Sciences Physiques"},{emoji:"ðŸ“š",label:"Lettres"},{emoji:"ðŸŒ",label:"Sciences Humaines"},{emoji:"ðŸ—£ï¸",label:"Langues Vivantes"}]},
-    {id:"documents",   emoji:"ðŸ“„", label:"Documents"},
+  { section:"", items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"}] },
+  { section:"ACTEURS & PÉDAGOGIE", items:[
+    {id:"enseignants", emoji:"👥", label:"Enseignants"},
+    {id:"eleves",      emoji:"🎓", label:"Élèves"},
+    {id:"departements",emoji:"🏛️", label:"Départements & Matières", expandable:true,
+      sub:[{emoji:"🌿",label:"SVT"},{emoji:"📐",label:"Mathématiques"},{emoji:"⚗️",label:"Sciences Physiques"},{emoji:"📚",label:"Lettres"},{emoji:"🌍",label:"Sciences Humaines"},{emoji:"🗣️",label:"Langues Vivantes"}]},
+    {id:"documents",   emoji:"📄", label:"Documents"},
   ]},
   { section:"SUIVI & PLANNINGS", items:[
-    {id:"edt",      emoji:"ðŸ“…", label:"Emploi du temps"},
-    {id:"epreuves", emoji:"ðŸ“‹", label:"Ã‰preuves & Ã‰valuations"},
-    {id:"bulletins",emoji:"ðŸ“’", label:"Bulletins de notes"},
-    {id:"conseil-classe",emoji:"ðŸ›ï¸", label:"Conseil de classe"},
-    {id:"secretariat",emoji:"ðŸ—‚ï¸", label:"SecrÃ©tariat"},
-    {id:"programme",emoji:"ðŸ“Š", label:"Suivi programme"},
+    {id:"edt",      emoji:"📅", label:"Emploi du temps"},
+    {id:"epreuves", emoji:"📋", label:"Épreuves & Évaluations"},
+    {id:"bulletins",emoji:"📒", label:"Bulletins de notes"},
+    {id:"conseil-classe",emoji:"🏛️", label:"Conseil de classe"},
+    {id:"secretariat",emoji:"🗂️", label:"Secrétariat"},
+    {id:"programme",emoji:"📊", label:"Suivi programme"},
   ]},
   { section:"CYCLE ANNUEL", items:[
-    {id:"gestion-annuelle",emoji:"ðŸ”„",label:"Gestion annuelle"},
+    {id:"gestion-annuelle",emoji:"🔄",label:"Gestion annuelle"},
   ]},
   { section:"ADMINISTRATION", items:[
-    {id:"comptes",emoji:"ðŸ‘¤",label:"Gestion des comptes"},
+    {id:"comptes",emoji:"👤",label:"Gestion des comptes"},
   ]},
 ];
 
 const NAV_CENSEUR_GROUPS = [
-  { section:"", items:[{id:"dashboard",emoji:"ðŸ ",label:"Tableau de bord"},{id:"babillard",emoji:"ðŸ“Œ",label:"Babillard"}] },
-  { section:"ACTEURS & PÃ‰DAGOGIE", items:[
-    {id:"eleves",      emoji:"ðŸŽ“", label:"Ã‰lÃ¨ves"},
-    {id:"departements",emoji:"ðŸ›ï¸", label:"DÃ©partements & MatiÃ¨res", expandable:true,
-      sub:[{emoji:"ðŸŒ¿",label:"SVT"},{emoji:"ðŸ“",label:"MathÃ©matiques"},{emoji:"âš—ï¸",label:"Sciences Physiques"},{emoji:"ðŸ“š",label:"Lettres"},{emoji:"ðŸŒ",label:"Sciences Humaines"},{emoji:"ðŸ—£ï¸",label:"Langues Vivantes"}]},
+  { section:"", items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"}] },
+  { section:"ACTEURS & PÉDAGOGIE", items:[
+    {id:"eleves",      emoji:"🎓", label:"Élèves"},
+    {id:"departements",emoji:"🏛️", label:"Départements & Matières", expandable:true,
+      sub:[{emoji:"🌿",label:"SVT"},{emoji:"📐",label:"Mathématiques"},{emoji:"⚗️",label:"Sciences Physiques"},{emoji:"📚",label:"Lettres"},{emoji:"🌍",label:"Sciences Humaines"},{emoji:"🗣️",label:"Langues Vivantes"}]},
   ]},
   { section:"SUIVI & PLANNINGS", items:[
-    {id:"edt",      emoji:"ðŸ“…", label:"Emploi du temps"},
-    {id:"epreuves", emoji:"ðŸ“‹", label:"Ã‰preuves & Ã‰valuations"},
-    {id:"bulletins",emoji:"ðŸ“’", label:"Bulletins de notes"},
-    {id:"programme",emoji:"ðŸ“Š", label:"Suivi programme"},
+    {id:"edt",      emoji:"📅", label:"Emploi du temps"},
+    {id:"epreuves", emoji:"📋", label:"Épreuves & Évaluations"},
+    {id:"bulletins",emoji:"📒", label:"Bulletins de notes"},
+    {id:"programme",emoji:"📊", label:"Suivi programme"},
   ]},
   { section:"DISCIPLINE & VIE SCOLAIRE", items:[
-    {id:"conduite",  emoji:"ðŸ›¡ï¸", label:"Conduite & Discipline"},
-    {id:"sanctions",emoji:"âš ï¸", label:"Sanctions"},
-    {id:"rapports", emoji:"ðŸ“Š", label:"Rapports disciplinaires"},
+    {id:"conduite",  emoji:"🛡️", label:"Conduite & Discipline"},
+    {id:"sanctions",emoji:"⚠️", label:"Sanctions"},
+    {id:"rapports", emoji:"📊", label:"Rapports disciplinaires"},
   ]},
 ];
 
 const NAV_ANIMATEUR_GROUPS = [
-  { section:"", items:[{id:"dashboard",emoji:"ðŸ ",label:"Tableau de bord"}] },
-  { section:"MON DÃ‰PARTEMENT", items:[
-    {id:"programme",  emoji:"ðŸ“Š",label:"Enseignants"},
-    {id:"epreuves",   emoji:"ðŸ“‹",label:"Ã‰preuves"},
-    {id:"suivi-prog-dept",emoji:"ðŸ“ˆ",label:"Suivi programme"},
+  { section:"", items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"}] },
+  { section:"MON DÉPARTEMENT", items:[
+    {id:"programme",  emoji:"📊",label:"Enseignants"},
+    {id:"epreuves",   emoji:"📋",label:"Épreuves"},
+    {id:"suivi-prog-dept",emoji:"📈",label:"Suivi programme"},
   ]},
-  { section:"RÃ‰UNIONS & RAPPORTS", items:[
-    {id:"fiche-inspection",emoji:"ðŸ”",label:"Fiches d'inspection"},
-    {id:"documents-ap",emoji:"ðŸ“„",label:"Documents"},
+  { section:"RÉUNIONS & RAPPORTS", items:[
+    {id:"fiche-inspection",emoji:"🔍",label:"Fiches d'inspection"},
+    {id:"documents-ap",emoji:"📄",label:"Documents"},
   ]},
   { section:"PLANNINGS", items:[
-    {id:"edt-teacher",emoji:"ðŸ“…",label:"Mon emploi du temps"},
+    {id:"edt-teacher",emoji:"📅",label:"Mon emploi du temps"},
   ]},
 ];
-const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"ðŸ ", label:"Tableau de bord"},{id:"babillard",emoji:"ðŸ“Œ",label:"Babillard"},{id:"conduite",emoji:"ðŸ›¡ï¸",label:"Conduite & Discipline"}];
+const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"},{id:"conduite",emoji:"🛡️",label:"Conduite & Discipline"}];
 
 const PAGE_TITLES = {
-  departements:"DÃ©partements",
+  departements:"Départements",
   dashboard:"Tableau de bord", "mes-classes":"Mes classes",
   programme:"Mon programme", cahier:"Cahier de texte",
-  epreuves:"Ã‰preuves", "edt-teacher":"Mon emploi du temps",
+  epreuves:"Épreuves", "edt-teacher":"Mon emploi du temps",
   edt:"Emploi du temps", documents:"Documents MINESEC",
-  eleves:"Ã‰lÃ¨ves", enseignants:"Enseignants",
+  eleves:"Élèves", enseignants:"Enseignants",
 };
 
 const KpiCard = ({label,value,sub,iconEmoji,bg,subColor}) => (
@@ -6646,7 +6647,7 @@ const KpiCard = ({label,value,sub,iconEmoji,bg,subColor}) => (
 
 function displayCl(cl){ return CLASS_DISPLAY[cl]||cl; }
 
-// â”€â”€â”€ Dashboard Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Dashboard Admin ────────────────────────────────────────────────
 function DashboardSecretaire() {
   const {setPage} = useApp();
   const {isMobile} = useDevice();
@@ -6654,24 +6655,24 @@ function DashboardSecretaire() {
   const dateStr = now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const dateCapitalized = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
   const actions = [
-    {label:"Attestations",icon:"ðŸ“œ",page:"secretariat"},
-    {label:"Certificats",icon:"ðŸ“‹",page:"secretariat"},
-    {label:"Fiches Ã©lÃ¨ves",icon:"ðŸ—‚ï¸",page:"secretariat"},
-    {label:"Listes classes",icon:"ðŸŽ“",page:"eleves"},
-    {label:"Babillard",icon:"ðŸ“Œ",page:"babillard"},
+    {label:"Attestations",icon:"📜",page:"secretariat"},
+    {label:"Certificats",icon:"📋",page:"secretariat"},
+    {label:"Fiches élèves",icon:"🗂️",page:"secretariat"},
+    {label:"Listes classes",icon:"🎓",page:"eleves"},
+    {label:"Babillard",icon:"📌",page:"babillard"},
   ];
   return (
     <div style={{padding:isMobile?"14px 14px 40px":"24px 28px 48px",display:"flex",flexDirection:"column",gap:22,background:"#f8fafc",minHeight:"100%"}}>
       <div>
         <h1 style={{fontSize:isMobile?18:22,fontWeight:800,color:"#0f172a",margin:0,letterSpacing:"-.3px"}}>
-          Bonjour, Monsieur le SecrÃ©taire
+          Bonjour, Monsieur le Secrétaire
         </h1>
         <p style={{color:"#64748b",margin:"4px 0 0",fontSize:12.5}}>
-          {dateCapitalized} Â· LycÃ©e de Kakatare-Maroua
+          {dateCapitalized} · Lycée de Kakatare-Maroua
         </p>
       </div>
       <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"20px",boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:14}}>AccÃ¨s rapide</div>
+        <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:14}}>Accès rapide</div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:10}}>
           {actions.map(a=>(
             <button key={a.label} onClick={()=>setPage(a.page)}
@@ -6687,8 +6688,8 @@ function DashboardSecretaire() {
         </div>
       </div>
       <div style={{background:"#f0fdf4",borderRadius:12,border:"1px solid #bbf7d0",padding:"16px 20px"}}>
-        <div style={{fontSize:13,fontWeight:700,color:"#166534",marginBottom:4}}>â„¹ï¸ AccÃ¨s SecrÃ©tariat</div>
-        <div style={{fontSize:12,color:"#166534"}}>Vous avez accÃ¨s aux documents officiels, aux listes d'Ã©lÃ¨ves (lecture seule) et au babillard.</div>
+        <div style={{fontSize:13,fontWeight:700,color:"#166534",marginBottom:4}}>ℹ️ Accès Secrétariat</div>
+        <div style={{fontSize:12,color:"#166534"}}>Vous avez accès aux documents officiels, aux listes d'élèves (lecture seule) et au babillard.</div>
       </div>
     </div>
   );
@@ -6717,25 +6718,25 @@ function DashboardAdmin() {
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, Administration ðŸ‘‹</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
-        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.txtMuted}}>2025â€“2026</div><div style={{fontSize:13,fontWeight:700,color:C.green}}>DonnÃ©es en direct â†—</div></div>
+        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, Administration 👋</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
+        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.txtMuted}}>2025–2026</div><div style={{fontSize:13,fontWeight:700,color:C.green}}>Données en direct ↗</div></div>
       </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Enseignants" value={stats.nbEns} sub="SVTEEHB Kakatare" iconEmoji="ðŸ‘¥" bg={C.greenPale} loading={loading} delay={0}/>
-        <KpiCard label="Classes" value={stats.nbClasses} sub="Toutes sÃ©ries" iconEmoji="ðŸ“š" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
-        <KpiCard label="Ã‰lÃ¨ves" value={stats.nbEleves} sub="Total effectifs" iconEmoji="ðŸŽ“" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
-        <KpiCard label="Couverture" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"âœ“ Objectif atteint":"âš  Sous objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="ðŸ“Š" bg={C.greenPale} loading={loading} delay={0.15}/>
+        <KpiCard label="Enseignants" value={stats.nbEns} sub="SVTEEHB Kakatare" iconEmoji="👥" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Classes" value={stats.nbClasses} sub="Toutes séries" iconEmoji="📚" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
+        <KpiCard label="Élèves" value={stats.nbEleves} sub="Total effectifs" iconEmoji="🎓" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.1}/>
+        <KpiCard label="Couverture" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"✓ Objectif atteint":"⚠ Sous objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="📊" bg={C.greenPale} loading={loading} delay={0.15}/>
       </div>
       {!loading && stats.tauxParEns.length>0 && (() => {
         const nbAlerte = stats.tauxParEns.filter(e=>e.taux<50).length;
         if (nbAlerte===0) return null;
         return (
           <div style={{display:"flex",alignItems:"center",gap:14,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12,padding:"14px 18px"}}>
-            <span style={{fontSize:26,flexShrink:0}}>âš ï¸</span>
+            <span style={{fontSize:26,flexShrink:0}}>⚠️</span>
             <div>
               <div style={{fontWeight:700,color:"#b91c1c",fontSize:13}}>Couverture du programme en retard</div>
               <div style={{fontSize:12,color:"#7f1d1d",marginTop:2}}>
-                {nbAlerte} enseignant{nbAlerte>1?"s":""} sur {stats.nbEns} {nbAlerte>1?"sont":"est"} en dessous de 50% de couverture â€” une relance pourrait Ãªtre utile.
+                {nbAlerte} enseignant{nbAlerte>1?"s":""} sur {stats.nbEns} {nbAlerte>1?"sont":"est"} en dessous de 50% de couverture — une relance pourrait être utile.
               </div>
             </div>
           </div>
@@ -6744,13 +6745,13 @@ function DashboardAdmin() {
       <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
         <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10}}>
           <div>
-            <h3 style={{margin:"0 0 2px",fontSize:13,fontWeight:700,color:C.txt}}>ðŸ“Š Couverture programme â€” tous les enseignants</h3>
-            <p style={{margin:0,fontSize:10.5,color:C.txtMuted}}>TriÃ©s du plus urgent au plus avancÃ©</p>
+            <h3 style={{margin:"0 0 2px",fontSize:13,fontWeight:700,color:C.txt}}>📊 Couverture programme — tous les enseignants</h3>
+            <p style={{margin:0,fontSize:10.5,color:C.txtMuted}}>Triés du plus urgent au plus avancé</p>
           </div>
           <button onClick={async()=>{ setRefreshing(true); await refreshData(); setRefreshing(false); }}
             disabled={refreshing}
             style={{display:"flex", alignItems:"center", gap:6, padding: isMobile?"7px":"6px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, color:C.txtMuted, fontSize:11, fontWeight:700, cursor:refreshing?"not-allowed":"pointer", fontFamily:"inherit", flexShrink:0}}>
-            {refreshing ? <Spinner size={11} color={C.txtMuted}/> : "ðŸ”„"} {!isMobile && "Actualiser"}
+            {refreshing ? <Spinner size={11} color={C.txtMuted}/> : "🔄"} {!isMobile && "Actualiser"}
           </button>
         </div>
         <div style={{marginTop:14}}/>
@@ -6768,7 +6769,7 @@ function DashboardAdmin() {
                 onMouseEnter={ev=>{ev.currentTarget.style.background="#f1f5f9";ev.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.06)";}}
                 onMouseLeave={ev=>{ev.currentTarget.style.background="#f8fafc";ev.currentTarget.style.boxShadow="none";}}>
                 <Avatar ens={e} size={32} fontSize={10}/>
-                <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{getNomCourt(e.nom)}</div><div style={{fontSize:10,color:C.txtMuted}}>{e.classes} classe{e.classes>1?"s":""} Â· {e.tf}/{e.tr} leÃ§ons</div></div>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{getNomCourt(e.nom)}</div><div style={{fontSize:10,color:C.txtMuted}}>{e.classes} classe{e.classes>1?"s":""} · {e.tf}/{e.tr} leçons</div></div>
                 <div style={{width:130,flexShrink:0}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:10,color:C.txtMuted}}>Couverture</span><span style={{fontSize:11,fontWeight:800,color:tauCol(e.taux)}}>{e.taux}%</span></div>
                   <ProgBar value={e.taux}/>
@@ -6778,7 +6779,7 @@ function DashboardAdmin() {
                   <span style={{width:5,height:5,borderRadius:"50%",background:statut.dot,flexShrink:0}}/>
                   {statut.label}
                 </span>
-                <span style={{fontSize:13,color:"#cbd5e1",flexShrink:0}}>â€º</span>
+                <span style={{fontSize:13,color:"#cbd5e1",flexShrink:0}}>›</span>
               </div>
               );
             })}
@@ -6789,9 +6790,9 @@ function DashboardAdmin() {
   );
 }
 
-// â”€â”€â”€ Dashboard Enseignant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Dashboard Enseignant ─────────────────────────────────────────
 
-// â”€â”€â”€ Dashboard Proviseur (vue tous dÃ©partements) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Dashboard Proviseur (vue tous départements) ───────────────────
 
 function DashboardProviseur() {
   const {rawData:data, refreshData, setPage} = useApp();
@@ -6821,14 +6822,14 @@ function DashboardProviseur() {
 
     const tauxMoyen = tauxParEns.length ? Math.round(tauxParEns.reduce((s,e)=>s+e.taux,0)/tauxParEns.length) : 0;
 
-    const groupNiveau = n => n && n.startsWith("2nde") ? "2nde" : n && n.startsWith("1Ã¨re") ? "1Ã¨re" : n && n.startsWith("Terminale") ? "Terminale" : n;
+    const groupNiveau = n => n && n.startsWith("2nde") ? "2nde" : n && n.startsWith("1ère") ? "1ère" : n && n.startsWith("Terminale") ? "Terminale" : n;
     const niveauMap = {};
     CLASSES_REELLES.forEach(c=>{
       const niv = groupNiveau(getNiveau(c.code)) || "Autre";
       niveauMap[niv] = (niveauMap[niv]||0) + c.effectif;
     });
-    const ordreNiveaux = ["6Ã¨me","5Ã¨me","4Ã¨me","3Ã¨me","2nde","1Ã¨re","Terminale","Autre"];
-    const niveauxColors = {"6Ã¨me":C.blue,"5Ã¨me":C.teal,"4Ã¨me":C.amber,"3Ã¨me":C.purple,"2nde":C.orange,"1Ã¨re":C.pink,"Terminale":C.green,"Autre":"#94a3b8"};
+    const ordreNiveaux = ["6ème","5ème","4ème","3ème","2nde","1ère","Terminale","Autre"];
+    const niveauxColors = {"6ème":C.blue,"5ème":C.teal,"4ème":C.amber,"3ème":C.purple,"2nde":C.orange,"1ère":C.pink,"Terminale":C.green,"Autre":"#94a3b8"};
     const niveaux = ordreNiveaux.filter(n=>niveauMap[n]).map(n=>({label:n,value:niveauMap[n],color:niveauxColors[n]}));
 
     const evolution = ["T1","T2","T3","ANN"].map(trim=>{
@@ -6868,44 +6869,44 @@ function DashboardProviseur() {
     setLoading(false);
   },[data]);
 
-  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helpers ──────────────────────────────────────────────────────
   const tauCol = t => t===null?"#94a3b8":t>=75?"#16a34a":t>=50?"#d97706":"#dc2626";
   const tauBg  = t => t===null?"#f1f5f9":t>=75?"#f0fdf4":t>=50?"#fffbeb":"#fef2f2";
-  const tauLabel = t => t===null?"â€”":t>=75?"Correct":t>=50?"Attention":"Critique";
-  const tauDot = t => t===null?"âšª":t>=75?"ðŸŸ¢":t>=50?"ðŸŸ ":"ðŸ”´";
+  const tauLabel = t => t===null?"—":t>=75?"Correct":t>=50?"Attention":"Critique";
+  const tauDot = t => t===null?"⚪":t>=75?"🟢":t>=50?"🟠":"🔴";
   const now = new Date();
   const dateStr = now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const dateCapitalized = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
 
-  // PrioritÃ©s calculÃ©es
+  // Priorités calculées
   const priorites = !loading ? [
     ...stats.parDept.filter(d=>d.taux!==null&&d.taux<50&&d.nbEns>0).map(d=>({
-      level:"critique", icon:"ðŸ”´",
-      titre:`Couverture critique â€” ${d.nom}`,
-      detail:`${d.nbEns} enseignant${d.nbEns>1?"s":""} Â· ${d.taux}% de couverture`,
+      level:"critique", icon:"🔴",
+      titre:`Couverture critique — ${d.nom}`,
+      detail:`${d.nbEns} enseignant${d.nbEns>1?"s":""} · ${d.taux}% de couverture`,
       action:()=>setPage("programme")
     })),
     ...stats.parDept.filter(d=>d.taux!==null&&d.taux>=50&&d.taux<75&&d.nbEns>0).map(d=>({
-      level:"attention", icon:"ðŸŸ ",
-      titre:`Couverture Ã  surveiller â€” ${d.nom}`,
-      detail:`${d.nbEns} enseignant${d.nbEns>1?"s":""} Â· ${d.taux}% de couverture`,
+      level:"attention", icon:"🟠",
+      titre:`Couverture à surveiller — ${d.nom}`,
+      detail:`${d.nbEns} enseignant${d.nbEns>1?"s":""} · ${d.taux}% de couverture`,
       action:()=>setPage("programme")
     })),
     ...stats.absencesParDept.slice(0,2).map(d=>({
-      level:"attention", icon:"ðŸŸ ",
-      titre:`Absences signalÃ©es â€” ${d.nom}`,
-      detail:`${d.total} sÃ©ance${d.total>1?"s":""} d'absence enregistrÃ©e${d.total>1?"s":""}`,
+      level:"attention", icon:"🟠",
+      titre:`Absences signalées — ${d.nom}`,
+      detail:`${d.total} séance${d.total>1?"s":""} d'absence enregistrée${d.total>1?"s":""}`,
       action:()=>setPage("eleves")
     })),
-    ...(stats.tauxMoyen>=75?[{level:"ok",icon:"ðŸŸ¢",titre:"Couverture globale satisfaisante",detail:`${stats.tauxMoyen}% Â· Objectif 75% atteint`,action:()=>setPage("programme")}]:[]),
+    ...(stats.tauxMoyen>=75?[{level:"ok",icon:"🟢",titre:"Couverture globale satisfaisante",detail:`${stats.tauxMoyen}% · Objectif 75% atteint`,action:()=>setPage("programme")}]:[]),
   ] : [];
 
-  // â”€â”€ Skeleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Skeleton ──────────────────────────────────────────────────────
   const Sk = ({w="100%",h=20,br=6}) => (
     <div style={{width:w,height:h,borderRadius:br,background:"linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
   );
 
-  // â”€â”€ Composant KPI premium â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Composant KPI premium ─────────────────────────────────────────
   const KPI = ({label, value, sub, subColor, accent, onClick, loading:ld}) => (
     <div onClick={onClick}
       style={{background:"#fff",borderRadius:12,padding:"18px 20px",flex:1,minWidth:140,
@@ -6916,19 +6917,19 @@ function DashboardProviseur() {
       onMouseEnter={e=>{if(onClick)e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.1)";}}
       onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,.06)";}}>
       <div style={{fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:10}}>{label}</div>
-      {ld ? <Sk h={28} br={4}/> : <div style={{fontSize:30,fontWeight:900,color:"#0f172a",lineHeight:1}}>{value??<span style={{color:"#94a3b8"}}>â€”</span>}</div>}
+      {ld ? <Sk h={28} br={4}/> : <div style={{fontSize:30,fontWeight:900,color:"#0f172a",lineHeight:1}}>{value??<span style={{color:"#94a3b8"}}>—</span>}</div>}
       {sub && !ld && <div style={{fontSize:11,marginTop:6,color:subColor||"#64748b",fontWeight:500}}>{sub}</div>}
     </div>
   );
 
-  // â”€â”€ Jauge couverture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Jauge couverture ──────────────────────────────────────────────
   const Jauge = ({value, objectif=75}) => {
     const col = tauCol(value);
     const pct = value!==null ? Math.min(100,value) : 0;
     return (
       <div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
-          <span style={{fontSize:28,fontWeight:900,color:col}}>{value!==null?`${value}%`:"â€”"}</span>
+          <span style={{fontSize:28,fontWeight:900,color:col}}>{value!==null?`${value}%`:"—"}</span>
           <span style={{fontSize:11,color:"#64748b"}}>Objectif : {objectif}%</span>
         </div>
         <div style={{height:8,background:"#e2e8f0",borderRadius:8,overflow:"hidden",marginBottom:4}}>
@@ -6937,7 +6938,7 @@ function DashboardProviseur() {
         {objectif && (
           <div style={{position:"relative",height:12}}>
             <div style={{position:"absolute",left:`${objectif}%`,top:0,width:2,height:10,background:"#94a3b8",borderRadius:1}}/>
-            <div style={{position:"absolute",left:`${objectif}%`,top:12,fontSize:9,color:"#94a3b8",transform:"translateX(-50%)"}}>â–² {objectif}%</div>
+            <div style={{position:"absolute",left:`${objectif}%`,top:12,fontSize:9,color:"#94a3b8",transform:"translateX(-50%)"}}>▲ {objectif}%</div>
           </div>
         )}
       </div>
@@ -6947,21 +6948,21 @@ function DashboardProviseur() {
   return (
     <div style={{padding:isMobile?"14px 14px 40px":"24px 28px 48px",display:"flex",flexDirection:"column",gap:22,background:"#f8fafc",minHeight:"100%"}}>
 
-      {/* â•â• EN-TÃŠTE â•â• */}
+      {/* ══ EN-TÊTE ══ */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
         <div>
           <h1 style={{fontSize:isMobile?18:22,fontWeight:800,color:"#0f172a",margin:0,letterSpacing:"-.3px"}}>
             Bonjour, Monsieur le Proviseur
           </h1>
           <p style={{color:"#64748b",margin:"4px 0 0",fontSize:12.5,fontWeight:400}}>
-            {dateCapitalized} Â· LycÃ©e de Kakatare-Maroua
+            {dateCapitalized} · Lycée de Kakatare-Maroua
           </p>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>2025â€“2026</div>
+            <div style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>2025–2026</div>
             <div style={{fontSize:10.5,color:"#64748b"}}>
-              {refreshing ? "Synchronisationâ€¦" : `Sync ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`}
+              {refreshing ? "Synchronisation…" : `Sync ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`}
             </div>
           </div>
           <button onClick={async()=>{ setRefreshing(true); await refreshData(); setRefreshing(false); }}
@@ -6979,28 +6980,28 @@ function DashboardProviseur() {
         </div>
       </div>
 
-      {/* â•â• KPIs PRINCIPAUX â•â• */}
+      {/* ══ KPIs PRINCIPAUX ══ */}
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:12}}>
-        <KPI label="Enseignants" value={loading?"":stats.nbEns} sub="Tous dÃ©partements"
+        <KPI label="Enseignants" value={loading?"":stats.nbEns} sub="Tous départements"
           accent="#0B4D2C" onClick={()=>setPage("enseignants")} loading={loading}/>
-        <KPI label="Classes" value={loading?"":stats.nbClasses} sub="Toutes sÃ©ries"
+        <KPI label="Classes" value={loading?"":stats.nbClasses} sub="Toutes séries"
           accent="#2563eb" subColor="#2563eb" onClick={()=>setPage("eleves")} loading={loading}/>
-        <KPI label="Ã‰lÃ¨ves" value={loading?"":stats.nbEleves.toLocaleString("fr-FR")} sub="Effectif total"
+        <KPI label="Élèves" value={loading?"":stats.nbEleves.toLocaleString("fr-FR")} sub="Effectif total"
           accent="#d97706" subColor="#d97706" onClick={()=>setPage("eleves")} loading={loading}/>
         <KPI label="Couverture" value={loading?"":stats.tauxMoyen>0?`${stats.tauxMoyen}%`:null}
-          sub={loading?"":stats.tauxMoyen>0?(stats.tauxMoyen>=75?"âœ“ Objectif atteint":"âš  Sous objectif 75%"):"Non renseignÃ©"}
+          sub={loading?"":stats.tauxMoyen>0?(stats.tauxMoyen>=75?"✓ Objectif atteint":"⚠ Sous objectif 75%"):"Non renseigné"}
           subColor={loading?"":tauCol(stats.tauxMoyen)} accent={loading?"#0B4D2C":tauCol(stats.tauxMoyen)}
           onClick={()=>setPage("programme")} loading={loading}/>
       </div>
 
-      {/* â•â• LIGNE CENTRALE : Couverture + Graphique + PrioritÃ©s â•â• */}
+      {/* ══ LIGNE CENTRALE : Couverture + Graphique + Priorités ══ */}
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":device==="tablet"?"1fr 1fr":"1fr 1.6fr 1fr",gap:16}}>
 
         {/* Situation couverture */}
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"18px 20px",
           boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:14}}>
-            Couverture pÃ©dagogique
+            Couverture pédagogique
           </div>
           {loading ? <><Sk h={28} br={4}/><div style={{height:12}}/><Sk h={8} br={4}/></> : (
             <Jauge value={stats.tauxMoyen>0?stats.tauxMoyen:null}/>
@@ -7018,7 +7019,7 @@ function DashboardProviseur() {
                       {e.value!==null&&<div style={{width:`${e.value}%`,height:"100%",background:tauCol(e.value),borderRadius:5}}/>}
                     </div>
                     <span style={{fontSize:10.5,fontWeight:700,color:tauCol(e.value),width:32,textAlign:"right"}}>
-                      {e.value!==null?`${e.value}%`:"â€”"}
+                      {e.value!==null?`${e.value}%`:"—"}
                     </span>
                   </div>
                 ))}
@@ -7027,13 +7028,13 @@ function DashboardProviseur() {
           </div>
         </div>
 
-        {/* Graphique Ã©volution */}
+        {/* Graphique évolution */}
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"18px 20px",
           boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div>
               <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px"}}>
-                Ã‰volution de la couverture
+                Évolution de la couverture
               </div>
               <div style={{fontSize:10.5,color:"#94a3b8",marginTop:2}}>La couverture progresse-t-elle ?</div>
             </div>
@@ -7047,11 +7048,11 @@ function DashboardProviseur() {
           {loading ? <Sk h={160} br={8}/> : <EvolutionChartLarge series={stats.evolution} height={160}/>}
         </div>
 
-        {/* Absences par dÃ©partement */}
+        {/* Absences par département */}
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"18px 20px",
           boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".6px",marginBottom:14}}>
-            Absences signalÃ©es
+            Absences signalées
           </div>
           {loading ? <Sk h={120} br={6}/> : stats.absencesParDept.length>0 ? (
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -7073,25 +7074,25 @@ function DashboardProviseur() {
             </div>
           ) : (
             <div style={{fontSize:12,color:"#94a3b8",textAlign:"center",padding:"30px 0"}}>
-              <div style={{fontSize:24,marginBottom:8}}>âœ“</div>
-              Aucune absence enregistrÃ©e
+              <div style={{fontSize:24,marginBottom:8}}>✓</div>
+              Aucune absence enregistrée
             </div>
           )}
         </div>
       </div>
 
-      {/* â•â• TABLEAU DÃ‰PARTEMENTS â•â• */}
+      {/* ══ TABLEAU DÉPARTEMENTS ══ */}
       <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",
         boxShadow:"0 1px 3px rgba(0,0,0,.05)",overflow:"hidden"}}>
         <div style={{padding:"16px 20px",borderBottom:"1px solid #f1f5f9",display:"flex",
           justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>Vue par dÃ©partement</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>Vue par département</div>
             <div style={{fontSize:11,color:"#64748b",marginTop:1}}>Couverture, effectifs et statut</div>
           </div>
           <button onClick={()=>setPage("programme")}
             style={{fontSize:11,fontWeight:600,color:"#0B4D2C",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
-            Suivi dÃ©taillÃ© â†’
+            Suivi détaillé →
           </button>
         </div>
         {loading ? (
@@ -7103,7 +7104,7 @@ function DashboardProviseur() {
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead>
                 <tr style={{background:"#f8fafc"}}>
-                  <th style={{padding:"10px 20px",textAlign:"left",fontWeight:600,color:"#64748b",fontSize:11}}>DÃ‰PARTEMENT</th>
+                  <th style={{padding:"10px 20px",textAlign:"left",fontWeight:600,color:"#64748b",fontSize:11}}>DÉPARTEMENT</th>
                   <th style={{padding:"10px 12px",textAlign:"center",fontWeight:600,color:"#64748b",fontSize:11}}>ENS.</th>
                   <th style={{padding:"10px 12px",textAlign:"center",fontWeight:600,color:"#64748b",fontSize:11}}>COUVERTURE</th>
                   <th style={{padding:"10px 20px",textAlign:"center",fontWeight:600,color:"#64748b",fontSize:11}}>STATUT</th>
@@ -7131,7 +7132,7 @@ function DashboardProviseur() {
                           <div style={{width:`${d.taux??0}%`,height:"100%",background:tauCol(d.taux),borderRadius:5}}/>
                         </div>
                         <span style={{fontSize:11,fontWeight:700,color:tauCol(d.taux),width:36,textAlign:"right"}}>
-                          {d.taux!==null?`${d.taux}%`:"â€”"}
+                          {d.taux!==null?`${d.taux}%`:"—"}
                         </span>
                       </div>
                     </td>
@@ -7146,7 +7147,7 @@ function DashboardProviseur() {
                 {stats.parDept.filter(d=>d.nbEns===0).length>0&&(
                   <tr style={{borderTop:"1px solid #f1f5f9"}}>
                     <td colSpan={4} style={{padding:"10px 20px",fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>
-                      {stats.parDept.filter(d=>d.nbEns===0).length} dÃ©partement(s) sans enseignant rattachÃ©
+                      {stats.parDept.filter(d=>d.nbEns===0).length} département(s) sans enseignant rattaché
                     </td>
                   </tr>
                 )}
@@ -7156,13 +7157,13 @@ function DashboardProviseur() {
         )}
       </div>
 
-      {/* â•â• PRIORITÃ‰S â•â• */}
+      {/* ══ PRIORITÉS ══ */}
       {!loading&&priorites.length>0&&(
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",
           boxShadow:"0 1px 3px rgba(0,0,0,.05)",overflow:"hidden"}}>
           <div style={{padding:"16px 20px",borderBottom:"1px solid #f1f5f9"}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>PrioritÃ©s du moment</div>
-            <div style={{fontSize:11,color:"#64748b",marginTop:1}}>Points nÃ©cessitant votre attention</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>Priorités du moment</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:1}}>Points nécessitant votre attention</div>
           </div>
           <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
             {priorites.slice(0,5).map((p,i)=>(
@@ -7186,18 +7187,18 @@ function DashboardProviseur() {
         </div>
       )}
 
-      {/* â•â• ACTIONS RAPIDES â•â• */}
+      {/* ══ ACTIONS RAPIDES ══ */}
       <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 20px",
         boxShadow:"0 1px 3px rgba(0,0,0,.05)"}}>
         <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",
           letterSpacing:".6px",marginBottom:14}}>Actions rapides</div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:8}}>
           {[
-            {label:"Absences",icon:"ðŸ“‹",page:"eleves"},
-            {label:"Enseignants",icon:"ðŸ‘¥",page:"enseignants"},
-            {label:"Couverture",icon:"ðŸ“Š",page:"programme"},
-            {label:"Bulletins",icon:"ðŸ“’",page:"bulletins"},
-            {label:"SecrÃ©tariat",icon:"ðŸ—‚ï¸",page:"secretariat"},
+            {label:"Absences",icon:"📋",page:"eleves"},
+            {label:"Enseignants",icon:"👥",page:"enseignants"},
+            {label:"Couverture",icon:"📊",page:"programme"},
+            {label:"Bulletins",icon:"📒",page:"bulletins"},
+            {label:"Secrétariat",icon:"🗂️",page:"secretariat"},
           ].map(a=>(
             <button key={a.page} onClick={()=>setPage(a.page)}
               style={{padding:"10px 8px",borderRadius:8,border:"1px solid #e2e8f0",background:"#f8fafc",
@@ -7223,8 +7224,8 @@ function DashboardSurveillance() {
 
   const sgClasses = user?.classes?.length > 0 ? user.classes : null;
   const niveauLabel = sgClasses
-    ? (sgClasses[0]?.startsWith('6')?'6Ã¨me':sgClasses[0]?.startsWith('5')?'5Ã¨me':sgClasses[0]?.startsWith('4')?'4Ã¨me':sgClasses[0]?.startsWith('3')?'3Ã¨me':sgClasses[0]?.startsWith('2')?'2nde':'1Ã¨re & Tle')
-    : "Toute l'Ã©cole";
+    ? (sgClasses[0]?.startsWith('6')?'6ème':sgClasses[0]?.startsWith('5')?'5ème':sgClasses[0]?.startsWith('4')?'4ème':sgClasses[0]?.startsWith('3')?'3ème':sgClasses[0]?.startsWith('2')?'2nde':'1ère & Tle')
+    : "Toute l'école";
 
   const [loading,setLoading]     = useState(true);
   const [tab,setTab]             = useState(()=>{ const t=window.__sgTab; window.__sgTab=null; return t||"vue"; });
@@ -7254,7 +7255,7 @@ function DashboardSurveillance() {
   const weekLabel = (wk) => {
     const d = new Date(wk), fin = new Date(wk);
     fin.setDate(fin.getDate()+6);
-    return 'Sem. '+d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})+' â€“ '+fin.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+    return 'Sem. '+d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})+' – '+fin.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
   };
 
   useEffect(()=>{
@@ -7307,7 +7308,7 @@ function DashboardSurveillance() {
   const typeMap={retards:"retard",sanctions:"sanction",incidents:"incident"};
 
   const saveEntry = async()=>{
-    if(!form.eleve_id||!form.classe){setFormErr("SÃ©lectionnez une classe et un Ã©lÃ¨ve.");return;}
+    if(!form.eleve_id||!form.classe){setFormErr("Sélectionnez une classe et un élève.");return;}
     setFormErr("");setSaving(true);
     const payload={type:typeMap[tab]||"retard",eleve_id:form.eleve_id,classe:form.classe,
           motif:form.motif||null,details:form.details||null,
@@ -7336,13 +7337,13 @@ function DashboardSurveillance() {
   const classesSG = sgClasses || CLASSES_REELLES.map(c=>c.code);
 
   const TABS=[
-    {id:"vue",       label:"Vue d'ensemble",emoji:"ðŸŽ¯"},
-    {id:"absences",  label:"Absences",      emoji:"ðŸ“‹"},
-    {id:"hebdo",     label:"Par semaine",   emoji:"ðŸ“…"},
-    {id:"bilan_trim", label:"Bilan trimestriel", emoji:"ðŸ“Š"},
-    {id:"retards",   label:"Retards",       emoji:"â°"},
-    {id:"sanctions", label:"Sanctions",     emoji:"âš ï¸"},
-    {id:"incidents", label:"Incidents",     emoji:"ðŸš¨"},
+    {id:"vue",       label:"Vue d'ensemble",emoji:"🎯"},
+    {id:"absences",  label:"Absences",      emoji:"📋"},
+    {id:"hebdo",     label:"Par semaine",   emoji:"📅"},
+    {id:"bilan_trim", label:"Bilan trimestriel", emoji:"📊"},
+    {id:"retards",   label:"Retards",       emoji:"⏰"},
+    {id:"sanctions", label:"Sanctions",     emoji:"⚠️"},
+    {id:"incidents", label:"Incidents",     emoji:"🚨"},
   ];
 
   const GravBadge=({g})=>{
@@ -7351,7 +7352,7 @@ function DashboardSurveillance() {
   };
   const NomEleve=({eleveId,classe})=>React.createElement("span",null,(ELEVES_DB[classe]||[]).find(x=>x.id===eleveId)?.nom||eleveId);
 
-  // Fiche Ã©lÃ¨ve (panel latÃ©ral)
+  // Fiche élève (panel latéral)
   const FichePanel = ficheEleve ? (()=>{
     const absEleve = stats.parEleve.find(e=>e.id===ficheEleve.id);
     const vieScoEleve = vieSco.filter(v=>v.eleve_id===ficheEleve.id);
@@ -7364,7 +7365,7 @@ function DashboardSurveillance() {
               <h3 style={{fontSize:16,fontWeight:800,color:C.txt,margin:0}}>{ficheEleve.nom}</h3>
               <p style={{fontSize:11,color:C.txtMuted,margin:"2px 0 0"}}>{ficheEleve.classe}</p>
             </div>
-            <button onClick={()=>setFicheEleve(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:C.txtMuted}}>âœ•</button>
+            <button onClick={()=>setFicheEleve(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:C.txtMuted}}>✕</button>
           </div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {[
@@ -7382,13 +7383,13 @@ function DashboardSurveillance() {
           <div>
             <h4 style={{fontSize:12,fontWeight:700,color:C.txt,marginBottom:10}}>Historique vie scolaire</h4>
             {vieScoEleve.length===0
-              ? <p style={{fontSize:12,color:C.txtLight,textAlign:"center",padding:"20px 0"}}>Aucun incident enregistrÃ©</p>
+              ? <p style={{fontSize:12,color:C.txtLight,textAlign:"center",padding:"20px 0"}}>Aucun incident enregistré</p>
               : vieScoEleve.map(v=>(
                 <div key={v.id} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:"1px solid "+C.border,alignItems:"flex-start"}}>
                   <span style={{fontSize:11,color:C.txtMuted,whiteSpace:"nowrap",width:55}}>{new Date(v.date).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</span>
                   <div style={{flex:1}}>
                     <span style={{fontSize:11,fontWeight:700,color:v.type==="incident"?"#7c3aed":v.type==="sanction"?C.red:C.amber,textTransform:"capitalize"}}>{v.type}</span>
-                    {v.motif && <span style={{fontSize:11,color:C.txt}}> Â· {v.motif}</span>}
+                    {v.motif && <span style={{fontSize:11,color:C.txt}}> · {v.motif}</span>}
                     {v.gravite && v.gravite!=="faible" && <GravBadge g={v.gravite}/>}
                   </div>
                 </div>
@@ -7404,33 +7405,33 @@ function DashboardSurveillance() {
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       {FichePanel}
 
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
         <div>
-          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance gÃ©nÃ©rale ðŸ›¡ï¸</h2>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Surveillance générale 🛡️</h2>
           <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>
             {new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
-            {" Â· "}<strong style={{color:C.green}}>{niveauLabel}</strong>
+            {" · "}<strong style={{color:C.green}}>{niveauLabel}</strong>
           </p>
         </div>
         <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
           style={{padding:"9px 16px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-          ðŸ“„ Bilan trimestriel
+          📄 Bilan trimestriel
         </button>
         {(tab==="retards"||tab==="sanctions"||tab==="incidents") && (
           <button onClick={()=>{setFormErr("");setForm({eleve_id:"",classe:"",motif:"",details:"",gravite:"faible"});setSelClasse("");setShowForm(!showForm);}}
             style={{padding:"9px 18px",borderRadius:10,border:"none",background:showForm?C.border:C.green,color:showForm?C.txt:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            {showForm?"âœ• Annuler":"âž• Enregistrer"}
+            {showForm?"✕ Annuler":"➕ Enregistrer"}
           </button>
         )}
       </div>
 
       {/* KPI */}
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Heures d'absence" value={(stats.totalHeures||stats.total)+"h"} sub={niveauLabel+" Â· "+stats.total+" sÃ©ances"} iconEmoji="ðŸ“‹" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
-        <KpiCard label="Ã‰lÃ¨ves en alerte" value={stats.nbAlerte} sub="3+ absences" iconEmoji="âš ï¸" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
-        <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="EnregistrÃ©s" iconEmoji="â°" bg={C.amberPale} subColor={C.amber} loading={vieLoading} delay={0.1}/>
-        <KpiCard label="Sanctions" value={vieSco.filter(v=>v.type==="sanction").length} sub="EnregistrÃ©es" iconEmoji="âš ï¸" bg={C.redPale} subColor={C.red} loading={vieLoading} delay={0.15}/>
+        <KpiCard label="Heures d'absence" value={(stats.totalHeures||stats.total)+"h"} sub={niveauLabel+" · "+stats.total+" séances"} iconEmoji="📋" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0}/>
+        <KpiCard label="Élèves en alerte" value={stats.nbAlerte} sub="3+ absences" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
+        <KpiCard label="Retards" value={vieSco.filter(v=>v.type==="retard").length} sub="Enregistrés" iconEmoji="⏰" bg={C.amberPale} subColor={C.amber} loading={vieLoading} delay={0.1}/>
+        <KpiCard label="Sanctions" value={vieSco.filter(v=>v.type==="sanction").length} sub="Enregistrées" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={vieLoading} delay={0.15}/>
       </div>
 
       {/* Onglets */}
@@ -7449,7 +7450,7 @@ function DashboardSurveillance() {
       {showForm && (
         <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:18,display:"flex",flexDirection:"column",gap:12}}>
           <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
-            {tab==="retards"?"â° Retard":tab==="sanctions"?"âš ï¸ Sanction":"ðŸš¨ Incident"}
+            {tab==="retards"?"⏰ Retard":tab==="sanctions"?"⚠️ Sanction":"🚨 Incident"}
           </h3>
           {formErr&&<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"8px 12px",fontSize:12.5,color:"#b91c1c"}}>{formErr}</div>}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
@@ -7457,16 +7458,16 @@ function DashboardSurveillance() {
               <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Classe *</label>
               <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
                 style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc"}}>
-                <option value="">â€” SÃ©lectionner â€”</option>
+                <option value="">— Sélectionner —</option>
                 {classesSG.map(c=><option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Ã‰lÃ¨ve *</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Élève *</label>
               <select value={form.eleve_id} onChange={e=>setForm(f=>({...f,eleve_id:e.target.value}))}
                 disabled={!selClasse}
                 style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:selClasse?"#f8fafc":"#f1f5f9",opacity:selClasse?1:.6}}>
-                <option value="">â€” SÃ©lectionner â€”</option>
+                <option value="">— Sélectionner —</option>
                 {elevesSel.map(e=><option key={e.id} value={e.id}>{e.nom}</option>)}
               </select>
             </div>
@@ -7477,7 +7478,7 @@ function DashboardSurveillance() {
             </div>
             {tab!=="retards"&&(
               <div>
-                <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>GravitÃ©</label>
+                <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Gravité</label>
                 <select value={form.gravite} onChange={e=>setForm(f=>({...f,gravite:e.target.value}))}
                   style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc"}}>
                   <option value="faible">Faible</option>
@@ -7487,14 +7488,14 @@ function DashboardSurveillance() {
               </div>
             )}
             <div style={{gridColumn:"1 / -1"}}>
-              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>DÃ©tails</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.txtMuted,display:"block",marginBottom:4}}>Détails</label>
               <textarea value={form.details} onChange={e=>setForm(f=>({...f,details:e.target.value}))}
-                placeholder="DÃ©tails..." style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc",resize:"vertical",minHeight:56,boxSizing:"border-box"}}/>
+                placeholder="Détails..." style={{width:"100%",padding:"9px 12px",border:"1.5px solid "+C.border,borderRadius:8,fontSize:13,fontFamily:"inherit",background:"#f8fafc",resize:"vertical",minHeight:56,boxSizing:"border-box"}}/>
             </div>
           </div>
           <button onClick={saveEntry} disabled={saving}
             style={{alignSelf:"flex-end",padding:"10px 24px",borderRadius:10,border:"none",background:saving?"#94a3b8":C.green,color:"#fff",fontWeight:700,fontSize:13,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8}}>
-            {saving?<><Spinner size={12} color="#fff"/> Enregistrement...</>:"âœ“ Enregistrer"}
+            {saving?<><Spinner size={12} color="#fff"/> Enregistrement...</>:"✓ Enregistrer"}
           </button>
         </div>
       )}
@@ -7503,8 +7504,8 @@ function DashboardSurveillance() {
       {tab==="vue" && (
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.4fr 1fr",gap:14}}>
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸŽ¯ Score discipline â€” Ã©lÃ¨ves Ã  surveiller</h3>
-            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Abs + retards + sanctions + incidents â€” cliquer pour la fiche</p>
+            <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>🎯 Score discipline — élèves à surveiller</h3>
+            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Abs + retards + sanctions + incidents — cliquer pour la fiche</p>
             {(loading||vieLoading)?<Sk h={200} br={8}/>:scoreParEleve.length>0?(
               <div style={{display:"flex",flexDirection:"column",gap:0,maxHeight:420,overflowY:"auto"}}>
                 {scoreParEleve.map((e,i)=>(
@@ -7526,22 +7527,22 @@ function DashboardSurveillance() {
                       <div style={{fontSize:13,fontWeight:800,color:e.score>=5?C.red:e.score>=2?C.amber:C.green}}>{e.score.toFixed(1)}</div>
                       <div style={{fontSize:9,color:C.txtMuted}}>score</div>
                     </div>
-                    <span style={{fontSize:12,color:C.txtMuted}}>â€º</span>
+                    <span style={{fontSize:12,color:C.txtMuted}}>›</span>
                   </div>
                 ))}
               </div>
-            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucun incident enregistrÃ©</div>}
+            ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucun incident enregistré</div>}
           </div>
 
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {/* Stats discipline */}
             <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-              <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸ“Š RÃ©partition vie scolaire</h3>
+              <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📊 Répartition vie scolaire</h3>
               {vieLoading?<Sk h={100} br={8}/>:(()=>{
                 const tot=vieSco.length||1;
                 const nb={retard:vieSco.filter(v=>v.type==="retard").length,sanction:vieSco.filter(v=>v.type==="sanction").length,incident:vieSco.filter(v=>v.type==="incident").length};
                 return tot===1&&vieSco.length===0
-                  ?<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"20px 0"}}>Aucune donnÃ©e</div>
+                  ?<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"20px 0"}}>Aucune donnée</div>
                   :<div style={{display:"flex",flexDirection:"column",gap:10}}>
                     {[{label:"Retards",val:nb.retard,col:C.amber},{label:"Sanctions",val:nb.sanction,col:C.red},{label:"Incidents",val:nb.incident,col:"#7c3aed"}].map(({label,val,col})=>(
                       <div key={label}>
@@ -7560,7 +7561,7 @@ function DashboardSurveillance() {
 
             {/* Absences par classe */}
             <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-              <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸ“‹ Absences par classe</h3>
+              <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📋 Absences par classe</h3>
               {loading?<Sk h={100} br={8}/>:(()=>{
                 const absMap={};
                 Object.entries(data?.absences||{}).forEach(([k,abs])=>{
@@ -7589,8 +7590,8 @@ function DashboardSurveillance() {
       {tab==="absences" && (
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.4fr 1fr",gap:14}}>
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸ” Ã‰lÃ¨ves les plus absents</h3>
-            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Top 30 â€” cliquer pour la fiche</p>
+            <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>🔍 Élèves les plus absents</h3>
+            <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Top 30 — cliquer pour la fiche</p>
             {loading?<Sk h={200} br={8}/>:stats.parEleve.length>0?(
               <div style={{display:"flex",flexDirection:"column",gap:0,maxHeight:440,overflowY:"auto"}}>
                 {stats.parEleve.map((e,i)=>(
@@ -7604,14 +7605,14 @@ function DashboardSurveillance() {
                       <div style={{fontSize:10,color:C.txtMuted}}>{e.classe}</div>
                     </div>
                     <span style={{fontSize:12,fontWeight:800,color:e.count>=3?C.red:C.amber,flexShrink:0}}>{e.count} abs.</span>
-                    <span style={{fontSize:12,color:C.txtMuted}}>â€º</span>
+                    <span style={{fontSize:12,color:C.txtMuted}}>›</span>
                   </div>
                 ))}
               </div>
             ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune absence</div>}
           </div>
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>{sgClasses?"ðŸ“š Par classe":"ðŸ›ï¸ Par dÃ©partement"}</h3>
+            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>{sgClasses?"📚 Par classe":"🏛️ Par département"}</h3>
             {loading?<Sk h={150} br={8}/>:(()=>{
               const map={};
               Object.entries(data?.absences||{}).forEach(([k,abs])=>{
@@ -7638,13 +7639,13 @@ function DashboardSurveillance() {
       {/* Par semaine */}
       {tab==="hebdo" && (
         <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸ“… Absences par semaine</h3>
-          <p style={{margin:"0 0 16px",fontSize:10,color:C.txtMuted}}>8 derniÃ¨res semaines Â· {niveauLabel}</p>
+          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>📅 Absences par semaine</h3>
+          <p style={{margin:"0 0 16px",fontSize:10,color:C.txtMuted}}>8 dernières semaines · {niveauLabel}</p>
           {loading?<Sk h={200} br={8}/>:stats.hebdo.length>0?(
             <div style={{display:"flex",flexDirection:"column",gap:0}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:12,padding:"8px 12px",background:"#f8fafc",borderRadius:"8px 8px 0 0",borderBottom:"1px solid "+C.border}}>
                 <span style={{fontSize:10,fontWeight:700,color:C.txtMuted}}>SEMAINE</span>
-                <span style={{fontSize:10,fontWeight:700,color:C.txtMuted,textAlign:"center"}}>Ã‰LÃˆVES</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.txtMuted,textAlign:"center"}}>ÉLÈVES</span>
                 <span style={{fontSize:10,fontWeight:700,color:C.txtMuted,textAlign:"right"}}>ABSENCES</span>
               </div>
               {stats.hebdo.map((w,i)=>{
@@ -7663,13 +7664,13 @@ function DashboardSurveillance() {
                 );
               })}
             </div>
-          ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune donnÃ©e</div>}
+          ):<div style={{fontSize:11,color:C.txtLight,textAlign:"center",padding:"30px 0"}}>Aucune donnée</div>}
         </div>
       )}
 
-      {/* â•â• Bilan Trimestriel â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══ Bilan Trimestriel ══════════════════════════════════════ */}
       {tab==="bilan_trim" && (()=>{
-        // AgrÃ©gation absences â†’ Ã©lÃ¨ve Ã— semaine trimestre
+        // Agrégation absences → élève × semaine trimestre
         const eleveMap = {};
         Object.entries(data?.absences||{}).forEach(([k,absents])=>{
           const [,classe,dateStr]=k.split("||");
@@ -7688,7 +7689,7 @@ function DashboardSurveillance() {
         }).filter(e=>e.totalTrim.some(t=>t>0)).sort((a,b)=>b.totalTrim[selTrim-1]-a.totalTrim[selTrim-1]);
         const aC=(h)=>h>=15?"#b91c1c":h>=6?"#d97706":"#15803d";
         const aB=(h)=>h>=15?"#fef2f2":h>=6?"#fffbeb":"#f0fdf4";
-        const aL=(h)=>h>=15?"ðŸ”´ BlÃ¢me":h>=6?"ðŸŸ  Avertissement":"ðŸŸ¢ Assidu";
+        const aL=(h)=>h>=15?"🔴 Blâme":h>=6?"🟠 Avertissement":"🟢 Assidu";
         return(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
@@ -7703,11 +7704,11 @@ function DashboardSurveillance() {
               <button onClick={()=>genererBilanTrimestriel(stats,vieSco,sgClasses,niveauLabel,data)}
                 style={{marginLeft:"auto",padding:"7px 14px",borderRadius:10,border:"none",
                   background:"#D4AF37",color:"#0B3D20",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                ðŸ“„ PDF
+                📄 PDF
               </button>
             </div>
             <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
-              {[{h:0,l:"< 6h Â· Assidu"},{h:6,l:"6â€“14h Â· Avertissement"},{h:15,l:"â‰¥ 15h Â· BlÃ¢me"}].map((s,i)=>(
+              {[{h:0,l:"< 6h · Assidu"},{h:6,l:"6–14h · Avertissement"},{h:15,l:"≥ 15h · Blâme"}].map((s,i)=>(
                 <span key={i} style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:8,background:aB(s.h),color:aC(s.h)}}>{s.l}</span>
               ))}
             </div>
@@ -7716,7 +7717,7 @@ function DashboardSurveillance() {
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:600}}>
                   <thead>
                     <tr style={{background:"#f8fafc",borderBottom:"1px solid "+C.border}}>
-                      <th style={{padding:"8px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Ã‰LÃˆVE</th>
+                      <th style={{padding:"8px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>ÉLÈVE</th>
                       <th style={{padding:"8px 8px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>CLASSE</th>
                       {[1,2,3,4,5,6].map(s=><th key={s} style={{padding:"8px 6px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>S{s}</th>)}
                       <th style={{padding:"8px 10px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>TOTAL</th>
@@ -7736,7 +7737,7 @@ function DashboardSurveillance() {
                             const h=e.sems[selTrim+"_"+s]||0;
                             return <td key={s} style={{padding:"9px 6px",textAlign:"center",fontWeight:h>0?700:400,
                               fontSize:12,color:h>=4?"#b91c1c":h>=2?"#d97706":h>0?"#374151":C.txtLight}}>
-                              {h>0?h+"h":"â€”"}
+                              {h>0?h+"h":"—"}
                             </td>;
                           })}
                           <td style={{padding:"9px 10px",textAlign:"center",fontWeight:800,fontSize:13,color:aC(total)}}>{total}h</td>
@@ -7762,16 +7763,16 @@ function DashboardSurveillance() {
               <thead>
                 <tr style={{background:"#f8fafc",borderBottom:"1px solid "+C.border}}>
                   <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Date</th>
-                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Ã‰lÃ¨ve</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Élève</th>
                   <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Classe</th>
                   <th style={{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>Motif</th>
-                  {tab!=="retards"&&<th style={{padding:"10px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>GravitÃ©</th>}
+                  {tab!=="retards"&&<th style={{padding:"10px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted}}>Gravité</th>}
                 </tr>
               </thead>
               <tbody>
                 {vieLoading?<tr><td colSpan={5} style={{padding:24,textAlign:"center",color:C.txtLight}}>Chargement...</td></tr>
                 :filteredVie.length===0?<tr><td colSpan={5} style={{padding:32,textAlign:"center",color:C.txtLight}}>
-                  <div style={{fontSize:24,marginBottom:6}}>ðŸ“­</div>Aucun enregistrement
+                  <div style={{fontSize:24,marginBottom:6}}>📭</div>Aucun enregistrement
                 </td></tr>
                 :filteredVie.map((v,i)=>(
                   <tr key={v.id} style={{borderBottom:"1px solid "+C.border,background:i%2===0?C.white:"#fafafa",cursor:"pointer"}}
@@ -7779,7 +7780,7 @@ function DashboardSurveillance() {
                     <td style={{padding:"10px 12px",color:C.txtMuted,whiteSpace:"nowrap"}}>{new Date(v.date).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</td>
                     <td style={{padding:"10px 12px",fontWeight:600,color:C.txt}}><NomEleve eleveId={v.eleve_id} classe={v.classe}/></td>
                     <td style={{padding:"10px 12px",color:C.txtMuted}}>{v.classe}</td>
-                    <td style={{padding:"10px 12px",color:C.txt,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.motif||"â€”"}</td>
+                    <td style={{padding:"10px 12px",color:C.txt,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.motif||"—"}</td>
                     {tab!=="retards"&&<td style={{padding:"10px 12px",textAlign:"center"}}><GravBadge g={v.gravite}/></td>}
                   </tr>
                 ))}
@@ -7793,8 +7794,8 @@ function DashboardSurveillance() {
 }
 
 
-// â”€â”€ Calendrier scolaire 2025-2026 : date â†’ {trim, sem} â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Trimestres chargÃ©s depuis Supabase (table annee_scolaire), fallback 2025-2026
+// ── Calendrier scolaire 2025-2026 : date → {trim, sem} ──────────
+// Trimestres chargés depuis Supabase (table annee_scolaire), fallback 2025-2026
 let TRIMESTRES_DYNAMIQUES = [
   {trim:1, debut:new Date("2025-10-06")},
   {trim:2, debut:new Date("2026-01-05")},
@@ -7819,10 +7820,10 @@ function getSemaineTrimestre(dateStr) {
   }
   return null;
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SYSTÃˆME BULLETINS â€” EduPilot Cameroun / MINESEC
-// Format : bulletin de notes par sÃ©quence avec coefficients officiels
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════
+// SYSTÈME BULLETINS — EduPilot Cameroun / MINESEC
+// Format : bulletin de notes par séquence avec coefficients officiels
+// ════════════════════════════════════════════════════════════════════
 
 // Chargement des coefficients depuis Supabase
 let COEFFICIENTS_DB = [];
@@ -7833,14 +7834,14 @@ async function loadCoefficients() {
   } catch(e) {}
 }
 
-// RÃ©soudre niveau+sÃ©rie depuis nom de classe
+// Résoudre niveau+série depuis nom de classe
 function parseClasseNiveauSerie(classe) {
   const c = (classe||"").trim();
-  let niveau = "6Ã¨me", serie = "";
-  if (/^6/i.test(c)) niveau = "6Ã¨me";
-  else if (/^5/i.test(c)) niveau = "5Ã¨me";
+  let niveau = "6ème", serie = "";
+  if (/^6/i.test(c)) niveau = "6ème";
+  else if (/^5/i.test(c)) niveau = "5ème";
   else if (/^4/i.test(c)) {
-    niveau = "4Ã¨me";
+    niveau = "4ème";
     if (/ALL|Alle/i.test(c)) serie = "ALL";
     else if (/ESP|Esp/i.test(c)) serie = "ESP";
     else if (/ARB|Ara/i.test(c)) serie = "ARB";
@@ -7848,7 +7849,7 @@ function parseClasseNiveauSerie(classe) {
     else if (/CHI|Chi/i.test(c)) serie = "CHI";
   }
   else if (/^3/i.test(c)) {
-    niveau = "3Ã¨me";
+    niveau = "3ème";
     if (/ALL|Alle/i.test(c)) serie = "ALL";
     else if (/ESP|Esp/i.test(c)) serie = "ESP";
     else if (/ARB|Ara/i.test(c)) serie = "ARB";
@@ -7865,7 +7866,7 @@ function parseClasseNiveauSerie(classe) {
     else serie = "C";
   }
   else if (/^1/i.test(c)) {
-    niveau = "1Ã¨re";
+    niveau = "1ère";
     if (/A4/i.test(c)) {
       if (/ALL|Alle/i.test(c)) serie = "ALL";
       else if (/ESP|Esp/i.test(c)) serie = "ESP";
@@ -7934,11 +7935,11 @@ function getMention(m) {
 }
 
 function getAppreciation(n) {
-  if(n===null) return "â€”";
-  if(n>=18) return "Excellent"; if(n>=16) return "TrÃ¨s Bien";
+  if(n===null) return "—";
+  if(n>=18) return "Excellent"; if(n>=16) return "Très Bien";
   if(n>=14) return "Bien"; if(n>=12) return "Assez Bien";
   if(n>=10) return "Passable"; if(n>=8) return "Insuffisant";
-  return "TrÃ¨s Insuffisant";
+  return "Très Insuffisant";
 }
 
 function genBulletin(opts) {
@@ -7946,7 +7947,7 @@ function genBulletin(opts) {
     eleve, classe, sequence, annee="2025-2026",
     notesIndex={}, absencesIndex={}, elevesClasse=[],
     appreciation="", decision="", mention="",
-    profPrincipalNom="Ã€ dÃ©finir",
+    profPrincipalNom="À définir",
     conduite=null, retards=0,
     exclusionsH=0, exclusionsJ=0,
     consignesH=0, consignesJ=0,
@@ -7960,7 +7961,7 @@ function genBulletin(opts) {
   const G="#0b5321", gold="#d4af37";
   const SEQUENCES=[1,2,3,4,5,6];
 
-  // â”€â”€ Calculs â”€â”€
+  // ── Calculs ──
   let totalPts=0, totalCoef=0, nbMatieres=0;
   const lignes = coefs.map(({matiere, coef}) => {
     const notesSeq = SEQUENCES.map(s => {
@@ -7985,17 +7986,17 @@ function genBulletin(opts) {
 
   const moyenne = totalCoef>0 ? Math.round(totalPts/totalCoef*100)/100 : null;
   const {rangs} = calcRangsClasse(classe,seq,notesIndex,elevesClasse);
-  const rang = rangs[eleve.id]||"â€”";
+  const rang = rangs[eleve.id]||"—";
   const effectif = elevesClasse.length;
   const mentionAff = mention||getMention(moyenne);
   const decColor = decision&&(decision.includes("ADMIS")||decision==="Passage") ? "#16a34a" : decision==="Redoublement" ? "#dc2626" : "#d97706";
 
-  // Points forts / Ã€ renforcer
+  // Points forts / À renforcer
   const avecMoy = lignes.filter(l=>l.moy!==null).sort((a,b)=>b.moy-a.moy);
   const pointsForts = avecMoy.slice(0,4);
   const aRenforcer = [...avecMoy].reverse().slice(0,5);
 
-  // Ã‰volution S1â†’seq
+  // Évolution S1→seq
   const evoData = SEQUENCES.slice(0,seq).map(s => {
     let tp=0,tc=0;
     coefs.forEach(({matiere,coef:c})=>{
@@ -8007,7 +8008,7 @@ function genBulletin(opts) {
   }).filter(v=>v!==null);
 
   const lastVal = evoData.length>=2?(evoData[evoData.length-1]-evoData[0]).toFixed(1):null;
-  const prog = lastVal!==null?(+lastVal>0?`+${lastVal}`:`${lastVal}`):"â€”";
+  const prog = lastVal!==null?(+lastVal>0?`+${lastVal}`:`${lastVal}`):"—";
   const progCol = lastVal===null?"#6b7280":+lastVal>0?"#16a34a":"#dc2626";
 
   // SVG graphique
@@ -8031,16 +8032,16 @@ function genBulletin(opts) {
     }).join("");
   }
 
-  // Groupes matiÃ¨res â€” listes exactes basÃ©es sur la DB coefficients
-  // Nomenclature officielle LycÃ©e de Kakatare :
-  // 6Ã¨me/5Ã¨me + 2nde/1Ã¨re/Tle sÃ©ries littÃ©raires â†’ "Sciences"
-  // 4Ã¨me/3Ã¨me â†’ "SVT"
-  // 2nde/1Ã¨re/Tle sÃ©ries scientifiques (C/D/Ti) â†’ "SVTEEHB"
-  const MATIERES_SCI = ["MathÃ©matiques","PCT","SVT","SVTEEHB","Sciences","Informatique","Physique-Chimie-Tech.","Biologie","Chimie","Physique"];
-  const MATIERES_LIT = ["FranÃ§ais","Anglais","Histoire-GÃ©ographie","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","LV2","Ã‰tude de texte","Expression orale","Correction orthographique","Ã‰ducation Ã  la citoyennetÃ© et Ã  la morale","Travail manuel et Ã©conomie sociale et familiale"];
-  const MATIERES_SPORT = ["EPS","Ã‰ducation Physique et Sportive"];
+  // Groupes matières — listes exactes basées sur la DB coefficients
+  // Nomenclature officielle Lycée de Kakatare :
+  // 6ème/5ème + 2nde/1ère/Tle séries littéraires → "Sciences"
+  // 4ème/3ème → "SVT"
+  // 2nde/1ère/Tle séries scientifiques (C/D/Ti) → "SVTEEHB"
+  const MATIERES_SCI = ["Mathématiques","PCT","SVT","SVTEEHB","Sciences","Informatique","Physique-Chimie-Tech.","Biologie","Chimie","Physique"];
+  const MATIERES_LIT = ["Français","Anglais","Histoire-Géographie","Philosophie","ECM","LV2","Allemand","Espagnol","Arabe","LV2","Étude de texte","Expression orale","Correction orthographique","Éducation à la citoyenneté et à la morale","Travail manuel et économie sociale et familiale"];
+  const MATIERES_SPORT = ["EPS","Éducation Physique et Sportive"];
 
-  // Toutes les matiÃ¨res dans l'ordre de la DB
+  // Toutes les matières dans l'ordre de la DB
   const toutesMatieres = lignes.map(l=>l.matiere);
 
   const sciL = lignes.filter(l=>MATIERES_SCI.some(m=>l.matiere===m||l.matiere.toLowerCase().includes(m.toLowerCase())));
@@ -8048,27 +8049,27 @@ function genBulletin(opts) {
   const autL = lignes.filter(l=>!sciL.includes(l)&&!litL.includes(l));
 
   const noteCol=(n)=>n===null?"":n>=14?"note-good":n>=10?"note-med":"note-low";
-  const appTxt=(n)=>n===null?"â€”":n>=16?"TrÃ¨s Bien":n>=14?"Bien":n>=12?"Assez Bien":n>=10?"Passable":n>=8?"Insuffisant":"Faible";
-  const appDot=(n)=>n===null?"âš«":n>=14?"ðŸŸ¢":n>=10?"ðŸŸ ":"ðŸ”´";
+  const appTxt=(n)=>n===null?"—":n>=16?"Très Bien":n>=14?"Bien":n>=12?"Assez Bien":n>=10?"Passable":n>=8?"Insuffisant":"Faible";
+  const appDot=(n)=>n===null?"⚫":n>=14?"🟢":n>=10?"🟠":"🔴";
 
   const renderLigne=(l)=>{
     const nc=SEQUENCES.map((s,i)=>{
       const n=l.notesSeq[i];
-      if(i>=seq) return `<td style="color:#d1d5db;">â€”</td>`;
+      if(i>=seq) return `<td style="color:#d1d5db;">—</td>`;
       const cl=n===null?"":n>=10?"note-good":"note-low";
-      return `<td class="${cl}">${n!==null?n.toFixed(2):"â€”"}</td>`;
+      return `<td class="${cl}">${n!==null?n.toFixed(2):"—"}</td>`;
     }).join("");
     const mc=noteCol(l.moy);
     return `<tr>
       <td class="subj-name">${l.matiere}</td>
       ${nc}
-      <td class="${mc}">${l.moy!==null?l.moy.toFixed(2):"â€”"}</td>
+      <td class="${mc}">${l.moy!==null?l.moy.toFixed(2):"—"}</td>
       <td>${l.coef}</td>
-      <td>${l.pts!==null?l.pts.toFixed(2):"â€”"}</td>
-      <td>${l.rang!==null?l.rang:"â€”"}</td>
-      <td>${l.minC!==null?l.minC.toFixed(1):"â€”"}</td>
-      <td>${l.moyC!==null?l.moyC.toFixed(1):"â€”"}</td>
-      <td>${l.maxC!==null?l.maxC.toFixed(1):"â€”"}</td>
+      <td>${l.pts!==null?l.pts.toFixed(2):"—"}</td>
+      <td>${l.rang!==null?l.rang:"—"}</td>
+      <td>${l.minC!==null?l.minC.toFixed(1):"—"}</td>
+      <td>${l.moyC!==null?l.moyC.toFixed(1):"—"}</td>
+      <td>${l.maxC!==null?l.maxC.toFixed(1):"—"}</td>
       <td>${appTxt(l.moy)} ${appDot(l.moy)}</td>
     </tr>`;
   };
@@ -8121,26 +8122,26 @@ body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
 
 <div class="top-bar"></div>
 
-<!-- EN-TÃŠTE -->
+<!-- EN-TÊTE -->
 <table class="header-table">
 <tr>
   <td class="header-left">
-    RÃ‰PUBLIQUE DU CAMEROUN<br>
-    <span style="font-weight:normal;font-style:italic;">Paix â€“ Travail â€“ Patrie</span><br>
-    <span style="color:#ccc;">â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€</span><br>
-    RÃ‰GION DE L'EXTRÃŠME-NORD<br>
-    DÃ‰PARTEMENT DU DIAMARÃ‰<br>
+    RÉPUBLIQUE DU CAMEROUN<br>
+    <span style="font-weight:normal;font-style:italic;">Paix – Travail – Patrie</span><br>
+    <span style="color:#ccc;">──────────────</span><br>
+    RÉGION DE L'EXTRÊME-NORD<br>
+    DÉPARTEMENT DU DIAMARÉ<br>
     ARRONDISSEMENT DE MAROUA II
   </td>
   <td class="header-center">
     <img src="https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/logo_lycee_kakatare.jpg/logo_lycee_kakatare.jpg" class="logo-img" alt="Logo" onerror="this.style.display='none'"/>
-    <div class="school-name">LycÃ©e de Kakatare-Maroua</div>
-    <div class="school-sub">BP 162 MAROUA â€“ TÃ‰L. 222 29 21 63 â€“ Mle 0CJ1GSF8111231106</div>
+    <div class="school-name">Lycée de Kakatare-Maroua</div>
+    <div class="school-sub">BP 162 MAROUA – TÉL. 222 29 21 63 – Mle 0CJ1GSF8111231106</div>
   </td>
   <td class="header-right">
     <div class="bulletin-box">
       <div class="bulletin-title">BULLETIN SCOLAIRE</div>
-      <div style="font-size:8pt;margin-top:3px;">ANNÃ‰E SCOLAIRE<br><span class="annee-val">${annee.replace("-","â€“")}</span></div>
+      <div style="font-size:8pt;margin-top:3px;">ANNÉE SCOLAIRE<br><span class="annee-val">${annee.replace("-","–")}</span></div>
       <div style="font-size:7.5pt;margin-top:2px;">TRIMESTRE</div>
       <div class="trimestre-badge">${trim}</div>
     </div>
@@ -8148,8 +8149,8 @@ body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
 </tr>
 </table>
 
-<!-- INFOS Ã‰LÃˆVE -->
-<div class="section-header">INFORMATIONS DE L'Ã‰LÃˆVE</div>
+<!-- INFOS ÉLÈVE -->
+<div class="section-header">INFORMATIONS DE L'ÉLÈVE</div>
 <table class="student-info-table">
 <tr>
   <td style="width:55px;">
@@ -8158,39 +8159,39 @@ body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
   <td style="padding-left:8px;">
     <table style="width:100%;font-size:8pt;">
       <tr><td colspan="2" style="font-size:9.5pt;font-weight:bold;">${eleve.nom}</td></tr>
-      <tr><td><strong>Classe :</strong> ${classe}</td><td><strong>Matricule :</strong> ${eleve.numero||"â€”"}</td></tr>
-      <tr><td><strong>Sexe :</strong> ${eleve.sexe==="G"||eleve.sexe==="M"?"Masculin":"FÃ©minin"}</td><td><strong>NÃ©e le :</strong> â€”</td></tr>
+      <tr><td><strong>Classe :</strong> ${classe}</td><td><strong>Matricule :</strong> ${eleve.numero||"—"}</td></tr>
+      <tr><td><strong>Sexe :</strong> ${eleve.sexe==="G"||eleve.sexe==="M"?"Masculin":"Féminin"}</td><td><strong>Née le :</strong> —</td></tr>
       <tr><td colspan="2"><strong>Professeur principal :</strong> ${profPrincipalNom}</td></tr>
     </table>
   </td>
   <td style="width:52%;">
     <table style="width:100%;border-collapse:separate;border-spacing:3px 0;">
     <tr>
-      <td><div class="stat-card" style="background:#f0fdf4;border-color:#16a34a;"><div class="stat-val" style="color:#15803d;">${moyenne!==null?moyenne.toFixed(2):"â€”"}<span style="font-size:6pt;">/20</span></div><div class="stat-lbl">Moyenne</div></div></td>
+      <td><div class="stat-card" style="background:#f0fdf4;border-color:#16a34a;"><div class="stat-val" style="color:#15803d;">${moyenne!==null?moyenne.toFixed(2):"—"}<span style="font-size:6pt;">/20</span></div><div class="stat-lbl">Moyenne</div></div></td>
       <td><div class="stat-card"><div class="stat-val">${rang}<span style="font-size:6pt;">/${effectif}</span></div><div class="stat-lbl">Rang</div></div></td>
-      <td><div class="stat-card"><div class="stat-val">${nbMatieres}<span style="font-size:6pt;">/${coefs.length}</span></div><div class="stat-lbl">MatiÃ¨res</div></div></td>
-      <td><div class="stat-card"><div class="stat-val">${totalPts>0?totalPts.toFixed(1):"â€”"}</div><div class="stat-lbl">Total pts</div></div></td>
-      <td><div class="stat-card"><div class="stat-val">â€” h</div><div class="stat-lbl">Absences</div></div></td>
-      <td><div class="stat-card"><div class="stat-val">${conduite!==null?conduite:"â€”"}<span style="font-size:6pt;">/20</span></div><div class="stat-lbl">Conduite</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">${nbMatieres}<span style="font-size:6pt;">/${coefs.length}</span></div><div class="stat-lbl">Matières</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">${totalPts>0?totalPts.toFixed(1):"—"}</div><div class="stat-lbl">Total pts</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">— h</div><div class="stat-lbl">Absences</div></div></td>
+      <td><div class="stat-card"><div class="stat-val">${conduite!==null?conduite:"—"}<span style="font-size:6pt;">/20</span></div><div class="stat-lbl">Conduite</div></div></td>
     </tr>
     </table>
   </td>
 </tr>
 </table>
 
-<!-- TABLEAU ACADÃ‰MIQUE -->
-<div class="section-header">RÃ‰SULTATS ACADÃ‰MIQUES</div>
+<!-- TABLEAU ACADÉMIQUE -->
+<div class="section-header">RÉSULTATS ACADÉMIQUES</div>
 <table class="results-table">
 <thead>
   <tr>
-    <th rowspan="2" style="width:22%;">MATIÃˆRE</th>
-    <th colspan="6">Ã‰VALUATIONS</th>
+    <th rowspan="2" style="width:22%;">MATIÈRE</th>
+    <th colspan="6">ÉVALUATIONS</th>
     <th rowspan="2">MOY.</th>
     <th rowspan="2">COEF.</th>
     <th rowspan="2">POINTS</th>
     <th rowspan="2">RANG</th>
     <th colspan="3">STATISTIQUES CLASSE</th>
-    <th rowspan="2" style="width:13%;">APPRÃ‰CIATION</th>
+    <th rowspan="2" style="width:13%;">APPRÉCIATION</th>
   </tr>
   <tr>
     <th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th>
@@ -8198,19 +8199,19 @@ body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
   </tr>
 </thead>
 <tbody>
-  ${sciL.length?grpRow("MATIÃˆRES SCIENTIFIQUES")+sciL.map(renderLigne).join(""):""}
-  ${litL.length?grpRow("MATIÃˆRES LITTÃ‰RAIRES")+litL.map(renderLigne).join(""):""}
-  ${autL.length?grpRow("AUTRES MATIÃˆRES")+autL.map(renderLigne).join(""):""}
+  ${sciL.length?grpRow("MATIÈRES SCIENTIFIQUES")+sciL.map(renderLigne).join(""):""}
+  ${litL.length?grpRow("MATIÈRES LITTÉRAIRES")+litL.map(renderLigne).join(""):""}
+  ${autL.length?grpRow("AUTRES MATIÈRES")+autL.map(renderLigne).join(""):""}
 </tbody>
 </table>
 
-<!-- BLOCS INFÃ‰RIEURS -->
+<!-- BLOCS INFÉRIEURS -->
 <table class="bottom-table">
 <tr>
-  <!-- COL 1 : Ã‰volution + Points forts/Ã€ renforcer -->
+  <!-- COL 1 : Évolution + Points forts/À renforcer -->
   <td>
     <div class="card-box" style="margin-bottom:4px;">
-      <div class="card-title">ðŸ“ˆ Ã‰VOLUTION DU TRAVAIL</div>
+      <div class="card-title">📈 ÉVOLUTION DU TRAVAIL</div>
       <div style="text-align:center;">
         <svg width="160" height="62" viewBox="0 0 165 65">
           ${svgPoly}${svgDots}${svgLabels}
@@ -8222,59 +8223,59 @@ body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
       <div class="card-box">
-        <div class="card-title">ðŸ‘ Points Forts</div>
-        ${pointsForts.length?pointsForts.map(l=>`<div class="pf-item"><span style="color:#16a34a;">â—</span> ${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"â€”"})</div>`).join(""):`<div style="font-size:7pt;color:#9ca3af;font-style:italic;">â€”</div>`}
+        <div class="card-title">👍 Points Forts</div>
+        ${pointsForts.length?pointsForts.map(l=>`<div class="pf-item"><span style="color:#16a34a;">●</span> ${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</div>`).join(""):`<div style="font-size:7pt;color:#9ca3af;font-style:italic;">—</div>`}
       </div>
       <div class="card-box">
-        <div class="card-title" style="color:#dc2626;">ðŸŽ¯ Ã€ Renforcer</div>
-        ${aRenforcer.length?aRenforcer.map(l=>`<div class="pf-item"><span style="color:#dc2626;">â—</span> ${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"â€”"})</div>`).join(""):`<div style="font-size:7pt;color:#9ca3af;font-style:italic;">â€”</div>`}
+        <div class="card-title" style="color:#dc2626;">🎯 À Renforcer</div>
+        ${aRenforcer.length?aRenforcer.map(l=>`<div class="pf-item"><span style="color:#dc2626;">●</span> ${l.matiere} (${l.moy!==null?l.moy.toFixed(2):"—"})</div>`).join(""):`<div style="font-size:7pt;color:#9ca3af;font-style:italic;">—</div>`}
       </div>
     </div>
   </td>
 
-  <!-- COL 2 : AssiduitÃ© + Conduite -->
+  <!-- COL 2 : Assiduité + Conduite -->
   <td>
     <div class="card-box" style="margin-bottom:4px;">
-      <div class="card-title">â± ASSIDUITÃ‰</div>
+      <div class="card-title">⏱ ASSIDUITÉ</div>
       <table style="width:100%;font-size:7pt;border-collapse:collapse;margin-bottom:4px;">
-        <tr><th style="background:#f3f4f6;padding:2px 3px;border:1px solid #e5e7eb;"></th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">TOTAL</th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">JUSTIFIÃ‰ES</th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">NON JUST.</th></tr>
-        <tr><td style="border:1px solid #e5e7eb;padding:2px 3px;font-weight:700;">Absences</td><td style="border:1px solid #e5e7eb;text-align:center;">â€” h</td><td style="border:1px solid #e5e7eb;text-align:center;">0 h</td><td style="border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:700;">â€” h</td></tr>
+        <tr><th style="background:#f3f4f6;padding:2px 3px;border:1px solid #e5e7eb;"></th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">TOTAL</th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">JUSTIFIÉES</th><th style="background:#f3f4f6;padding:2px;border:1px solid #e5e7eb;">NON JUST.</th></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:2px 3px;font-weight:700;">Absences</td><td style="border:1px solid #e5e7eb;text-align:center;">— h</td><td style="border:1px solid #e5e7eb;text-align:center;">0 h</td><td style="border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:700;">— h</td></tr>
       </table>
       <div style="font-size:7pt;">Retards : <strong>${retards}</strong></div>
     </div>
     <div class="card-box">
-      <div class="card-title">ðŸ›¡ CONDUITE & VIE SCOLAIRE</div>
+      <div class="card-title">🛡 CONDUITE & VIE SCOLAIRE</div>
       <div style="font-size:7pt;line-height:1.6;">
-        <div>Note de conduite : <strong>${conduite!==null?conduite+" / 20":"â€”"}</strong></div>
+        <div>Note de conduite : <strong>${conduite!==null?conduite+" / 20":"—"}</strong></div>
         <div>Retards : ${retards} | Exclusions : ${exclusionsH} h (${exclusionsJ} j)</div>
         <div>Consignes : ${consignesH} h (${consignesJ} j)</div>
-        <div>BlÃ¢me travail : ${blameTravail} | BlÃ¢me conduite : ${blameConduite}</div>
+        <div>Blâme travail : ${blameTravail} | Blâme conduite : ${blameConduite}</div>
       </div>
     </div>
   </td>
 
-  <!-- COL 3 : Conseil + DÃ©cision -->
+  <!-- COL 3 : Conseil + Décision -->
   <td>
     <div class="card-box" style="margin-bottom:4px;">
-      <div class="card-title">ðŸ‘¥ CONSEIL DE CLASSE</div>
-      <div style="font-size:7.5pt;font-style:italic;min-height:28px;line-height:1.4;color:#374151;">${appreciation||"â€”"}</div>
+      <div class="card-title">👥 CONSEIL DE CLASSE</div>
+      <div style="font-size:7.5pt;font-style:italic;min-height:28px;line-height:1.4;color:#374151;">${appreciation||"—"}</div>
       ${decision&&((mentionAff==="Bien"||mentionAff==="Assez Bien"||moyenne!==null&&moyenne>=12))?
-        `<div style="text-align:center;font-weight:bold;color:#0b5321;font-size:8pt;margin-top:3px;">â˜… ENCOURAGEMENTS â˜…</div>`:""}
+        `<div style="text-align:center;font-weight:bold;color:#0b5321;font-size:8pt;margin-top:3px;">★ ENCOURAGEMENTS ★</div>`:""}
       ${decision&&moyenne!==null&&moyenne>=15?
-        `<div style="text-align:center;font-weight:bold;color:#1d4ed8;font-size:8pt;margin-top:2px;">â˜… FÃ‰LICITATIONS â˜…</div>`:""}
+        `<div style="text-align:center;font-weight:bold;color:#1d4ed8;font-size:8pt;margin-top:2px;">★ FÉLICITATIONS ★</div>`:""}
     </div>
     ${decision?`
     <div class="card-box">
-      <div class="card-title">ðŸŽ“ DÃ‰CISION DU CONSEIL</div>
+      <div class="card-title">🎓 DÉCISION DU CONSEIL</div>
       <div style="background:#f0fdf4;border:1px solid #16a34a;color:#15803d;font-weight:bold;text-align:center;padding:4px;font-size:8.5pt;border-radius:3px;margin-bottom:4px;">${decision}</div>
       <div style="font-size:7pt;line-height:1.6;">
-        <div>Moyenne annuelle : <strong>${moyenne!==null?moyenne.toFixed(2)+" / 20":"â€”"}</strong></div>
-        <div>Mention : <strong>${mentionAff||"â€”"}</strong></div>
+        <div>Moyenne annuelle : <strong>${moyenne!==null?moyenne.toFixed(2)+" / 20":"—"}</strong></div>
+        <div>Mention : <strong>${mentionAff||"—"}</strong></div>
         <div>Rang annuel : <strong>${rang} / ${effectif}</strong></div>
-        <div>Travail annuel : <strong style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${decision&&moyenne!==null?(moyenne>=10?"PASSABLE":"INSUFFISANT"):"â€”"}</strong></div>
+        <div>Travail annuel : <strong style="color:${moyenne!==null&&moyenne>=10?"#16a34a":"#dc2626"}">${decision&&moyenne!==null?(moyenne>=10?"PASSABLE":"INSUFFISANT"):"—"}</strong></div>
       </div>
     </div>`:
-    `<div class="card-box"><div class="card-title">ðŸŽ“ DÃ‰CISION</div><div style="font-size:7pt;color:#9ca3af;font-style:italic;text-align:center;padding:8px;">En attente du Conseil de Classe</div></div>`}
+    `<div class="card-box"><div class="card-title">🎓 DÉCISION</div><div style="font-size:7pt;color:#9ca3af;font-style:italic;text-align:center;padding:8px;">En attente du Conseil de Classe</div></div>`}
   </td>
 </tr>
 </table>
@@ -8284,19 +8285,19 @@ body{background:#fff;color:#000;font-size:8.5pt;line-height:1.15;}
 <tr>
   <td><strong>PROFESSEUR PRINCIPAL</strong><br><span style="font-size:7pt;">${profPrincipalNom}</span><div class="sig-space"></div></td>
   <td style="width:80px;">
-    <div style="width:25px;height:25px;border:1.5px solid ${gold};border-radius:50%;margin:0 auto;color:${gold};text-align:center;line-height:23px;font-size:14pt;">â˜…</div>
+    <div style="width:25px;height:25px;border:1.5px solid ${gold};border-radius:50%;margin:0 auto;color:${gold};text-align:center;line-height:23px;font-size:14pt;">★</div>
   </td>
-  <td><strong>CHEF D'Ã‰TABLISSEMENT</strong><br><span style="font-size:7pt;">Le Proviseur</span><div class="sig-space"></div></td>
+  <td><strong>CHEF D'ÉTABLISSEMENT</strong><br><span style="font-size:7pt;">Le Proviseur</span><div class="sig-space"></div></td>
 </tr>
 </table>
 
-<div class="bottom-motto">â—† DISCIPLINE â€“ TRAVAIL â€“ RÃ‰USSITE â—†</div>
+<div class="bottom-motto">◆ DISCIPLINE – TRAVAIL – RÉUSSITE ◆</div>
 </body></html>`;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PROFIL Ã‰LÃˆVE â€” Modal de modification (Proviseur uniquement)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// PROFIL ÉLÈVE — Modal de modification (Proviseur uniquement)
+// ════════════════════════════════════════════════════════════════
 function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
   const {isMobile} = useDevice();
   const [form, setForm] = useState({
@@ -8332,7 +8333,7 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
         const url = `https://ochijkylsranqectspxc.supabase.co/storage/v1/object/public/eleves-photos/${uploaded.path}`;
         setPhotoPreview(url);
         setForm(p=>({...p, photo_url: url}));
-        setMsg({ok:true, txt:"Photo uploadÃ©e âœ“"});
+        setMsg({ok:true, txt:"Photo uploadée ✓"});
       }
     } catch(e) {
       setMsg({ok:false, txt:"Erreur upload photo"});
@@ -8359,7 +8360,7 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
     });
     setSaving(false);
     if (res?.ok) {
-      setMsg({ok:true, txt:"Profil mis Ã  jour âœ“"});
+      setMsg({ok:true, txt:"Profil mis à jour ✓"});
       setTimeout(()=>{ onSaved&&onSaved({...eleve,...form,photo_url:photoPreview}); onClose(); }, 800);
     } else {
       setMsg({ok:false, txt: res?.error||"Erreur"});
@@ -8374,10 +8375,10 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
       <div style={{background:"#fff",borderRadius:isMobile?0:16,maxWidth:560,margin:"0 auto",
         padding:isMobile?"16px":"28px",minHeight:isMobile?"100vh":"auto"}}>
 
-        {/* En-tÃªte */}
+        {/* En-tête */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-          <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>ðŸ‘¤ Profil Ã©lÃ¨ve</div>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>âœ•</button>
+          <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>👤 Profil élève</div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>✕</button>
         </div>
 
         {/* Photo */}
@@ -8387,7 +8388,7 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
             background:"#e5e7eb",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             {photoPreview
               ? <img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="photo"/>
-              : <span style={{fontSize:32,color:"#9ca3af"}}>ðŸ‘¤</span>}
+              : <span style={{fontSize:32,color:"#9ca3af"}}>👤</span>}
           </div>
           <div>
             <div style={{fontSize:13,fontWeight:700,color:"#1f2937",marginBottom:6}}>
@@ -8395,10 +8396,10 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
             </div>
             <label style={{display:"inline-block",padding:"6px 14px",borderRadius:8,border:"1.5px solid #0B4D2C",
               color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",background:"#fff"}}>
-              {uploading?"Envoi...":"ðŸ“· Changer la photo"}
+              {uploading?"Envoi...":"📷 Changer la photo"}
               <input type="file" accept="image/*" onChange={handlePhoto} style={{display:"none"}}/>
             </label>
-            <div style={{fontSize:10,color:"#9ca3af",marginTop:4}}>JPG, PNG, WEBP â€” max 5 MB</div>
+            <div style={{fontSize:10,color:"#9ca3af",marginTop:4}}>JPG, PNG, WEBP — max 5 MB</div>
           </div>
         </div>
 
@@ -8410,15 +8411,15 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
               style={inp} placeholder="NOM DE FAMILLE"/>
           </div>
           <div>
-            <span style={lbl}>PrÃ©nom</span>
+            <span style={lbl}>Prénom</span>
             <input value={form.prenom} onChange={e=>setForm(p=>({...p,prenom:e.target.value}))}
-              style={inp} placeholder="PrÃ©nom(s)"/>
+              style={inp} placeholder="Prénom(s)"/>
           </div>
           <div>
             <span style={lbl}>Sexe</span>
             <select value={form.sexe} onChange={e=>setForm(p=>({...p,sexe:e.target.value}))} style={inp}>
               <option value="M">Masculin</option>
-              <option value="F">FÃ©minin</option>
+              <option value="F">Féminin</option>
             </select>
           </div>
           <div>
@@ -8470,7 +8471,7 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
             style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#0B4D2C",
               color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
               opacity:saving?.6:1}}>
-            {saving?"Enregistrementâ€¦":"ðŸ’¾ Enregistrer"}
+            {saving?"Enregistrement…":"💾 Enregistrer"}
           </button>
         </div>
       </div>
@@ -8478,9 +8479,9 @@ function ProfilEleveModal({eleve, classe, onClose, onSaved}) {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CONDUITE & DISCIPLINE â€” Saisie par SG / Censeur
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// CONDUITE & DISCIPLINE — Saisie par SG / Censeur
+// ════════════════════════════════════════════════════════════════
 function ConduiteClassePage() {
   const {user, data} = useApp();
   const {isMobile} = useDevice();
@@ -8488,7 +8489,7 @@ function ConduiteClassePage() {
   const isCenseur = (user?.role||"").startsWith("censeur");
   const isProviseur = user?.role === "proviseur";
 
-  // Classes accessibles selon rÃ´le
+  // Classes accessibles selon rôle
   const sgClasses = isSG ? (user?.classes||[]) : null;
   const allClasses = Object.keys(ELEVES_DB).sort();
   const classes = sgClasses || allClasses;
@@ -8546,21 +8547,21 @@ function ConduiteClassePage() {
       p_blame_conduite: c.blame_conduite||"Aucun"
     });
     setSaving(null);
-    if(res?.ok) showToast(`âœ“ ${eleve.nom} â€” conduite S${selSeq} enregistrÃ©e`);
+    if(res?.ok) showToast(`✓ ${eleve.nom} — conduite S${selSeq} enregistrée`);
     else showToast("Erreur: "+(res?.error||"inconnue"), false);
   };
 
   const inp = (w="60px")=>({width:w,border:"1.5px solid #e5e7eb",borderRadius:6,padding:"4px 6px",
     fontSize:12,fontFamily:"inherit",textAlign:"center",outline:"none"});
-  const BLAMES = ["Aucun","Avertissement","BlÃ¢me simple","BlÃ¢me avec mise en garde","Exclusion temporaire"];
+  const BLAMES = ["Aucun","Avertissement","Blâme simple","Blâme avec mise en garde","Exclusion temporaire"];
 
   return (
     <div style={{padding:isMobile?"10px":"20px",maxWidth:1100,margin:"0 auto"}}>
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>ðŸ›¡ï¸ Conduite & Discipline</div>
-          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Saisie par sÃ©quence</div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🛡️ Conduite & Discipline</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Saisie par séquence</div>
         </div>
         {toast && (
           <div style={{padding:"8px 14px",borderRadius:8,fontSize:12,fontWeight:700,
@@ -8575,34 +8576,34 @@ function ConduiteClassePage() {
           <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Classe</div>
           <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
             style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
-            {classes.map(c=><option key={c} value={c}>{c} ({(ELEVES_DB[c]||[]).length} Ã©lÃ¨ves)</option>)}
+            {classes.map(c=><option key={c} value={c}>{c} ({(ELEVES_DB[c]||[]).length} élèves)</option>)}
           </select>
         </div>
         <div>
-          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>SÃ©quence</div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Séquence</div>
           <select value={selSeq} onChange={e=>setSelSeq(+e.target.value)}
             style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
-            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>S{s} â€” Trimestre {s<=2?1:s<=4?2:3}</option>)}
+            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>S{s} — Trimestre {s<=2?1:s<=4?2:3}</option>)}
           </select>
         </div>
       </div>
 
       {/* Tableau */}
-      {loading ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargementâ€¦</div> :
-      elevesClasse.length===0 ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Aucun Ã©lÃ¨ve dans cette classe</div> : (
+      {loading ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargement…</div> :
+      elevesClasse.length===0 ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Aucun élève dans cette classe</div> : (
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead>
               <tr style={{background:"#0B4D2C",color:"#fff"}}>
-                <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Ã‰lÃ¨ve</th>
+                <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Élève</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Note /20</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Retards</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Excl. h</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Excl. j</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Cons. h</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Cons. j</th>
-                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>BlÃ¢me travail</th>
-                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>BlÃ¢me conduite</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>Blâme travail</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>Blâme conduite</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Action</th>
               </tr>
             </thead>
@@ -8667,7 +8668,7 @@ function ConduiteClassePage() {
                         style={{padding:"5px 10px",borderRadius:6,border:"none",background:"#0B4D2C",
                           color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                           opacity:isSav?.6:1,whiteSpace:"nowrap"}}>
-                        {isSav?"â€¦":"ðŸ’¾ Sauv."}
+                        {isSav?"…":"💾 Sauv."}
                       </button>
                     </td>
                   </tr>
@@ -8681,9 +8682,9 @@ function ConduiteClassePage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CONSEIL DE CLASSE â€” Module Proviseur / Censeur
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// CONSEIL DE CLASSE — Module Proviseur / Censeur
+// ════════════════════════════════════════════════════════════════
 function ConseilClassePage() {
   const {user, data} = useApp();
   const {isMobile} = useDevice();
@@ -8757,7 +8758,7 @@ function ConseilClassePage() {
   const getD=(eleveId,field,def="")=>decisions[eleveId]?.[field]??def;
   const setD=(eleveId,field,val)=>setDecisions(p=>({...p,[eleveId]:{...(p[eleveId]||{}),[field]:val}}));
 
-  // Sauvegarder le conseil + toutes les dÃ©cisions
+  // Sauvegarder le conseil + toutes les décisions
   const handleSave = async (statut="brouillon") => {
     setSaving(true);
     // 1. Sauvegarder le conseil
@@ -8772,7 +8773,7 @@ function ConseilClassePage() {
     const conseilId = res.id || (await sb.get("conseil_classe",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`))?.[0]?.id;
     if(!conseilId){setSaving(false);showToast("Erreur: conseil introuvable",false);return;}
 
-    // 2. Sauvegarder les dÃ©cisions
+    // 2. Sauvegarder les décisions
     const saves = moyennes.map(e=>{
       const d=decisions[e.id]||{};
       if(!d.decision&&!d.appreciation&&!d.observations) return Promise.resolve();
@@ -8788,24 +8789,24 @@ function ConseilClassePage() {
     });
     await Promise.all(saves);
     setSaving(false);
-    showToast(statut==="valide"?"âœ“ Conseil validÃ©":"âœ“ Brouillon sauvegardÃ©");
+    showToast(statut==="valide"?"✓ Conseil validé":"✓ Brouillon sauvegardé");
     await loadConseil();
   };
 
-  // GÃ©nÃ©ration PV
+  // Génération PV
   const handlePV = () => {
     const seq=selSeq; const trim=seq<=2?1:seq<=4?2:3;
     const now=new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
     const rows = moyennes.map(e=>{
       const d=decisions[e.id]||{};
-      const dec=d.decision||"â€”";
-      const moy=e.moy!==null?e.moy.toFixed(2):"â€”";
-      const decCol=dec==="Passage"?"#16a34a":dec==="Redoublement"?"#dc2626":dec==="FÃ©licitations"?"#2563eb":"#d97706";
+      const dec=d.decision||"—";
+      const moy=e.moy!==null?e.moy.toFixed(2):"—";
+      const decCol=dec==="Passage"?"#16a34a":dec==="Redoublement"?"#dc2626":dec==="Félicitations"?"#2563eb":"#d97706";
       return `<tr style="border-bottom:1px solid #f0f0f0;">
         <td style="padding:5px 8px;font-weight:600;">${e.nom}</td>
         <td style="text-align:center;padding:5px 8px;font-weight:700;color:${e.moy!==null&&e.moy>=10?"#16a34a":"#dc2626"}">${moy}</td>
-        <td style="text-align:center;padding:5px 8px;">${rangs[e.id]||"â€”"}</td>
-        <td style="padding:5px 8px;font-size:10px;font-style:italic;">${d.appreciation||"â€”"}</td>
+        <td style="text-align:center;padding:5px 8px;">${rangs[e.id]||"—"}</td>
+        <td style="padding:5px 8px;font-size:10px;font-style:italic;">${d.appreciation||"—"}</td>
         <td style="text-align:center;padding:5px 8px;font-weight:700;color:${decCol};">${dec}</td>
       </tr>`;
     }).join("");
@@ -8838,37 +8839,37 @@ th:first-child{text-align:left;}
 <script>window.onload=()=>window.print();</script>
 </head><body>
 <div class="header">
-  <div style="font-size:10px;color:#6b7280;margin-bottom:4px;">LYCÃ‰E DE KAKATARE-MAROUA â€” AnnÃ©e scolaire 2025-2026</div>
-  <div class="title">ProcÃ¨s-Verbal du Conseil de Classe</div>
-  <div class="subtitle">SÃ©quence ${seq} â€” Trimestre ${trim} Â· ${selClasse}</div>
+  <div style="font-size:10px;color:#6b7280;margin-bottom:4px;">LYCÉE DE KAKATARE-MAROUA — Année scolaire 2025-2026</div>
+  <div class="title">Procès-Verbal du Conseil de Classe</div>
+  <div class="subtitle">Séquence ${seq} — Trimestre ${trim} · ${selClasse}</div>
   <div style="font-size:10px;color:#6b7280;margin-top:4px;">Tenu le ${dateConseil?new Date(dateConseil).toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}):now}</div>
 </div>
 
 <div class="info-grid">
   <div class="info-box"><div class="info-label">Classe</div><div class="info-val">${selClasse}</div></div>
-  <div class="info-box"><div class="info-label">Effectif</div><div class="info-val">${elevesClasse.length} Ã©lÃ¨ves</div></div>
-  <div class="info-box"><div class="info-label">PrÃ©sident</div><div class="info-val">Le Proviseur</div></div>
-  <div class="info-box"><div class="info-label">Date</div><div class="info-val">${dateConseil||"â€”"}</div></div>
+  <div class="info-box"><div class="info-label">Effectif</div><div class="info-val">${elevesClasse.length} élèves</div></div>
+  <div class="info-box"><div class="info-label">Président</div><div class="info-val">Le Proviseur</div></div>
+  <div class="info-box"><div class="info-label">Date</div><div class="info-val">${dateConseil||"—"}</div></div>
 </div>
 
 <div class="stats">
   <div class="stat-box"><div class="stat-num">${elevesClasse.length}</div><div class="stat-lbl">Effectif</div></div>
-  <div class="stat-box"><div class="stat-num">${moyennes.filter(e=>e.moy!==null&&e.moy>=10).length}</div><div class="stat-lbl">â‰¥ 10/20</div></div>
+  <div class="stat-box"><div class="stat-num">${moyennes.filter(e=>e.moy!==null&&e.moy>=10).length}</div><div class="stat-lbl">≥ 10/20</div></div>
   <div class="stat-box"><div class="stat-num" style="color:#16a34a">${passed}</div><div class="stat-lbl">Admis</div></div>
   <div class="stat-box"><div class="stat-num" style="color:#dc2626">${redoub}</div><div class="stat-lbl">Redoublants</div></div>
 </div>
 
 <table>
   <thead><tr>
-    <th style="width:30%;text-align:left;">Ã‰lÃ¨ve</th>
+    <th style="width:30%;text-align:left;">Élève</th>
     <th>Moyenne</th><th>Rang</th>
-    <th style="width:28%;">ApprÃ©ciation</th>
-    <th>DÃ©cision</th>
+    <th style="width:28%;">Appréciation</th>
+    <th>Décision</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
 
-${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:700;color:#0B4D2C;margin-bottom:4px;">APPRÃ‰CIATION GÃ‰NÃ‰RALE DU CONSEIL</div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:10px;font-size:11px;font-style:italic;">${appreciationGen}</div></div>`:""}
+${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:700;color:#0B4D2C;margin-bottom:4px;">APPRÉCIATION GÉNÉRALE DU CONSEIL</div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:10px;font-size:11px;font-style:italic;">${appreciationGen}</div></div>`:""}
 
 <div class="sig-grid">
   <div class="sig-box"><div style="height:40px;"></div>Le Proviseur</div>
@@ -8878,9 +8879,9 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
     setPreviewHtml(stripAutoPrint(html));
   };
 
-  const DECISIONS=["","Passage","Redoublement","Passage conditionnel","FÃ©licitations",
+  const DECISIONS=["","Passage","Redoublement","Passage conditionnel","Félicitations",
     "Encouragements","Tableau d'honneur","Avertissement travail","Avertissement conduite"];
-  const DEC_COLORS={"Passage":"#16a34a","FÃ©licitations":"#2563eb","Encouragements":"#7c3aed",
+  const DEC_COLORS={"Passage":"#16a34a","Félicitations":"#2563eb","Encouragements":"#7c3aed",
     "Tableau d'honneur":"#d97706","Redoublement":"#dc2626","Passage conditionnel":"#d97706",
     "Avertissement travail":"#dc2626","Avertissement conduite":"#dc2626"};
 
@@ -8890,13 +8891,13 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
 
   return (
     <div style={{padding:isMobile?"10px":"20px",maxWidth:1200,margin:"0 auto"}}>
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>ðŸ›ï¸ Conseil de Classe</div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🏛️ Conseil de Classe</div>
           <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>
             {conseil?.statut==="valide"?
-              <span style={{color:"#16a34a",fontWeight:700}}>âœ“ ValidÃ©</span>:
+              <span style={{color:"#16a34a",fontWeight:700}}>✓ Validé</span>:
               <span style={{color:"#d97706"}}>Brouillon</span>}
           </div>
         </div>
@@ -8907,18 +8908,18 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
           <button onClick={handlePV}
             style={{padding:"8px 16px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",
               color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            ðŸ“„ PV
+            📄 PV
           </button>
           <button onClick={()=>{
             const rows = moyennes.map(e=>{
               const d=decisions[e.id]||{};
               return {
-                "Rang": rangs[e.id]||"â€”",
+                "Rang": rangs[e.id]||"—",
                 "Nom": e.nom,
                 "Sexe": e.sexe==="G"||e.sexe==="M"?"M":"F",
                 "Moyenne": e.moy!==null?e.moy:"",
-                "ApprÃ©ciation": d.appreciation||"",
-                "DÃ©cision": d.decision||"",
+                "Appréciation": d.appreciation||"",
+                "Décision": d.decision||"",
                 "Observations": d.observations||""
               };
             });
@@ -8930,17 +8931,17 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
           }}
             style={{padding:"8px 16px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",
               color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            ðŸ“Š Export Excel
+            📊 Export Excel
           </button>
           {!isValide&&<button onClick={()=>handleSave("brouillon")} disabled={saving}
             style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#e5e7eb",
               color:"#374151",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:saving?.6:1}}>
-            {saving?"...":"ðŸ’¾ Sauvegarder"}
+            {saving?"...":"💾 Sauvegarder"}
           </button>}
-          {!isValide&&<button onClick={()=>window.confirm("Valider dÃ©finitivement ce conseil ?")&&handleSave("valide")}
+          {!isValide&&<button onClick={()=>window.confirm("Valider définitivement ce conseil ?")&&handleSave("valide")}
             style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#0B4D2C",
               color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            âœ“ Valider
+            ✓ Valider
           </button>}
         </div>
       </div>
@@ -8955,10 +8956,10 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
           </select>
         </div>
         <div>
-          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>SÃ©quence</div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>Séquence</div>
           <select value={selSeq} onChange={e=>setSelSeq(+e.target.value)}
             style={{...inp,padding:"8px 12px",fontSize:13}}>
-            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>S{s} â€” Trimestre {s<=2?1:s<=4?2:3}</option>)}
+            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>S{s} — Trimestre {s<=2?1:s<=4?2:3}</option>)}
           </select>
         </div>
         <div>
@@ -8968,15 +8969,15 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
         </div>
       </div>
 
-      {/* ApprÃ©ciation gÃ©nÃ©rale */}
+      {/* Appréciation générale */}
       <div style={{marginBottom:14}}>
         <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase"}}>
-          ApprÃ©ciation gÃ©nÃ©rale du conseil
+          Appréciation générale du conseil
         </div>
         <textarea value={appreciationGen} onChange={e=>setAppreciationGen(e.target.value)}
           disabled={isValide} rows={2}
           style={{...inp,padding:"8px 12px",fontSize:13,resize:"vertical",width:"100%"}}
-          placeholder="Observations gÃ©nÃ©rales sur la classe..."/>
+          placeholder="Observations générales sur la classe..."/>
       </div>
 
       {/* Statistiques rapides */}
@@ -8991,7 +8992,7 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
             {[
               {n:elevesClasse.length,l:"Effectif",c:"#0B4D2C"},
               {n:moyClass!==null?moyClass.toFixed(2):"-",l:"Moy. classe",c:"#2563eb"},
-              {n:moy10,l:"â‰¥ 10/20",c:"#16a34a"},
+              {n:moy10,l:"≥ 10/20",c:"#16a34a"},
               {n:passed,l:"Admis",c:"#16a34a"},
               {n:redoub,l:"Redoublants",c:"#dc2626"},
             ].map(({n,l,c})=>(
@@ -9005,40 +9006,40 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
         );
       })()}
 
-      {/* Tableau des Ã©lÃ¨ves */}
-      {loading?<div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargementâ€¦</div>:(
+      {/* Tableau des élèves */}
+      {loading?<div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargement…</div>:(
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead>
               <tr style={{background:"#0B4D2C",color:"#fff"}}>
                 <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Rang</th>
-                <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Ã‰lÃ¨ve</th>
+                <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>Élève</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700}}>Moy.</th>
-                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:160}}>ApprÃ©ciation</th>
-                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:150}}>DÃ©cision</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:160}}>Appréciation</th>
+                <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:150}}>Décision</th>
                 <th style={{padding:"8px 6px",textAlign:"center",fontWeight:700,minWidth:120}}>Observations</th>
               </tr>
             </thead>
             <tbody>
               {moyennes.map((e,i)=>{
                 const moy=e.moy;
-                const rang=rangs[e.id]||"â€”";
+                const rang=rangs[e.id]||"—";
                 const moyCol=moy===null?"#9ca3af":moy>=10?"#16a34a":"#dc2626";
                 const dec=getD(e.id,"decision","");
                 const decCol=DEC_COLORS[dec]||"#374151";
                 return (
                   <tr key={e.id} style={{background:i%2===0?"#fff":"#f9fafb",borderBottom:"1px solid #f0f0f0"}}>
                     <td style={{padding:"6px 10px",textAlign:"center",fontWeight:700,color:"#6b7280"}}>
-                      {moy!==null?rang:"â€”"}
+                      {moy!==null?rang:"—"}
                     </td>
                     <td style={{padding:"6px 10px",fontWeight:600}}>{e.nom}</td>
                     <td style={{padding:"6px 6px",textAlign:"center",fontWeight:900,fontSize:13,color:moyCol}}>
-                      {moy!==null?moy.toFixed(2):"â€”"}
+                      {moy!==null?moy.toFixed(2):"—"}
                     </td>
                     <td style={{padding:"4px 6px"}}>
                       <input value={getD(e.id,"appreciation","")} disabled={isValide}
                         onChange={ev=>setD(e.id,"appreciation",ev.target.value)}
-                        style={{...inp,fontSize:11}} placeholder="ApprÃ©ciationâ€¦"/>
+                        style={{...inp,fontSize:11}} placeholder="Appréciation…"/>
                     </td>
                     <td style={{padding:"4px 6px"}}>
                       <select value={dec} disabled={isValide}
@@ -9046,7 +9047,7 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
                         style={{...inp,color:decCol,fontWeight:dec?700:400}}>
                         {DECISIONS.map(d=><option key={d} value={d}
                           style={{color:DEC_COLORS[d]||"#374151"}}>
-                          {d||"â€” DÃ©cision â€”"}
+                          {d||"— Décision —"}
                         </option>)}
                       </select>
                     </td>
@@ -9063,12 +9064,12 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
         </div>
       )}
 
-      {/* AperÃ§u PV */}
+      {/* Aperçu PV */}
       {previewHtml&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
           <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
             <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>ðŸ“„ PV â€” {selClasse} Â· S{selSeq}</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📄 PV — {selClasse} · S{selSeq}</div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>imprimerHTML(previewHtml)}
                   style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Imprimer</button>
@@ -9090,7 +9091,7 @@ function BulletinsPage() {
   const {user,data} = useApp();
   const {isMobile} = useDevice();
   const isAdm = isAdminRole(user?.role)||user?.role==="censeur";
-  // Classes disponibles selon rÃ´le
+  // Classes disponibles selon rôle
   const classes = useMemo(()=>{
     if(!data) return [];
     const set=new Set();
@@ -9110,7 +9111,7 @@ function BulletinsPage() {
 
   const elevesClasse = useMemo(()=>{
     if(!selClasse||!data) return [];
-    // Chercher dans ELEVES_DB (frontend) â€” fallback si table eleves pas encore chargÃ©e
+    // Chercher dans ELEVES_DB (frontend) — fallback si table eleves pas encore chargée
     return (ELEVES_DB[selClasse]||[]).map(e=>({id:e.id, nom:e.n||e.nom||"", sexe:e.g||e.sexe||"G", numero:e.num||e.numero||""}));
   },[selClasse,data]);
 
@@ -9175,14 +9176,14 @@ function BulletinsPage() {
     const coefs = getCoefsForClasse(selClasse);
     const {rangs} = calcRangsClasse(selClasse, selSeq, data?.notes||{}, elevesClasse);
 
-    // En-tÃªtes dynamiques par matiÃ¨re
+    // En-têtes dynamiques par matière
     const rows = filteredEleves.map(e=>{
       const row = {
-        "NÂ°": filteredEleves.indexOf(e)+1,
+        "N°": filteredEleves.indexOf(e)+1,
         "Nom": e.nom,
         "Sexe": e.sexe==="G"||e.sexe==="M"?"M":"F",
       };
-      // Notes par matiÃ¨re
+      // Notes par matière
       let totalPts=0, totalCoef=0;
       coefs.forEach(({matiere,coef})=>{
         const k=`${selClasse}||${matiere}-S${selSeq}`;
@@ -9200,7 +9201,7 @@ function BulletinsPage() {
     });
 
     // Ligne statistiques classe
-    const statsRow = {"NÂ°":"", "Nom":"MOYENNES CLASSE", "Sexe":""};
+    const statsRow = {"N°":"", "Nom":"MOYENNES CLASSE", "Sexe":""};
     coefs.forEach(({matiere,coef})=>{
       const moyC = calcMoyClasse(selClasse, selSeq, matiere, data?.notes||{}, elevesClasse);
       statsRow[`${matiere} (coef ${coef})`] = moyC!==null?moyC:"";
@@ -9216,21 +9217,21 @@ function BulletinsPage() {
 
   return (
     <div style={{padding:isMobile?"12px":"24px",maxWidth:1000,margin:"0 auto"}}>
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>ðŸ“‹ Bulletins de notes</div>
-          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>GÃ©nÃ©ration Â· SÃ©quences S1 Ã  S6</div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>📋 Bulletins de notes</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Génération · Séquences S1 à S6</div>
         </div>
         {selClasse && filteredEleves.length>0 && (
           <div style={{display:"flex",gap:8}}>
             <button onClick={handleExportExcel}
               style={{padding:"10px 18px",borderRadius:10,border:"1.5px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-              ðŸ“Š Export Excel
+              📊 Export Excel
             </button>
             <button onClick={handlePrintAll}
               style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-              ðŸ–¨ Imprimer tout ({filteredEleves.length})
+              🖨 Imprimer tout ({filteredEleves.length})
             </button>
           </div>
         )}
@@ -9241,37 +9242,37 @@ function BulletinsPage() {
         <div>
           <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Classe</div>
           <select value={selClasse} onChange={e=>{setSelClasse(e.target.value);setSelEleve(null);}} style={inp}>
-            <option value="">â€” Choisir une classe â€”</option>
+            <option value="">— Choisir une classe —</option>
             {classes.map(c=><option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>SÃ©quence</div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Séquence</div>
           <select value={selSeq} onChange={e=>setSelSeq(+e.target.value)} style={inp}>
-            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>SÃ©quence {s} â€” Trimestre {s<=2?1:s<=4?2:3}</option>)}
+            {[1,2,3,4,5,6].map(s=><option key={s} value={s}>Séquence {s} — Trimestre {s<=2?1:s<=4?2:3}</option>)}
           </select>
         </div>
         <div>
           <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Rechercher</div>
-          <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} style={inp} placeholder="Nom de l'Ã©lÃ¨veâ€¦"/>
+          <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} style={inp} placeholder="Nom de l'élève…"/>
         </div>
       </div>
 
-      {/* Liste Ã©lÃ¨ves */}
+      {/* Liste élèves */}
       {!selClasse ? (
         <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>
-          <div style={{fontSize:40,marginBottom:12}}>ðŸ“‹</div>
+          <div style={{fontSize:40,marginBottom:12}}>📋</div>
           <div style={{fontSize:15,fontWeight:700}}>Choisissez une classe pour commencer</div>
         </div>
       ) : filteredEleves.length===0 ? (
-        <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Aucun Ã©lÃ¨ve dans cette classe</div>
+        <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Aucun élève dans cette classe</div>
       ) : (
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto auto auto",gap:10,padding:"8px 14px",background:"#f0fdf4",borderRadius:8,fontSize:11,fontWeight:700,color:"#0B4D2C",textTransform:"uppercase",letterSpacing:".5px"}}>
             <div>#</div><div>Nom</div><div>Moy.</div><div>Rang</div><div></div>
           </div>
           {filteredEleves.map((e,i)=>{
-            // Calculer moyenne Ã  la volÃ©e
+            // Calculer moyenne à la volée
             const coefs=getCoefsForClasse(selClasse);
             let tp=0,tc=0;
             coefs.forEach(({matiere,coef})=>{
@@ -9280,7 +9281,7 @@ function BulletinsPage() {
               if(n!==undefined&&n!==null&&n!==""){tp+=+n*coef;tc+=coef;}
             });
             const moy=tc>0?Math.round(tp/tc*100)/100:null;
-            const rang=rangs[e.id]||"â€”";
+            const rang=rangs[e.id]||"—";
             const moyCol=moy===null?"#9ca3af":moy>=10?"#15803d":"#dc2626";
             return (
               <div key={e.id} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7eb",padding:"12px 16px",display:"grid",gridTemplateColumns:"40px 1fr 70px 50px auto",alignItems:"center",gap:10}}>
@@ -9289,15 +9290,15 @@ function BulletinsPage() {
                 </div>
                 <div>
                   <div style={{fontWeight:700,fontSize:13,color:"#1f2937"}}>{e.nom}</div>
-                  <div style={{fontSize:11,color:"#6b7280"}}>{e.sexe==="G"||e.sexe==="M"?"GarÃ§on":"Fille"}</div>
+                  <div style={{fontSize:11,color:"#6b7280"}}>{e.sexe==="G"||e.sexe==="M"?"Garçon":"Fille"}</div>
                 </div>
                 <div style={{fontWeight:900,fontSize:15,color:moyCol}}>
-                  {moy!==null?moy.toFixed(2):"â€”"}<span style={{fontSize:10,color:"#9ca3af"}}>/20</span>
+                  {moy!==null?moy.toFixed(2):"—"}<span style={{fontSize:10,color:"#9ca3af"}}>/20</span>
                 </div>
                 <div style={{fontSize:13,fontWeight:700,color:"#6b7280"}}>{rang}</div>
                 <button onClick={()=>handlePreview(e)}
                   style={{padding:"6px 14px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                  ðŸ‘ Bulletin
+                  👁 Bulletin
                 </button>
               </div>
             );
@@ -9305,12 +9306,12 @@ function BulletinsPage() {
         </div>
       )}
 
-      {/* AperÃ§u PDF */}
+      {/* Aperçu PDF */}
       {previewHtml && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
           <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
             <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>ðŸ“‹ Bulletin â€” {selEleve?.nom} Â· {selClasse} Â· S{selSeq}</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📋 Bulletin — {selEleve?.nom} · {selClasse} · S{selSeq}</div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>imprimerHTML(previewHtml)}
                   style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Imprimer</button>
@@ -9328,12 +9329,12 @@ function BulletinsPage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// BABILLARD NUMÃ‰RIQUE â€” Tableau d'affichage de l'Ã©tablissement
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SECRÃ‰TARIAT â€” Documents administratifs officiels
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// BABILLARD NUMÉRIQUE — Tableau d'affichage de l'établissement
+// ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// SECRÉTARIAT — Documents administratifs officiels
+// ════════════════════════════════════════════════════════════════
 function SecretariatPage() {
   const {user, data} = useApp();
   const {isMobile} = useDevice();
@@ -9357,17 +9358,17 @@ function SecretariatPage() {
   const headerHtml = `
     <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:3px solid #0B4D2C;padding-bottom:10px;margin-bottom:14px;">
       <div style="font-size:9px;line-height:1.8;color:#1f2937;">
-        <strong>REPUBLIC OF CAMEROON</strong><br>Peace â€“ Work â€“ Fatherland<br>
-        Ministry of Secondary Education<br>Far North Region Â· DiamarÃ© Division
+        <strong>REPUBLIC OF CAMEROON</strong><br>Peace – Work – Fatherland<br>
+        Ministry of Secondary Education<br>Far North Region · Diamaré Division
       </div>
       <div style="text-align:center;">
         <img src="${logoUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #D4AF37;" onerror="this.style.display='none'"/>
-        <div style="font-size:14px;font-weight:900;color:#0B4D2C;margin-top:4px;text-transform:uppercase;">LYCÃ‰E DE KAKATARE-MAROUA</div>
-        <div style="font-size:9px;color:#6b7280;">BP 162 Maroua â€“ TÃ©l. 222 29 21 63 â€“ Mle 0CJ1GSF8111231106</div>
+        <div style="font-size:14px;font-weight:900;color:#0B4D2C;margin-top:4px;text-transform:uppercase;">LYCÉE DE KAKATARE-MAROUA</div>
+        <div style="font-size:9px;color:#6b7280;">BP 162 Maroua – Tél. 222 29 21 63 – Mle 0CJ1GSF8111231106</div>
       </div>
       <div style="text-align:right;font-size:9px;line-height:1.8;color:#1f2937;">
-        <strong>RÃ‰PUBLIQUE DU CAMEROUN</strong><br>Paix â€“ Travail â€“ Patrie<br>
-        MinistÃ¨re des Enseignements Secondaires<br>RÃ©gion ExtrÃªme-Nord Â· DÃ©p. du DiamarÃ©
+        <strong>RÉPUBLIQUE DU CAMEROUN</strong><br>Paix – Travail – Patrie<br>
+        Ministère des Enseignements Secondaires<br>Région Extrême-Nord · Dép. du Diamaré
       </div>
     </div>`;
 
@@ -9377,7 +9378,7 @@ function SecretariatPage() {
     const sexe = eleve.sexe||eleve.g||"M";
     const isFemme = sexe==="F";
     const dateDoc = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
-    const ref = `NÂ°${Date.now().toString().slice(-6)}/ATT/LYKAMA/${new Date().getFullYear()}`;
+    const ref = `N°${Date.now().toString().slice(-6)}/ATT/LYKAMA/${new Date().getFullYear()}`;
 
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
@@ -9395,20 +9396,20 @@ body{font-family:Arial,sans-serif;font-size:12px;color:#1f2937;padding:20mm;}
 <script>window.onload=()=>window.print();</script>
 </head><body>
 ${headerHtml}
-<div class="ref">RÃ©f : ${ref} Â· Maroua, le ${dateDoc}</div>
-<div class="title">Attestation de ScolaritÃ©</div>
+<div class="ref">Réf : ${ref} · Maroua, le ${dateDoc}</div>
+<div class="title">Attestation de Scolarité</div>
 <div class="body">
-Je soussignÃ©, <strong>MARTIN PAUL</strong>, Proviseur du LycÃ©e de Kakatare-Maroua,
-atteste que <strong>${nom}</strong> est ${isFemme?"inscrite":"inscrit"} dans notre Ã©tablissement
-pour le compte de l'annÃ©e scolaire <strong>${annee}</strong>, en classe de <strong>${classe}</strong>.
+Je soussigné, <strong>MARTIN PAUL</strong>, Proviseur du Lycée de Kakatare-Maroua,
+atteste que <strong>${nom}</strong> est ${isFemme?"inscrite":"inscrit"} dans notre établissement
+pour le compte de l'année scolaire <strong>${annee}</strong>, en classe de <strong>${classe}</strong>.
 <br><br>
-Cette attestation est dÃ©livrÃ©e Ã  ${isFemme?"l'intÃ©ressÃ©e":"l'intÃ©ressÃ©"} pour servir et valoir
-ce que de droit${motif?" (motif : "+motif+")":" notamment pour prÃ©sentation aux autoritÃ©s compÃ©tentes"}.
+Cette attestation est délivrée à ${isFemme?"l'intéressée":"l'intéressé"} pour servir et valoir
+ce que de droit${motif?" (motif : "+motif+")":" notamment pour présentation aux autorités compétentes"}.
 </div>
 ${motif?'<div style="margin:10px 0;"><strong>Motif :</strong> '+motif+'</div>':""}
 <div class="sig">
-  <div class="sig-box"><div style="height:50px;"></div>LE SECRÃ‰TAIRE<br><strong>HASSAN</strong></div>
-  <div class="sig-box"><div style="height:50px;"></div>LE PROVISEUR<br><strong>MARTIN PAUL</strong><br><small>PLEG â€“ Hors Ã‰chelle</small></div>
+  <div class="sig-box"><div style="height:50px;"></div>LE SECRÉTAIRE<br><strong>HASSAN</strong></div>
+  <div class="sig-box"><div style="height:50px;"></div>LE PROVISEUR<br><strong>MARTIN PAUL</strong><br><small>PLEG – Hors Échelle</small></div>
 </div>
 </body></html>`;
   };
@@ -9419,7 +9420,7 @@ ${motif?'<div style="margin:10px 0;"><strong>Motif :</strong> '+motif+'</div>':"
     const sexe = eleve.sexe||eleve.g||"M";
     const isFemme = sexe==="F";
     const dateDoc = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
-    const ref = `NÂ°${Date.now().toString().slice(-6)}/CERT/LYKAMA/${new Date().getFullYear()}`;
+    const ref = `N°${Date.now().toString().slice(-6)}/CERT/LYKAMA/${new Date().getFullYear()}`;
 
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
@@ -9436,21 +9437,21 @@ body{font-family:Arial,sans-serif;font-size:12px;color:#1f2937;padding:20mm;}
 <script>window.onload=()=>window.print();</script>
 </head><body>
 ${headerHtml}
-<div class="ref">RÃ©f : ${ref} Â· Maroua, le ${dateDoc}</div>
-<div class="title">Certificat de FrÃ©quentation Scolaire</div>
+<div class="ref">Réf : ${ref} · Maroua, le ${dateDoc}</div>
+<div class="title">Certificat de Fréquentation Scolaire</div>
 <div class="body">
-Je soussignÃ©, <strong>MARTIN PAUL</strong>, Proviseur du LycÃ©e de Kakatare-Maroua,
-certifie que <strong>${nom}</strong> frÃ©quente rÃ©guliÃ¨rement notre Ã©tablissement
-pour l'annÃ©e scolaire <strong>${annee}</strong>, en classe de <strong>${classe}</strong>.
+Je soussigné, <strong>MARTIN PAUL</strong>, Proviseur du Lycée de Kakatare-Maroua,
+certifie que <strong>${nom}</strong> fréquente régulièrement notre établissement
+pour l'année scolaire <strong>${annee}</strong>, en classe de <strong>${classe}</strong>.
 <br><br>
-${isFemme?"L'Ã©lÃ¨ve est":"L'Ã©lÃ¨ve est"} ${isFemme?"connue":"connu"} pour son sÃ©rieux et sa rÃ©gularitÃ©.
+${isFemme?"L'élève est":"L'élève est"} ${isFemme?"connue":"connu"} pour son sérieux et sa régularité.
 <br><br>
-Le prÃ©sent certificat est Ã©tabli Ã  la demande de ${isFemme?"l'intÃ©ressÃ©e":"l'intÃ©ressÃ©"} pour
-servir et valoir ce que de droit${motif?" (motif : "+motif+")":" notamment pour toutes dÃ©marches administratives"}.
+Le présent certificat est établi à la demande de ${isFemme?"l'intéressée":"l'intéressé"} pour
+servir et valoir ce que de droit${motif?" (motif : "+motif+")":" notamment pour toutes démarches administratives"}.
 </div>
 <div class="sig">
-  <div class="sig-box"><div style="height:50px;"></div>LE SECRÃ‰TAIRE<br><strong>HASSAN</strong></div>
-  <div class="sig-box"><div style="height:50px;"></div>LE PROVISEUR<br><strong>MARTIN PAUL</strong><br><small>PLEG â€“ Hors Ã‰chelle</small></div>
+  <div class="sig-box"><div style="height:50px;"></div>LE SECRÉTAIRE<br><strong>HASSAN</strong></div>
+  <div class="sig-box"><div style="height:50px;"></div>LE PROVISEUR<br><strong>MARTIN PAUL</strong><br><small>PLEG – Hors Échelle</small></div>
 </div>
 </body></html>`;
   };
@@ -9476,21 +9477,21 @@ td{border:1px solid #d1d5db;padding:8px 10px;font-size:11px;}
 </style>
 </head><body>
 ${headerHtml}
-<div class="title">Fiche d'Inscription â€” AnnÃ©e scolaire ${annee}</div>
-<div class="photo-box">ðŸ“·<div style="font-size:9px;margin-top:4px;color:#9ca3af;">Photo</div></div>
+<div class="title">Fiche d'Inscription — Année scolaire ${annee}</div>
+<div class="photo-box">📷<div style="font-size:9px;margin-top:4px;color:#9ca3af;">Photo</div></div>
 <table>
-  <tr><td class="label">Nom et PrÃ©noms</td><td><strong>${nom}</strong></td></tr>
-  <tr><td class="label">Matricule</td><td>${eleve.numero||eleve.num||"â€”"}</td></tr>
-  <tr><td class="label">Sexe</td><td>${sexe==="F"?"FÃ©minin":"Masculin"}</td></tr>
-  <tr><td class="label">Date de naissance</td><td>â€”</td></tr>
-  <tr><td class="label">Lieu de naissance</td><td>â€”</td></tr>
+  <tr><td class="label">Nom et Prénoms</td><td><strong>${nom}</strong></td></tr>
+  <tr><td class="label">Matricule</td><td>${eleve.numero||eleve.num||"—"}</td></tr>
+  <tr><td class="label">Sexe</td><td>${sexe==="F"?"Féminin":"Masculin"}</td></tr>
+  <tr><td class="label">Date de naissance</td><td>—</td></tr>
+  <tr><td class="label">Lieu de naissance</td><td>—</td></tr>
   <tr><td class="label">Classe</td><td>${classe}</td></tr>
-  <tr><td class="label">AnnÃ©e scolaire</td><td>${annee}</td></tr>
+  <tr><td class="label">Année scolaire</td><td>${annee}</td></tr>
   <tr><td class="label">Statut</td><td>Nouveau / Redoublant</td></tr>
-  <tr><td class="label">Nom du pÃ¨re/tuteur</td><td>&nbsp;</td></tr>
-  <tr><td class="label">Nom de la mÃ¨re</td><td>&nbsp;</td></tr>
+  <tr><td class="label">Nom du père/tuteur</td><td>&nbsp;</td></tr>
+  <tr><td class="label">Nom de la mère</td><td>&nbsp;</td></tr>
   <tr><td class="label">Adresse des parents</td><td>&nbsp;</td></tr>
-  <tr><td class="label">TÃ©lÃ©phone</td><td>&nbsp;</td></tr>
+  <tr><td class="label">Téléphone</td><td>&nbsp;</td></tr>
 </table>
 <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;font-size:10px;">
   <div style="border-top:1px solid #d1d5db;padding-top:8px;">Signature du parent/tuteur</div>
@@ -9508,9 +9509,9 @@ ${headerHtml}
   };
 
   const DOCS = [
-    {id:"attestation", label:"ðŸ“‹ Attestation de scolaritÃ©"},
-    {id:"certificat",  label:"ðŸ“œ Certificat de frÃ©quentation"},
-    {id:"inscription", label:"ðŸ“ Fiche d'inscription"},
+    {id:"attestation", label:"📋 Attestation de scolarité"},
+    {id:"certificat",  label:"📜 Certificat de fréquentation"},
+    {id:"inscription", label:"📝 Fiche d'inscription"},
   ];
 
   const inp={border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",
@@ -9519,7 +9520,7 @@ ${headerHtml}
   return (
     <div style={{padding:isMobile?"12px":"24px",maxWidth:900,margin:"0 auto"}}>
       <div style={{marginBottom:20}}>
-        <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>ðŸ—‚ï¸ SecrÃ©tariat</div>
+        <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🗂️ Secrétariat</div>
         <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Documents administratifs officiels</div>
       </div>
 
@@ -9557,42 +9558,42 @@ ${headerHtml}
           </div>
         )}
 
-        {/* AnnÃ©e scolaire */}
+        {/* Année scolaire */}
         <div>
           <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
-            textTransform:"uppercase",letterSpacing:".5px"}}>AnnÃ©e scolaire</div>
+            textTransform:"uppercase",letterSpacing:".5px"}}>Année scolaire</div>
           <select value={annee} onChange={e=>setAnnee(e.target.value)} style={{...inp}}>
-            <option value="2025-2026">2025â€“2026</option>
-            <option value="2024-2025">2024â€“2025</option>
+            <option value="2025-2026">2025–2026</option>
+            <option value="2024-2025">2024–2025</option>
           </select>
         </div>
       </div>
 
-      {/* Recherche Ã©lÃ¨ve */}
+      {/* Recherche élève */}
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:16}}>
         <div>
           <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
             textTransform:"uppercase",letterSpacing:".5px"}}>Classe</div>
           <select value={selClasse} onChange={e=>{setSelClasse(e.target.value);setSearchTerm("");}}
             style={{...inp,width:"100%"}}>
-            <option value="">â€” Toutes les classes â€”</option>
+            <option value="">— Toutes les classes —</option>
             {classes.map(c=><option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
           <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
-            textTransform:"uppercase",letterSpacing:".5px"}}>Rechercher un Ã©lÃ¨ve</div>
+            textTransform:"uppercase",letterSpacing:".5px"}}>Rechercher un élève</div>
           <input value={searchTerm} onChange={e=>{setSearchTerm(e.target.value);setSelClasse("");}}
-            style={{...inp,width:"100%"}} placeholder="Nom de l'Ã©lÃ¨ve..."/>
+            style={{...inp,width:"100%"}} placeholder="Nom de l'élève..."/>
         </div>
       </div>
 
-      {/* Liste Ã©lÃ¨ves */}
+      {/* Liste élèves */}
       {filteredEleves.length===0?(
         <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>
-          <div style={{fontSize:40,marginBottom:12}}>ðŸ”</div>
+          <div style={{fontSize:40,marginBottom:12}}>🔍</div>
           <div style={{fontSize:14,fontWeight:700}}>
-            {searchTerm||selClasse?"Aucun Ã©lÃ¨ve trouvÃ©":"Choisissez une classe ou recherchez un Ã©lÃ¨ve"}
+            {searchTerm||selClasse?"Aucun élève trouvé":"Choisissez une classe ou recherchez un élève"}
           </div>
         </div>
       ):(
@@ -9608,25 +9609,25 @@ ${headerHtml}
               </div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13,color:"#1f2937"}}>{e.nom||e.n}</div>
-                <div style={{fontSize:11,color:"#6b7280"}}>{selClasse||e.classe||"â€”"}</div>
+                <div style={{fontSize:11,color:"#6b7280"}}>{selClasse||e.classe||"—"}</div>
               </div>
               <button onClick={()=>handleGenerate(e)}
                 style={{padding:"7px 16px",borderRadius:8,border:"none",
                   background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,
                   cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                ðŸ“„ GÃ©nÃ©rer
+                📄 Générer
               </button>
             </div>
           ))}
           {filteredEleves.length>50&&(
             <div style={{textAlign:"center",fontSize:12,color:"#9ca3af",padding:8}}>
-              {filteredEleves.length-50} Ã©lÃ¨ves supplÃ©mentaires â€” affinez la recherche
+              {filteredEleves.length-50} élèves supplémentaires — affinez la recherche
             </div>
           )}
         </div>
       )}
 
-      {/* AperÃ§u document */}
+      {/* Aperçu document */}
       {previewHtml&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,
           display:"flex",flexDirection:"column",padding:16}}>
@@ -9678,11 +9679,11 @@ function BabillardPage() {
 
   const CATS = ["Annonce","Urgent","Circulaire","Convocation","Information"];
   const CAT_COLORS = {
-    "Annonce":   {bg:"#dbeafe",col:"#1d4ed8",dot:"ðŸ”µ"},
-    "Urgent":    {bg:"#fee2e2",col:"#dc2626",dot:"ðŸ”´"},
-    "Circulaire":{bg:"#f0fdf4",col:"#16a34a",dot:"ðŸŸ¢"},
-    "Convocation":{bg:"#fef9c3",col:"#b45309",dot:"ðŸŸ¡"},
-    "Information":{bg:"#f3f4f6",col:"#374151",dot:"âšª"},
+    "Annonce":   {bg:"#dbeafe",col:"#1d4ed8",dot:"🔵"},
+    "Urgent":    {bg:"#fee2e2",col:"#dc2626",dot:"🔴"},
+    "Circulaire":{bg:"#f0fdf4",col:"#16a34a",dot:"🟢"},
+    "Convocation":{bg:"#fef9c3",col:"#b45309",dot:"🟡"},
+    "Information":{bg:"#f3f4f6",col:"#374151",dot:"⚪"},
   };
 
   const loadAnnonces = async () => {
@@ -9710,7 +9711,7 @@ function BabillardPage() {
   const handleSave = async () => {
     if(!form.titre.trim()||!form.contenu.trim()){alert("Titre et contenu obligatoires.");return;}
     setSaving(true);
-    // Upload piÃ¨ce jointe si prÃ©sente
+    // Upload pièce jointe si présente
     let pj = null;
     if(form.fichier) {
       try {
@@ -9775,7 +9776,7 @@ function BabillardPage() {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
           <div style={{flex:1}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-              {a.epingle && <span style={{fontSize:14}}>ðŸ“Œ</span>}
+              {a.epingle && <span style={{fontSize:14}}>📌</span>}
               <span style={{background:cc.bg,color:cc.col,borderRadius:20,padding:"2px 10px",
                 fontSize:10,fontWeight:700}}>{cc.dot} {a.categorie}</span>
               <span style={{fontSize:10,color:"#9ca3af"}}>{dateStr}</span>
@@ -9785,8 +9786,8 @@ function BabillardPage() {
             <div style={{fontSize:15,fontWeight:800,color:"#1f2937",marginBottom:8}}>{a.titre}</div>
             <div style={{fontSize:13,color:"#374151",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{a.contenu}</div>
             <div style={{marginTop:8,fontSize:10,color:"#9ca3af",display:"flex",gap:12,flexWrap:"wrap"}}>
-              <span>âœï¸ {a.auteur_nom||a.auteur_id}</span>
-              <span>â± Expire le {new Date(a.expire_at).toLocaleDateString("fr-FR")}</span>
+              <span>✍️ {a.auteur_nom||a.auteur_id}</span>
+              <span>⏱ Expire le {new Date(a.expire_at).toLocaleDateString("fr-FR")}</span>
             </div>
             {(a.pieces_jointes||[]).length>0&&(
               <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:6}}>
@@ -9795,11 +9796,11 @@ function BabillardPage() {
                     style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",
                       borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",
                       textDecoration:"none",color:"#0B4D2C",fontSize:11,fontWeight:700}}>
-                    ðŸ“Ž {pj.nom}
+                    📎 {pj.nom}
                     <span style={{color:"#9ca3af",fontWeight:400}}>
                       ({pj.taille>1048576?(pj.taille/1048576).toFixed(1)+"MB":(pj.taille/1024).toFixed(0)+"KB"})
                     </span>
-                    â¬‡
+                    ⬇
                   </a>
                 ))}
               </div>
@@ -9811,18 +9812,18 @@ function BabillardPage() {
                 <button onClick={()=>handleEpingle(a)}
                   style={{padding:"5px 10px",borderRadius:6,border:`1px solid ${a.epingle?"#D4AF37":"#e5e7eb"}`,
                     background:a.epingle?"#fef9c3":"#f9fafb",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                  {a.epingle?"ðŸ“Œ Ã‰pinglÃ©":"ðŸ“Œ Ã‰pingler"}
+                  {a.epingle?"📌 Épinglé":"📌 Épingler"}
                 </button>
               )}
               <button onClick={()=>openEdit(a)}
                 style={{padding:"5px 10px",borderRadius:6,border:"1px solid #0B4D2C",
                   background:"#fff",color:"#0B4D2C",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                âœï¸ Modifier
+                ✏️ Modifier
               </button>
               <button onClick={()=>handleDelete(a.id)}
                 style={{padding:"5px 10px",borderRadius:6,border:"1px solid #fee2e2",
                   background:"#fff",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                ðŸ—‘ Supprimer
+                🗑 Supprimer
               </button>
             </div>
           )}
@@ -9833,22 +9834,22 @@ function BabillardPage() {
 
   return (
     <div style={{padding:isMobile?"12px":"24px",maxWidth:860,margin:"0 auto"}}>
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>ðŸ“Œ Babillard</div>
-          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Tableau d'affichage du LycÃ©e de Kakatare</div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>📌 Babillard</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Tableau d'affichage du Lycée de Kakatare</div>
         </div>
         {canWrite && (
           <button onClick={openNew}
             style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",
               color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            ï¼‹ Nouvelle annonce
+            ＋ Nouvelle annonce
           </button>
         )}
       </div>
 
-      {/* Filtres par catÃ©gorie */}
+      {/* Filtres par catégorie */}
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
         {["Tous",...CATS].map(cat=>{
           const cc = CAT_COLORS[cat];
@@ -9859,7 +9860,7 @@ function BabillardPage() {
                 background:filterCat===cat?"#0B4D2C":cc?cc.bg:"#f9fafb",
                 color:filterCat===cat?"#fff":cc?cc.col:"#374151",
                 fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-              {cc?.dot||"ðŸ“‹"} {cat} {count>0?<span style={{opacity:.7}}>({count})</span>:""}
+              {cc?.dot||"📋"} {cat} {count>0?<span style={{opacity:.7}}>({count})</span>:""}
             </button>
           );
         })}
@@ -9867,13 +9868,13 @@ function BabillardPage() {
 
       {/* Contenu */}
       {loading ? (
-        <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>Chargementâ€¦</div>
+        <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>Chargement…</div>
       ) : filtered.length===0 ? (
         <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>
-          <div style={{fontSize:48,marginBottom:12}}>ðŸ“‹</div>
+          <div style={{fontSize:48,marginBottom:12}}>📋</div>
           <div style={{fontSize:15,fontWeight:700}}>Aucune annonce</div>
           <div style={{fontSize:13,marginTop:6}}>
-            {canWrite?"Publiez la premiÃ¨re annonce !":"Aucune annonce pour le moment."}
+            {canWrite?"Publiez la première annonce !":"Aucune annonce pour le moment."}
           </div>
         </div>
       ) : (
@@ -9881,14 +9882,14 @@ function BabillardPage() {
           {epinglees.length>0 && (
             <div style={{marginBottom:16}}>
               <div style={{fontSize:11,fontWeight:700,color:"#D4AF37",textTransform:"uppercase",
-                letterSpacing:".8px",marginBottom:8}}>ðŸ“Œ Ã‰pinglÃ©es</div>
+                letterSpacing:".8px",marginBottom:8}}>📌 Épinglées</div>
               {epinglees.map(a=><AnnonceCard key={a.id} a={a}/>)}
             </div>
           )}
           {normales.length>0 && (
             <div>
               {epinglees.length>0 && <div style={{fontSize:11,fontWeight:700,color:"#6b7280",
-                textTransform:"uppercase",letterSpacing:".8px",marginBottom:8}}>ðŸ“¢ Annonces rÃ©centes</div>}
+                textTransform:"uppercase",letterSpacing:".8px",marginBottom:8}}>📢 Annonces récentes</div>}
               {normales.map(a=><AnnonceCard key={a.id} a={a}/>)}
             </div>
           )}
@@ -9902,28 +9903,28 @@ function BabillardPage() {
             padding:isMobile?"16px":"28px",minHeight:isMobile?"100vh":"auto"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
               <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>
-                {editId?"âœï¸ Modifier l'annonce":"ðŸ“Œ Nouvelle annonce"}
+                {editId?"✏️ Modifier l'annonce":"📌 Nouvelle annonce"}
               </div>
               <button onClick={()=>{setShowForm(false);resetForm();setEditId(null);}}
-                style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>âœ•</button>
+                style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>✕</button>
             </div>
 
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
                 <span style={label}>Titre *</span>
                 <input value={form.titre} onChange={e=>setForm(p=>({...p,titre:e.target.value}))}
-                  style={inp} placeholder="Ex: RÃ©union des enseignants vendredi 15h"/>
+                  style={inp} placeholder="Ex: Réunion des enseignants vendredi 15h"/>
               </div>
 
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 <div>
-                  <span style={label}>CatÃ©gorie</span>
+                  <span style={label}>Catégorie</span>
                   <select value={form.categorie} onChange={e=>setForm(p=>({...p,categorie:e.target.value}))} style={inp}>
                     {CATS.map(c=><option key={c} value={c}>{CAT_COLORS[c]?.dot} {c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <span style={label}>DurÃ©e d'affichage (jours)</span>
+                  <span style={label}>Durée d'affichage (jours)</span>
                   <input type="number" min="1" max="365" value={form.duree}
                     onChange={e=>setForm(p=>({...p,duree:e.target.value}))} style={inp}/>
                 </div>
@@ -9933,7 +9934,7 @@ function BabillardPage() {
                 <span style={label}>Contenu *</span>
                 <textarea value={form.contenu} onChange={e=>setForm(p=>({...p,contenu:e.target.value}))}
                   style={{...inp,height:150,resize:"vertical"}}
-                  placeholder="RÃ©digez votre annonce ici..."/>
+                  placeholder="Rédigez votre annonce ici..."/>
               </div>
 
               {isAdmin && (
@@ -9941,18 +9942,18 @@ function BabillardPage() {
                   <input type="checkbox" checked={form.epingle}
                     onChange={e=>setForm(p=>({...p,epingle:e.target.checked}))}
                     style={{width:16,height:16}}/>
-                  <span style={{fontWeight:700}}>ðŸ“Œ Ã‰pingler cette annonce en haut</span>
+                  <span style={{fontWeight:700}}>📌 Épingler cette annonce en haut</span>
                 </label>
               )}
 
-              {/* PiÃ¨ces jointes */}
+              {/* Pièces jointes */}
               <div>
-                <span style={label}>ðŸ“Ž PiÃ¨ce jointe (PDF, image â€” max 10 MB)</span>
+                <span style={label}>📎 Pièce jointe (PDF, image — max 10 MB)</span>
                 <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                   onChange={e=>setForm(p=>({...p,fichier:e.target.files[0]}))}
                   style={{...inp,padding:"6px 8px",fontSize:12}}/>
                 {form.fichier&&<div style={{fontSize:11,color:"#16a34a",marginTop:4}}>
-                  âœ… {form.fichier.name} ({(form.fichier.size/1024).toFixed(0)} KB)
+                  ✅ {form.fichier.name} ({(form.fichier.size/1024).toFixed(0)} KB)
                 </div>}
               </div>
 
@@ -9966,7 +9967,7 @@ function BabillardPage() {
                   style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#0B4D2C",
                     color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                     opacity:saving?.6:1}}>
-                  {saving?"Publicationâ€¦":"ðŸ“¢ Publier"}
+                  {saving?"Publication…":"📢 Publier"}
                 </button>
               </div>
             </div>
@@ -10018,7 +10019,7 @@ function DashboardCenseur() {
       .map(([cl,n])=>({cl,n}))
       .sort((a,b)=>b.n-a.n).slice(0,12);
 
-    // Couverture EDT (classes avec au moins 1 crÃ©neau)
+    // Couverture EDT (classes avec au moins 1 créneau)
     const classesAvecEdt = new Set();
     Object.values(data.edtBase||{}).forEach(slots=>{
       Object.keys(slots||{}).forEach(cl=>classesAvecEdt.add(cl));
@@ -10040,17 +10041,17 @@ function DashboardCenseur() {
 
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
         <div>
-          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Tableau de bord Censeur ðŸ“</h2>
-          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} Â· Vue pÃ©dagogique globale</p>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Tableau de bord Censeur 📐</h2>
+          <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Vue pédagogique globale</p>
         </div>
         <div style={{display:"flex",gap:8}}>
           {[
-            {label:"Programmes",page:"programme",emoji:"ðŸ“–"},
-            {label:"EDT",page:"edt",emoji:"ðŸ“…"},
-            {label:"Ã‰lÃ¨ves",page:"eleves",emoji:"ðŸ‘¥"},
+            {label:"Programmes",page:"programme",emoji:"📖"},
+            {label:"EDT",page:"edt",emoji:"📅"},
+            {label:"Élèves",page:"eleves",emoji:"👥"},
           ].map(({label,page,emoji})=>(
             <button key={page} onClick={()=>setPage(page)}
               style={{padding:"8px 12px",borderRadius:10,border:"1px solid "+C.border,background:C.white,color:C.txt,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
@@ -10062,24 +10063,24 @@ function DashboardCenseur() {
 
       {/* KPI */}
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Couverture programme" value={stats.tauxMoyen+"%"} sub={stats.tauxMoyen>=75?"Objectif atteint âœ“":"Sous l'objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="ðŸ“Š" bg={C.greenPale} loading={loading} delay={0}/>
-        <KpiCard label="Enseignants en retard" value={stats.nbAlerteProg} sub="< 50% couverture" iconEmoji="âš ï¸" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
-        <KpiCard label="EDT configurÃ©" value={stats.edtCoverage.oui+"/"+stats.edtCoverage.total} sub="classes avec crÃ©neaux" iconEmoji="ðŸ“…" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.1}/>
-        <KpiCard label="Absences totales" value={stats.nbAbsTotal} sub="Toutes classes" iconEmoji="ðŸ“‹" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.15}/>
+        <KpiCard label="Couverture programme" value={stats.tauxMoyen+"%"} sub={stats.tauxMoyen>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="📊" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Enseignants en retard" value={stats.nbAlerteProg} sub="< 50% couverture" iconEmoji="⚠️" bg={C.redPale} subColor={C.red} loading={loading} delay={0.05}/>
+        <KpiCard label="EDT configuré" value={stats.edtCoverage.oui+"/"+stats.edtCoverage.total} sub="classes avec créneaux" iconEmoji="📅" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.1}/>
+        <KpiCard label="Absences totales" value={stats.nbAbsTotal} sub="Toutes classes" iconEmoji="📋" bg={C.amberPale} subColor={C.amber} loading={loading} delay={0.15}/>
       </div>
 
       {/* Alerte programme */}
       {!loading && stats.nbAlerteProg > 0 && (
         <div style={{display:"flex",alignItems:"center",gap:14,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12,padding:"14px 18px"}}>
-          <span style={{fontSize:26,flexShrink:0}}>âš ï¸</span>
+          <span style={{fontSize:26,flexShrink:0}}>⚠️</span>
           <div>
             <div style={{fontWeight:700,color:"#b91c1c",fontSize:13}}>Programme en retard critique</div>
             <div style={{fontSize:12,color:"#7f1d1d",marginTop:2}}>
-              {stats.nbAlerteProg} enseignant{stats.nbAlerteProg>1?"s":""} sous 50% de couverture â€” action requise.
+              {stats.nbAlerteProg} enseignant{stats.nbAlerteProg>1?"s":""} sous 50% de couverture — action requise.
             </div>
           </div>
           <button onClick={()=>setPage("programme")} style={{marginLeft:"auto",padding:"8px 14px",borderRadius:8,border:"1px solid #fecaca",background:"#fff",color:"#b91c1c",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-            Voir programmes â†’
+            Voir programmes →
           </button>
         </div>
       )}
@@ -10089,8 +10090,8 @@ function DashboardCenseur() {
 
         {/* Couverture par enseignant */}
         <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸ“Š Couverture programme â€” enseignants</h3>
-          <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>TriÃ©s du plus urgent au plus avancÃ©</p>
+          <h3 style={{margin:"0 0 4px",fontSize:12.5,fontWeight:700,color:C.txt}}>📊 Couverture programme — enseignants</h3>
+          <p style={{margin:"0 0 12px",fontSize:10,color:C.txtMuted}}>Triés du plus urgent au plus avancé</p>
           {loading?<Sk h={200} br={8}/>:stats.tauxParEns.length>0?(
             <div style={{display:"flex",flexDirection:"column",gap:10,maxHeight:380,overflowY:"auto"}}>
               {stats.tauxParEns.map(e=>(
@@ -10106,7 +10107,7 @@ function DashboardCenseur() {
                 </div>
               ))}
             </div>
-          ):<div style={{textAlign:"center",padding:"30px 0",color:C.txtLight,fontSize:11}}>Aucune donnÃ©e</div>}
+          ):<div style={{textAlign:"center",padding:"30px 0",color:C.txtLight,fontSize:11}}>Aucune donnée</div>}
         </div>
 
         {/* Colonne droite */}
@@ -10114,7 +10115,7 @@ function DashboardCenseur() {
 
           {/* Absences par classe */}
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸ“‹ Absences par classe</h3>
+            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📋 Absences par classe</h3>
             {loading?<Sk h={120} br={8}/>:stats.absParClasse.length>0?(
               <div style={{display:"flex",flexDirection:"column",gap:7}}>
                 {stats.absParClasse.map(({cl,n})=>(
@@ -10127,13 +10128,13 @@ function DashboardCenseur() {
                   </div>
                 ))}
               </div>
-            ):<div style={{textAlign:"center",padding:"20px 0",color:C.txtLight,fontSize:11}}>Aucune absence enregistrÃ©e</div>}
+            ):<div style={{textAlign:"center",padding:"20px 0",color:C.txtLight,fontSize:11}}>Aucune absence enregistrée</div>}
           </div>
 
           {/* Classes sans programme */}
           {!loading && stats.classesAlertes.length>0 && (
             <div style={{background:"#fffbeb",borderRadius:12,border:"1px solid #fde68a",padding:14}}>
-              <h3 style={{margin:"0 0 8px",fontSize:12,fontWeight:700,color:"#92400e"}}>ðŸ“­ Classes sans programme saisi</h3>
+              <h3 style={{margin:"0 0 8px",fontSize:12,fontWeight:700,color:"#92400e"}}>📭 Classes sans programme saisi</h3>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {stats.classesAlertes.map(cl=>(
                   <span key={cl} style={{fontSize:11,padding:"3px 10px",borderRadius:12,background:"#fef3c7",color:"#78350f",fontWeight:600}}>{cl}</span>
@@ -10144,13 +10145,13 @@ function DashboardCenseur() {
 
           {/* EDT coverage */}
           <div style={{background:C.white,borderRadius:12,border:"1px solid "+C.border,padding:16}}>
-            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>ðŸ“… Couverture EDT</h3>
+            <h3 style={{margin:"0 0 12px",fontSize:12.5,fontWeight:700,color:C.txt}}>📅 Couverture EDT</h3>
             {loading?<Sk h={60} br={8}/>:(
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:12,color:C.txt}}>{stats.edtCoverage.oui} classe{stats.edtCoverage.oui>1?"s":""} configurÃ©e{stats.edtCoverage.oui>1?"s":""}</span>
+                  <span style={{fontSize:12,color:C.txt}}>{stats.edtCoverage.oui} classe{stats.edtCoverage.oui>1?"s":""} configurée{stats.edtCoverage.oui>1?"s":""}</span>
                   <span style={{fontSize:12,fontWeight:700,color:stats.edtCoverage.non>0?C.red:C.green}}>
-                    {stats.edtCoverage.non>0?stats.edtCoverage.non+" sans EDT":"âœ“ Complet"}
+                    {stats.edtCoverage.non>0?stats.edtCoverage.non+" sans EDT":"✓ Complet"}
                   </span>
                 </div>
                 <div style={{height:8,borderRadius:4,background:"#e2e8f0"}}>
@@ -10168,14 +10169,14 @@ function DashboardCenseur() {
 
 function genRapportDept(stats, user, trim) {
   const deptNom=DEPARTEMENTS_LIST.find(d=>d.id===user.departement_id)?.nom||"SVTEEHB";
-  const periode={ANN:"AnnÃ©e 2025-2026",T1:"Trimestre 1",T2:"Trimestre 2",T3:"Trimestre 3"}[trim]||trim;
+  const periode={ANN:"Année 2025-2026",T1:"Trimestre 1",T2:"Trimestre 2",T3:"Trimestre 3"}[trim]||trim;
   const date=new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
   const rows=stats.enseignants.map(e=>{
     const c=e.taux>=75?"#15803d":e.taux>=50?"#92400e":"#b91c1c";
     const bg=e.taux>=75?"#f0fdf4":e.taux>=50?"#fffbeb":"#fef2f2";
-    const lbl=e.taux>=75?"âœ“ Objectif":e.taux>=50?"En cours":"âš  Retard";
+    const lbl=e.taux>=75?"✓ Objectif":e.taux>=50?"En cours":"⚠ Retard";
     return `<tr><td style='padding:8px 12px;font-weight:600'>${e.nom}</td>
-      <td style='padding:8px 12px;text-align:center'>${(e.classes||[]).join(", ")||"â€”"}</td>
+      <td style='padding:8px 12px;text-align:center'>${(e.classes||[]).join(", ")||"—"}</td>
       <td style='padding:8px 12px;text-align:center'>${e.fait}</td>
       <td style='padding:8px 12px;text-align:center'>${e.ref}</td>
       <td style='padding:8px 12px;text-align:center;font-weight:800;color:${c}'>${e.taux}%</td>
@@ -10191,19 +10192,19 @@ function genRapportDept(stats, user, trim) {
   .kpi{display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 20px;margin:0 8px 8px 0;text-align:center}
   .kv{font-size:22px;font-weight:800;color:#0B4D2C}.kl{font-size:10px;color:#6b7280;margin-top:2px}
   @media print{body{margin:16px}}</style></head><body>
-  <h1>Rapport pÃ©dagogique â€” DÃ©partement ${deptNom}</h1>
-  <div style='color:#6b7280;font-size:11px;margin-bottom:20px'>LycÃ©e de Kakatare-Maroua Â· ${periode} Â· ${date}<br>Animateur : ${user.nom}</div>
+  <h1>Rapport pédagogique — Département ${deptNom}</h1>
+  <div style='color:#6b7280;font-size:11px;margin-bottom:20px'>Lycée de Kakatare-Maroua · ${periode} · ${date}<br>Animateur : ${user.nom}</div>
   <div>
     <div class='kpi'><div class='kv'>${stats.enseignants.length}</div><div class='kl'>Enseignants</div></div>
     <div class='kpi'><div class='kv'>${stats.tauxMoyen}%</div><div class='kl'>Couverture moy.</div></div>
-    <div class='kpi'><div class='kv'>${stats.totalFait}/${stats.totalRef}</div><div class='kl'>LeÃ§ons faites</div></div>
+    <div class='kpi'><div class='kv'>${stats.totalFait}/${stats.totalRef}</div><div class='kl'>Leçons faites</div></div>
     <div class='kpi'><div class='kv'>${stats.enseignants.filter(e=>e.taux<50).length}</div><div class='kl'>En retard</div></div>
   </div>
-  <table><thead><tr><th>Enseignant</th><th style='text-align:center'>Classes</th><th style='text-align:center'>Faites</th><th style='text-align:center'>PrÃ©vues</th><th style='text-align:center'>Taux</th><th style='text-align:center'>Statut</th></tr></thead>
+  <table><thead><tr><th>Enseignant</th><th style='text-align:center'>Classes</th><th style='text-align:center'>Faites</th><th style='text-align:center'>Prévues</th><th style='text-align:center'>Taux</th><th style='text-align:center'>Statut</th></tr></thead>
   <tbody>${rows}</tbody></table>
   <div style='margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:40px'>
     <div style='border-top:1px solid #d1d5db;padding-top:8px;text-align:center;font-size:12px'>Le Proviseur<br><br><br>Signature &amp; Cachet :</div>
-    <div style='border-top:1px solid #d1d5db;padding-top:8px;text-align:center;font-size:12px'>L\'Animateur PÃ©dagogique<br><br><br>Signature :</div>
+    <div style='border-top:1px solid #d1d5db;padding-top:8px;text-align:center;font-size:12px'>L\'Animateur Pédagogique<br><br><br>Signature :</div>
   </div></body></html>`;
   return html;
 }
@@ -10324,7 +10325,7 @@ function PVReunionModal({stats, user, onClose, onGenerate}) {
             onGenerate(html);
           }}
             style={{width:"100%",padding:"9px 0",marginTop:8,background:"#f9fafb",color:"#374151",border:"1px solid #e5e7eb",borderRadius:10,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-            ðŸ‘ï¸ AperÃ§u avant impression
+            👁️ Aperçu avant impression
           </button>
         </div>
       </div>
@@ -10333,12 +10334,12 @@ function PVReunionModal({stats, user, onClose, onGenerate}) {
 }
 
 // Retire le script d'auto-impression avant affichage en apercu (evite le print automatique)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// FICHE D'INSPECTION â€” GÃ©nÃ©rateur HTML imprimable
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// FICHE D'INSPECTION — Générateur HTML imprimable
+// ════════════════════════════════════════════════════════════════
 function genFicheInspection(data) {
   const {
-    etablissement="LycÃ©e de Kakatare-Maroua", animateur="", enseignant="",
+    etablissement="Lycée de Kakatare-Maroua", animateur="", enseignant="",
     classe="", matiere="", dateVisite="", heureDebut="", heureFin="",
     effectifPresent="",
     obs={}, doc={},
@@ -10347,12 +10348,12 @@ function genFicheInspection(data) {
   } = data;
 
   const row = (label, val) => {
-    const v = val===true?"âœ” Oui":val===false?"âœ˜ Non":"â€”";
+    const v = val===true?"✔ Oui":val===false?"✘ Non":"—";
     const c = val===true?"#16a34a":val===false?"#dc2626":"#6b7280";
     return `<tr><td style="padding:5px 10px;border-bottom:1px solid #f0f0f0;font-size:12px;">${label}</td>
       <td style="padding:5px 10px;border-bottom:1px solid #f0f0f0;text-align:center;font-weight:700;font-size:12px;color:${c};">${v}</td></tr>`;
   };
-  const mention_color = {"TrÃ¨s bien":"#16a34a","Bien":"#2563eb","Assez bien":"#7c3aed","Passable":"#d97706","Insuffisant":"#dc2626"}[mention]||"#374151";
+  const mention_color = {"Très bien":"#16a34a","Bien":"#2563eb","Assez bien":"#7c3aed","Passable":"#d97706","Insuffisant":"#dc2626"}[mention]||"#374151";
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
   <style>
@@ -10381,53 +10382,53 @@ function genFicheInspection(data) {
   <div class="header">
     <div class="logo">EduPilot Cameroun</div>
     <div class="subtitle">${etablissement}</div>
-    <div class="titre-fiche">Fiche d'Inspection PÃ©dagogique</div>
-    <div style="font-size:11px;color:#6b7280;">Animateur PÃ©dagogique Â· Visite de classe</div>
+    <div class="titre-fiche">Fiche d'Inspection Pédagogique</div>
+    <div style="font-size:11px;color:#6b7280;">Animateur Pédagogique · Visite de classe</div>
   </div>
 
   <div class="grid2">
     <div class="cell"><div class="cell-label">Animateur</div><div class="cell-val">${animateur}</div></div>
-    <div class="cell"><div class="cell-label">Enseignant inspectÃ©</div><div class="cell-val">${enseignant}</div></div>
+    <div class="cell"><div class="cell-label">Enseignant inspecté</div><div class="cell-val">${enseignant}</div></div>
     <div class="cell"><div class="cell-label">Classe</div><div class="cell-val">${classe}</div></div>
-    <div class="cell"><div class="cell-label">MatiÃ¨re</div><div class="cell-val">${matiere}</div></div>
+    <div class="cell"><div class="cell-label">Matière</div><div class="cell-val">${matiere}</div></div>
     <div class="cell"><div class="cell-label">Date de visite</div><div class="cell-val">${dateVisite}</div></div>
-    <div class="cell"><div class="cell-label">Horaire Â· Effectif prÃ©sent</div><div class="cell-val">${heureDebut} â€“ ${heureFin} &nbsp;|&nbsp; ${effectifPresent} Ã©lÃ¨ves</div></div>
+    <div class="cell"><div class="cell-label">Horaire · Effectif présent</div><div class="cell-val">${heureDebut} – ${heureFin} &nbsp;|&nbsp; ${effectifPresent} élèves</div></div>
   </div>
 
-  <h3>I. Observation de la sÃ©ance de cours</h3>
+  <h3>I. Observation de la séance de cours</h3>
   <table>
-    <tr style="background:#f0fdf4;"><th style="text-align:left;padding:6px 10px;font-size:11px;">CritÃ¨re</th><th style="width:80px;text-align:center;font-size:11px;">ApprÃ©ciation</th></tr>
+    <tr style="background:#f0fdf4;"><th style="text-align:left;padding:6px 10px;font-size:11px;">Critère</th><th style="width:80px;text-align:center;font-size:11px;">Appréciation</th></tr>
     ${row("Tenue vestimentaire correcte", obs.tenue_correcte)}
-    ${row("Tableau structurÃ© en 3 parties", obs.tableau_structure)}
+    ${row("Tableau structuré en 3 parties", obs.tableau_structure)}
     ${row("Plan du cours visible", obs.plan_cours_visible)}
-    ${row("Titre de leÃ§on encadrÃ©", obs.titre_encadre)}
-    ${row("Ã‰criture lisible", obs.ecriture_lisible)}
+    ${row("Titre de leçon encadré", obs.titre_encadre)}
+    ${row("Écriture lisible", obs.ecriture_lisible)}
     ${row("Voix audible par toute la classe", obs.voix_audible)}
-    ${row("Niveau de langue adaptÃ© aux Ã©lÃ¨ves", obs.langue_adaptee)}
-    ${row("Ã‰lÃ¨ves interrogÃ©s de faÃ§on nominative", obs.eleves_interroges)}
-    ${row("Transitions bien menÃ©es entre parties", obs.transitions_menees)}
-    ${row("Situation d'apprentissage APC prÃ©sentÃ©e", obs.situation_apc)}
-    ${row("TÃ¢ches traduisant les habiletÃ©s/contenus", obs.taches_habiletes)}
-    ${row("Trace Ã©crite conforme au programme", obs.trace_ecrite_conforme)}
-    ${row("Exercices corrigÃ©s avec participation classe", obs.exercices_corriges)}
-    ${row("Classe impliquÃ©e activement", obs.classe_impliquee)}
+    ${row("Niveau de langue adapté aux élèves", obs.langue_adaptee)}
+    ${row("Élèves interrogés de façon nominative", obs.eleves_interroges)}
+    ${row("Transitions bien menées entre parties", obs.transitions_menees)}
+    ${row("Situation d'apprentissage APC présentée", obs.situation_apc)}
+    ${row("Tâches traduisant les habiletés/contenus", obs.taches_habiletes)}
+    ${row("Trace écrite conforme au programme", obs.trace_ecrite_conforme)}
+    ${row("Exercices corrigés avec participation classe", obs.exercices_corriges)}
+    ${row("Classe impliquée activement", obs.classe_impliquee)}
   </table>
 
   <h3>II. Documents administratifs de classe</h3>
   <table>
-    <tr style="background:#f0fdf4;"><th style="text-align:left;padding:6px 10px;font-size:11px;">Document</th><th style="width:80px;text-align:center;font-size:11px;">Ã‰tat</th></tr>
-    ${row("Cahier de textes tenu Ã  jour", doc.cahier_texte_tenu)}
-    ${row("Progression annuelle collÃ©e dans le cahier", doc.progression_collee)}
-    ${row("Progression respectÃ©e", doc.progression_respectee)}
+    <tr style="background:#f0fdf4;"><th style="text-align:left;padding:6px 10px;font-size:11px;">Document</th><th style="width:80px;text-align:center;font-size:11px;">État</th></tr>
+    ${row("Cahier de textes tenu à jour", doc.cahier_texte_tenu)}
+    ${row("Progression annuelle collée dans le cahier", doc.progression_collee)}
+    ${row("Progression respectée", doc.progression_respectee)}
     ${row("Registre de notes tenu correctement", doc.registre_notes_tenu)}
-    ${row("Absences renseignÃ©es", doc.absences_renseignees)}
-    ${row("Fiche pÃ©dagogique de leÃ§on prÃ©sente", doc.fiche_pedago_presente)}
+    ${row("Absences renseignées", doc.absences_renseignees)}
+    ${row("Fiche pédagogique de leçon présente", doc.fiche_pedago_presente)}
   </table>
 
-  <h3>III. ApprÃ©ciation globale</h3>
+  <h3>III. Appréciation globale</h3>
   <div class="note-box">
     <div>
-      <div class="note-label">Note attribuÃ©e</div>
+      <div class="note-label">Note attribuée</div>
       <div class="note-num">${noteSur20} <span style="font-size:18px;font-weight:400;color:#6b7280;">/ 20</span></div>
     </div>
     <div>
@@ -10437,22 +10438,22 @@ function genFicheInspection(data) {
   </div>
 
   <div style="margin-bottom:10px;">
-    <div style="font-size:11px;font-weight:700;color:#0B4D2C;margin-bottom:4px;">âœ… Points forts</div>
-    <div class="textarea-section">${pointsForts||"â€”"}</div>
+    <div style="font-size:11px;font-weight:700;color:#0B4D2C;margin-bottom:4px;">✅ Points forts</div>
+    <div class="textarea-section">${pointsForts||"—"}</div>
   </div>
   <div style="margin-bottom:10px;">
-    <div style="font-size:11px;font-weight:700;color:#d97706;margin-bottom:4px;">âš ï¸ Points Ã  amÃ©liorer</div>
-    <div class="textarea-section">${pointsAmeliorer||"â€”"}</div>
+    <div style="font-size:11px;font-weight:700;color:#d97706;margin-bottom:4px;">⚠️ Points à améliorer</div>
+    <div class="textarea-section">${pointsAmeliorer||"—"}</div>
   </div>
   <div style="margin-bottom:10px;">
-    <div style="font-size:11px;font-weight:700;color:#2563eb;margin-bottom:4px;">ðŸ“Œ Recommandations</div>
-    <div class="textarea-section">${recommandations||"â€”"}</div>
+    <div style="font-size:11px;font-weight:700;color:#2563eb;margin-bottom:4px;">📌 Recommandations</div>
+    <div class="textarea-section">${recommandations||"—"}</div>
   </div>
 
   <div class="signature-area">
     <div class="sig-box">
       <div style="height:40px;"></div>
-      <div>L'Animateur PÃ©dagogique</div>
+      <div>L'Animateur Pédagogique</div>
       <div style="font-weight:700;margin-top:4px;">${animateur}</div>
     </div>
     <div class="sig-box">
@@ -10464,9 +10465,9 @@ function genFicheInspection(data) {
   </body></html>`;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 // PAGE FICHES D'INSPECTION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 function FicheInspectionPage() {
   const {user, data} = useApp();
   const {isMobile} = useDevice();
@@ -10517,9 +10518,9 @@ function FicheInspectionPage() {
         transitions_menees:f.obs_transitions_menees,situation_apc:f.obs_situation_apc,
         taches_habiletes:f.obs_taches_habiletes,trace_ecrite_conforme:f.obs_trace_ecrite_conforme,
         exercices_corriges:f.obs_exercices_corriges,classe_impliquee:f.obs_classe_impliquee},
-      doc:{cahier_texte_tenu:f.doc_cahier_texte_tenu,progression_collee:f.doc_progression_collÃ©e,
+      doc:{cahier_texte_tenu:f.doc_cahier_texte_tenu,progression_collee:f.doc_progression_collée,
         progression_respectee:f.doc_progression_respectee,registre_notes_tenu:f.doc_registre_notes_tenu,
-        absences_renseignees:f.doc_absences_renseignÃ©es,fiche_pedago_presente:f.doc_fiche_pedago_presente},
+        absences_renseignees:f.doc_absences_renseignées,fiche_pedago_presente:f.doc_fiche_pedago_presente},
       points_forts:f.points_forts||"", points_ameliorer:f.points_ameliorer||"",
       recommandations:f.recommandations||"", note_sur_20:f.note_sur_20||"", mention:f.mention||""
     });
@@ -10552,7 +10553,7 @@ function FicheInspectionPage() {
 
   const handlePreview = (f)=>{
     const ens = data?.users?.[f.enseignant_id];
-    // Calcul effectif prÃ©sent depuis absences de l'enseignant ce jour-lÃ 
+    // Calcul effectif présent depuis absences de l'enseignant ce jour-là
     const totalClasse = (ELEVES_DB[f.classe]||[]).length;
     const absKey = f.enseignant_id+"||"+f.classe;
     const absSeance = (data?.absences?.[absKey]||[]).find(a=>a.seance===f.date_visite);
@@ -10570,9 +10571,9 @@ function FicheInspectionPage() {
         transitions_menees:f.obs_transitions_menees,situation_apc:f.obs_situation_apc,
         taches_habiletes:f.obs_taches_habiletes,trace_ecrite_conforme:f.obs_trace_ecrite_conforme,
         exercices_corriges:f.obs_exercices_corriges,classe_impliquee:f.obs_classe_impliquee},
-      doc:{cahier_texte_tenu:f.doc_cahier_texte_tenu,progression_collee:f.doc_progression_collÃ©e,
+      doc:{cahier_texte_tenu:f.doc_cahier_texte_tenu,progression_collee:f.doc_progression_collée,
         progression_respectee:f.doc_progression_respectee,registre_notes_tenu:f.doc_registre_notes_tenu,
-        absences_renseignees:f.doc_absences_renseignÃ©es,fiche_pedago_presente:f.doc_fiche_pedago_presente},
+        absences_renseignees:f.doc_absences_renseignées,fiche_pedago_presente:f.doc_fiche_pedago_presente},
       pointsForts:f.points_forts, pointsAmeliorer:f.points_ameliorer,
       recommandations:f.recommandations, noteSur20:f.note_sur_20, mention:f.mention
     });
@@ -10595,53 +10596,53 @@ function FicheInspectionPage() {
 
   const obsLabels = [
     ["tenue_correcte","Tenue vestimentaire correcte"],
-    ["tableau_structure","Tableau structurÃ© en 3 parties"],
+    ["tableau_structure","Tableau structuré en 3 parties"],
     ["plan_cours_visible","Plan du cours visible"],
-    ["titre_encadre","Titre de leÃ§on encadrÃ©"],
-    ["ecriture_lisible","Ã‰criture lisible"],
+    ["titre_encadre","Titre de leçon encadré"],
+    ["ecriture_lisible","Écriture lisible"],
     ["voix_audible","Voix audible par toute la classe"],
-    ["langue_adaptee","Niveau de langue adaptÃ©"],
-    ["eleves_interroges","Ã‰lÃ¨ves interrogÃ©s nominativement"],
-    ["transitions_menees","Transitions bien menÃ©es"],
-    ["situation_apc","Situation APC prÃ©sentÃ©e"],
-    ["taches_habiletes","TÃ¢ches/habiletÃ©s respectÃ©es"],
-    ["trace_ecrite_conforme","Trace Ã©crite conforme au programme"],
-    ["exercices_corriges","Exercices corrigÃ©s avec la classe"],
-    ["classe_impliquee","Classe activement impliquÃ©e"],
+    ["langue_adaptee","Niveau de langue adapté"],
+    ["eleves_interroges","Élèves interrogés nominativement"],
+    ["transitions_menees","Transitions bien menées"],
+    ["situation_apc","Situation APC présentée"],
+    ["taches_habiletes","Tâches/habiletés respectées"],
+    ["trace_ecrite_conforme","Trace écrite conforme au programme"],
+    ["exercices_corriges","Exercices corrigés avec la classe"],
+    ["classe_impliquee","Classe activement impliquée"],
   ];
   const docLabels = [
-    ["cahier_texte_tenu","Cahier de textes Ã  jour"],
-    ["progression_collee","Progression collÃ©e dans le cahier"],
-    ["progression_respectee","Progression respectÃ©e"],
+    ["cahier_texte_tenu","Cahier de textes à jour"],
+    ["progression_collee","Progression collée dans le cahier"],
+    ["progression_respectee","Progression respectée"],
     ["registre_notes_tenu","Registre de notes tenu"],
-    ["absences_renseignees","Absences renseignÃ©es"],
-    ["fiche_pedago_presente","Fiche pÃ©dagogique prÃ©sente"],
+    ["absences_renseignees","Absences renseignées"],
+    ["fiche_pedago_presente","Fiche pédagogique présente"],
   ];
 
-  const mentions = ["TrÃ¨s bien","Bien","Assez bien","Passable","Insuffisant"];
-  const mention_colors = {"TrÃ¨s bien":"#16a34a","Bien":"#2563eb","Assez bien":"#7c3aed","Passable":"#d97706","Insuffisant":"#dc2626"};
+  const mentions = ["Très bien","Bien","Assez bien","Passable","Insuffisant"];
+  const mention_colors = {"Très bien":"#16a34a","Bien":"#2563eb","Assez bien":"#7c3aed","Passable":"#d97706","Insuffisant":"#dc2626"};
   const inp = {width:"100%",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
   const label = {fontSize:11,fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:".5px",marginBottom:4,display:"block"};
 
   return (
     <div style={{padding:isMobile?"12px":"24px",maxWidth:900,margin:"0 auto"}}>
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div>
-          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>ðŸ” Fiches d'inspection</div>
-          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{fiches.length} visite{fiches.length!==1?"s":""} enregistrÃ©e{fiches.length!==1?"s":""}</div>
+          <div style={{fontSize:isMobile?16:20,fontWeight:900,color:"#0B4D2C"}}>🔍 Fiches d'inspection</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{fiches.length} visite{fiches.length!==1?"s":""} enregistrée{fiches.length!==1?"s":""}</div>
         </div>
         <button onClick={openNew}
           style={{padding:"10px 18px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-          ï¼‹ Nouvelle inspection
+          ＋ Nouvelle inspection
         </button>
       </div>
 
       {/* Liste des fiches */}
-      {loading ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargementâ€¦</div> :
+      {loading ? <div style={{textAlign:"center",padding:40,color:"#9ca3af"}}>Chargement…</div> :
       fiches.length===0 ? (
         <div style={{textAlign:"center",padding:60,color:"#9ca3af"}}>
-          <div style={{fontSize:40,marginBottom:12}}>ðŸ”</div>
+          <div style={{fontSize:40,marginBottom:12}}>🔍</div>
           <div style={{fontSize:15,fontWeight:700}}>Aucune fiche d'inspection</div>
           <div style={{fontSize:13,marginTop:6}}>Cliquez sur "Nouvelle inspection" pour commencer</div>
         </div>
@@ -10657,14 +10658,14 @@ function FicheInspectionPage() {
                 </div>
                 <div style={{flex:1,minWidth:120}}>
                   <div style={{fontWeight:800,fontSize:14,color:"#1f2937"}}>{ens?.nom||f.enseignant_id}</div>
-                  <div style={{fontSize:12,color:"#6b7280"}}>{f.classe} Â· {f.matiere} Â· {f.date_visite}</div>
+                  <div style={{fontSize:12,color:"#6b7280"}}>{f.classe} · {f.matiere} · {f.date_visite}</div>
                 </div>
                 {f.mention && <span style={{background:mc+"22",color:mc,borderRadius:20,padding:"3px 12px",fontSize:11,fontWeight:700}}>{f.mention}</span>}
                 {f.note_sur_20!=null && <span style={{fontWeight:900,color:"#0B4D2C",fontSize:16}}>{f.note_sur_20}<span style={{fontSize:12,fontWeight:400,color:"#9ca3af"}}>/20</span></span>}
                 <div style={{display:"flex",gap:6}}>
                   <button onClick={()=>handlePreview(f)}
                     style={{padding:"6px 12px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                    ðŸ‘ AperÃ§u
+                    👁 Aperçu
                   </button>
                   <button onClick={()=>openEdit(f)}
                     style={{padding:"6px 12px",borderRadius:8,border:"1px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
@@ -10682,19 +10683,19 @@ function FicheInspectionPage() {
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2000,overflowY:"auto",padding:isMobile?"0":"20px"}}>
           <div style={{background:"#fff",borderRadius:isMobile?0:16,maxWidth:680,margin:"0 auto",padding:isMobile?"16px":"28px",minHeight:"100vh"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-              <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>ðŸ” {editFiche?"Modifier":"Nouvelle"} fiche d'inspection</div>
+              <div style={{fontSize:16,fontWeight:900,color:"#0B4D2C"}}>🔍 {editFiche?"Modifier":"Nouvelle"} fiche d'inspection</div>
               <button onClick={()=>{setShowForm(false);resetForm();setEditFiche(null);}}
-                style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>âœ•</button>
+                style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#6b7280"}}>✕</button>
             </div>
 
-            {/* Infos gÃ©nÃ©rales */}
+            {/* Infos générales */}
             <div style={{background:"#f8fafc",borderRadius:10,padding:16,marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>INFORMATIONS GÃ‰NÃ‰RALES</div>
+              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>INFORMATIONS GÉNÉRALES</div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
                 <div>
                   <span style={label}>Enseignant *</span>
                   <select value={form.enseignant_id} onChange={e=>setForm(p=>({...p,enseignant_id:e.target.value}))} style={inp}>
-                    <option value="">â€” Choisir â€”</option>
+                    <option value="">— Choisir —</option>
                     {enseignantsDept.map(e=><option key={e.id} value={e.id}>{e.nom}</option>)}
                   </select>
                 </div>
@@ -10704,12 +10705,12 @@ function FicheInspectionPage() {
                     const ens = data?.users?.[form.enseignant_id];
                     setForm(p=>({...p,classe:e.target.value}));
                   }} style={inp}>
-                    <option value="">â€” Choisir â€”</option>
+                    <option value="">— Choisir —</option>
                     {(data?.users?.[form.enseignant_id]?.classes||[]).map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <span style={label}>MatiÃ¨re</span>
+                  <span style={label}>Matière</span>
                   <input value={form.matiere} onChange={e=>setForm(p=>({...p,matiere:e.target.value}))} style={inp} placeholder="ex: SVT"/>
                 </div>
                 <div>
@@ -10717,7 +10718,7 @@ function FicheInspectionPage() {
                   <input type="date" value={form.date_visite} onChange={e=>setForm(p=>({...p,date_visite:e.target.value}))} style={inp}/>
                 </div>
                 <div>
-                  <span style={label}>Heure dÃ©but</span>
+                  <span style={label}>Heure début</span>
                   <input type="time" value={form.heure_debut} onChange={e=>setForm(p=>({...p,heure_debut:e.target.value}))} style={inp}/>
                 </div>
                 <div>
@@ -10725,15 +10726,15 @@ function FicheInspectionPage() {
                   <input type="time" value={form.heure_fin} onChange={e=>setForm(p=>({...p,heure_fin:e.target.value}))} style={inp}/>
                 </div>
                 <div>
-                  <span style={label}>Effectif prÃ©sent <span style={{fontWeight:400,color:"#9ca3af"}}>(calculÃ© auto si vide)</span></span>
+                  <span style={label}>Effectif présent <span style={{fontWeight:400,color:"#9ca3af"}}>(calculé auto si vide)</span></span>
                   <input type="number" value={form.effectif_present} onChange={e=>setForm(p=>({...p,effectif_present:e.target.value}))} style={inp} placeholder="Auto depuis absences"/>
                 </div>
               </div>
             </div>
 
-            {/* Observation sÃ©ance */}
+            {/* Observation séance */}
             <div style={{background:"#f8fafc",borderRadius:10,padding:16,marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>I. OBSERVATION DE LA SÃ‰ANCE</div>
+              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>I. OBSERVATION DE LA SÉANCE</div>
               {obsLabels.map(([key,lbl])=>(
                 <div key={key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
                   <span style={{fontSize:12,color:"#374151",flex:1,marginRight:12}}>{lbl}</span>
@@ -10753,9 +10754,9 @@ function FicheInspectionPage() {
               ))}
             </div>
 
-            {/* ApprÃ©ciation */}
+            {/* Appréciation */}
             <div style={{background:"#f8fafc",borderRadius:10,padding:16,marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>III. APPRÃ‰CIATION GLOBALE</div>
+              <div style={{fontSize:12,fontWeight:900,color:"#0B4D2C",marginBottom:12}}>III. APPRÉCIATION GLOBALE</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
                 <div>
                   <span style={label}>Note / 20</span>
@@ -10765,25 +10766,25 @@ function FicheInspectionPage() {
                 <div>
                   <span style={label}>Mention</span>
                   <select value={form.mention} onChange={e=>setForm(p=>({...p,mention:e.target.value}))} style={inp}>
-                    <option value="">â€” Mention â€”</option>
+                    <option value="">— Mention —</option>
                     {mentions.map(m=><option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
               </div>
               <div style={{marginBottom:10}}>
-                <span style={label}>âœ… Points forts</span>
+                <span style={label}>✅ Points forts</span>
                 <textarea value={form.points_forts} onChange={e=>setForm(p=>({...p,points_forts:e.target.value}))}
-                  style={{...inp,height:70,resize:"vertical"}} placeholder="Points positifs observÃ©sâ€¦"/>
+                  style={{...inp,height:70,resize:"vertical"}} placeholder="Points positifs observés…"/>
               </div>
               <div style={{marginBottom:10}}>
-                <span style={label}>âš ï¸ Points Ã  amÃ©liorer</span>
+                <span style={label}>⚠️ Points à améliorer</span>
                 <textarea value={form.points_ameliorer} onChange={e=>setForm(p=>({...p,points_ameliorer:e.target.value}))}
-                  style={{...inp,height:70,resize:"vertical"}} placeholder="Aspects Ã  amÃ©liorerâ€¦"/>
+                  style={{...inp,height:70,resize:"vertical"}} placeholder="Aspects à améliorer…"/>
               </div>
               <div>
-                <span style={label}>ðŸ“Œ Recommandations</span>
+                <span style={label}>📌 Recommandations</span>
                 <textarea value={form.recommandations} onChange={e=>setForm(p=>({...p,recommandations:e.target.value}))}
-                  style={{...inp,height:70,resize:"vertical"}} placeholder="Recommandations Ã  l'enseignantâ€¦"/>
+                  style={{...inp,height:70,resize:"vertical"}} placeholder="Recommandations à l'enseignant…"/>
               </div>
             </div>
 
@@ -10794,19 +10795,19 @@ function FicheInspectionPage() {
               </button>
               <button onClick={handleSave} disabled={saving}
                 style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#0B4D2C",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:saving?.6:1}}>
-                {saving?"Enregistrementâ€¦":"ðŸ’¾ Enregistrer"}
+                {saving?"Enregistrement…":"💾 Enregistrer"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* APERÃ‡U PDF */}
+      {/* APERÇU PDF */}
       {previewHtml && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
           <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
             <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>ðŸ“„ Fiche d'inspection</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📄 Fiche d'inspection</div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>imprimerHTML(previewHtml)}
                   style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
@@ -10879,13 +10880,13 @@ function DocumentsAnimateurPage() {
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       <div>
-        <h2 style={{fontSize:18,fontWeight:800,color:C.txt,margin:0}}>Documents Ã  produire</h2>
-        <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>Fiches, rapports et PV de rÃ©union du dÃ©partement</p>
+        <h2 style={{fontSize:18,fontWeight:800,color:C.txt,margin:0}}>Documents à produire</h2>
+        <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>Fiches, rapports et PV de réunion du département</p>
       </div>
       <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
           <h3 style={{margin:0,fontSize:13,fontWeight:700,color:C.txt}}>
-            ðŸ“„ Documents Ã  produire
+            📄 Documents à produire
           </h3>
           <div style={{display:"flex",gap:6}}>
             {["ANN","T1","T2","T3"].map(t=>(
@@ -10893,7 +10894,7 @@ function DocumentsAnimateurPage() {
                 style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${selTrimAnim===t?C.green:C.border}`,
                   background:selTrimAnim===t?C.greenPale:C.white,color:selTrimAnim===t?C.green:C.txtMuted,
                   fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                {t==="ANN"?"AnnÃ©e":t}
+                {t==="ANN"?"Année":t}
               </button>
             ))}
           </div>
@@ -10904,25 +10905,25 @@ function DocumentsAnimateurPage() {
             return(
               <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
                 background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`,flexWrap:"wrap"}}>
-                <EnsAvatarInfo e={e} subtitle={`${e.nbClasses} classe${e.nbClasses>1?"s":""} Â· ${e.taux}% couverture`}/>
+                <EnsAvatarInfo e={e} subtitle={`${e.nbClasses} classe${e.nbClasses>1?"s":""} · ${e.taux}% couverture`}/>
                 <div style={{display:"flex",gap:6,flexShrink:0,
                   width:isMobile?"100%":"auto",justifyContent:isMobile?"flex-end":"flex-start",
                   marginTop:isMobile?6:0}}>
                   <button onClick={()=>{
-                    const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"â€”");
+                    const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
                     imprimerHTML(html);
                   }}
                     style={{padding:"7px 12px",borderRadius:8,border:"none",background:C.green,color:"#fff",
                       fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,whiteSpace:"nowrap"}}>
-                    ðŸ“„ Fiche suivi
+                    📄 Fiche suivi
                   </button>
                   <button onClick={()=>{
-                    const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"â€”");
-                    setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Fiche suivi â€” "+e.nom);
+                    const html=genFicheSuivi(e,e.classes||[],(data?.prog||{}),selTrimAnim,(data?.notes||{}),(data?.absences||{}),deptNom,user.nom||"—");
+                    setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Fiche suivi — "+e.nom);
                   }}
                     style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
                       fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-                    ðŸ‘ï¸
+                    👁️
                   </button>
                 </div>
               </div>
@@ -10930,29 +10931,29 @@ function DocumentsAnimateurPage() {
           })}
           <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
             background:"#f0fdf4",borderRadius:10,border:`1px solid ${C.greenBorder}`,marginTop:4}}>
-            <span style={{fontSize:22,flexShrink:0}}>ðŸ“Š</span>
+            <span style={{fontSize:22,flexShrink:0}}>📊</span>
             <div style={{flex:1}}>
-              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>Rapport trimestriel dÃ©partement</div>
+              <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>Rapport trimestriel département</div>
               <div style={{fontSize:10,color:C.txtMuted}}>
-                {stats.enseignants.length} enseignants Â· {stats.tauxMoyen}% moy. Â· {selTrimAnim==="ANN"?"AnnÃ©e":selTrimAnim}
+                {stats.enseignants.length} enseignants · {stats.tauxMoyen}% moy. · {selTrimAnim==="ANN"?"Année":selTrimAnim}
               </div>
             </div>
             <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); imprimerHTML(html); }}
               style={{padding:"7px 12px",borderRadius:8,border:"none",background:"#D4AF37",color:"#0B3D20",
                 fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-              ðŸ“¥ Exporter PDF
+              📥 Exporter PDF
             </button>
-            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Rapport trimestriel dÃ©partement"); }}
+            <button onClick={()=>{ const html=genRapportDept(stats,user,selTrimAnim); setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("Rapport trimestriel département"); }}
               style={{padding:"7px 10px",borderRadius:8,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",
                 fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-              ðŸ‘ï¸
+              👁️
             </button>
           </div>
 
           {/* PV de reunion */}
           <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
             background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe",marginTop:8}}>
-            <span style={{fontSize:22,flexShrink:0}}>ðŸ“</span>
+            <span style={{fontSize:22,flexShrink:0}}>📝</span>
             <div style={{flex:1}}>
               <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>PV de reunion de departement</div>
               <div style={{fontSize:10,color:C.txtMuted}}>Reunion mensuelle - ordre du jour, presents, progression, decisions</div>
@@ -10968,13 +10969,13 @@ function DocumentsAnimateurPage() {
 
             {showPV && (
         <PVReunionModal stats={stats} user={user} onClose={()=>setShowPV(false)}
-          onGenerate={(html)=>{ setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("PV de rÃ©union de dÃ©partement"); }}/>
+          onGenerate={(html)=>{ setPreviewHtml(stripAutoPrint(html)); setPreviewLabel("PV de réunion de département"); }}/>
       )}
       {previewHtml && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:2100,display:"flex",flexDirection:"column",padding:16}}>
           <div style={{background:"#fff",borderRadius:12,flex:1,display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:900,margin:"0 auto",width:"100%"}}>
             <div style={{padding:"12px 18px",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>ðŸ“„ {previewLabel}</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#0B4D2C"}}>📄 {previewLabel}</div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>imprimerHTML(previewHtml)}
                   style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#0B4D2C",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
@@ -11022,7 +11023,7 @@ function DashboardAnimateur() {
     const deptId = user.departement_id;
     const deptNom = DEPARTEMENTS_LIST.find(d=>d.id===deptId)?.nom||"";
 
-    // Enseignants du dÃ©partement
+    // Enseignants du département
     const enseignants = Object.values(data.users||{}).filter(u=>
       u.departement_id===deptId && u.role==="enseignant"
     );
@@ -11048,12 +11049,12 @@ function DashboardAnimateur() {
     const totalFait = ensAvecStats.reduce((s,e)=>s+e.fait,0);
     const totalRef  = ensAvecStats.reduce((s,e)=>s+e.ref,0);
 
-    // Ã‰preuves en attente de validation du dÃ©partement
+    // Épreuves en attente de validation du département
     const epAttente = (data.epreuves||[]).filter(e=>
       enseignants.some(u=>u.id===e.ens_id) && e.statut==="attente"
     ).length;
 
-    // Absences cette semaine dans les classes du dÃ©partement
+    // Absences cette semaine dans les classes du département
     const today = new Date();
     const lun = new Date(today); lun.setDate(today.getDate()-(today.getDay()||7)+1);
     const lunStr = lun.toISOString().slice(0,10);
@@ -11078,36 +11079,36 @@ function DashboardAnimateur() {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
         <div>
           <h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>
-            Bonjour, {getNomCourt(user?.nom)} ðŸ‘‹
+            Bonjour, {getNomCourt(user?.nom)} 👋
           </h2>
           <p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>
-            Animateur pÃ©dagogique Â· DÃ©partement {stats.deptNom||""}
+            Animateur pédagogique · Département {stats.deptNom||""}
           </p>
         </div>
         <div style={{display:"inline-flex",alignItems:"center",gap:5,background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:600,color:C.green}}>
-          <span style={{width:5,height:5,borderRadius:"50%",background:C.green}}/>SynchronisÃ©
+          <span style={{width:5,height:5,borderRadius:"50%",background:C.green}}/>Synchronisé
         </div>
       </div>
 
       {/* KPIs */}
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Enseignants" value={stats.enseignants.length} sub="dans mon dÃ©partement" iconEmoji="ðŸ‘¥" bg={C.greenPale} loading={loading} delay={0}/>
-        <KpiCard label="Couverture moyenne" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"Objectif atteint âœ“":"Sous l'objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="ðŸ“Š" bg={tauBg(stats.tauxMoyen)} loading={loading} delay={0.05}/>
-        <KpiCard label="LeÃ§ons faites" value={stats.totalFait} sub={`sur ${stats.totalRef} prÃ©vues`} iconEmoji="âœ…" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.1}/>
-        <KpiCard label="Ã‰preuves en attente" value={stats.epAttente} sub="Ã  valider" iconEmoji="ðŸ“‹" bg={stats.epAttente>0?"#fff7ed":C.greenPale} subColor={stats.epAttente>0?C.amber:C.green} loading={loading} delay={0.15}/>
-        <KpiCard label="Absences cette semaine" value={stats.absWeek} sub="dans le dÃ©partement" iconEmoji="âš ï¸" bg={stats.absWeek>5?"#fef2f2":C.greenPale} subColor={stats.absWeek>5?C.red:C.green} loading={loading} delay={0.2}/>
+        <KpiCard label="Enseignants" value={stats.enseignants.length} sub="dans mon département" iconEmoji="👥" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Couverture moyenne" value={`${stats.tauxMoyen}%`} sub={stats.tauxMoyen>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={tauCol(stats.tauxMoyen)} iconEmoji="📊" bg={tauBg(stats.tauxMoyen)} loading={loading} delay={0.05}/>
+        <KpiCard label="Leçons faites" value={stats.totalFait} sub={`sur ${stats.totalRef} prévues`} iconEmoji="✅" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.1}/>
+        <KpiCard label="Épreuves en attente" value={stats.epAttente} sub="à valider" iconEmoji="📋" bg={stats.epAttente>0?"#fff7ed":C.greenPale} subColor={stats.epAttente>0?C.amber:C.green} loading={loading} delay={0.15}/>
+        <KpiCard label="Absences cette semaine" value={stats.absWeek} sub="dans le département" iconEmoji="⚠️" bg={stats.absWeek>5?"#fef2f2":C.greenPale} subColor={stats.absWeek>5?C.red:C.green} loading={loading} delay={0.2}/>
       </div>
 
       {/* Tableau enseignants */}
       <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
         <h3 style={{margin:"0 0 14px",fontSize:13,fontWeight:700,color:C.txt}}>
-          ðŸ“š Enseignants du dÃ©partement â€” suivi programme
+          📚 Enseignants du département — suivi programme
         </h3>
         {loading?[1,2,3].map(i=><Sk key={i} h={72} br={9} style={{marginBottom:8}}/>)
         :stats.enseignants.length===0?(
           <div style={{textAlign:"center",padding:"32px 0",color:C.txtLight}}>
-            <div style={{fontSize:32,marginBottom:8}}>ðŸ“­</div>
-            Aucun enseignant dans ce dÃ©partement
+            <div style={{fontSize:32,marginBottom:8}}>📭</div>
+            Aucun enseignant dans ce département
           </div>
         ):(
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -11119,13 +11120,13 @@ function DashboardAnimateur() {
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:5}}>
                     <div style={{minWidth:0,overflow:"hidden",flex:1}}>
                       <div style={{fontSize:12,fontWeight:700,color:C.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nom}</div>
-                      <div style={{fontSize:9.5,color:C.txtMuted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nbClasses} cl. Â· {e.fait}/{e.ref} leÃ§.</div>
+                      <div style={{fontSize:9.5,color:C.txtMuted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.nbClasses} cl. · {e.fait}/{e.ref} leç.</div>
                     </div>
                     <div style={{textAlign:"right",flexShrink:0}}>
                       <div style={{fontSize:16,fontWeight:800,color:tauCol(e.taux)}}>{e.taux}%</div>
                       <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8,
                         background:tauBg(e.taux),color:tauCol(e.taux)}}>
-                        {e.taux>=75?"âœ“ Objectif":e.taux>=50?"En cours":"âš  Retard"}
+                        {e.taux>=75?"✓ Objectif":e.taux>=50?"En cours":"⚠ Retard"}
                       </span>
                     </div>
                   </div>
@@ -11167,27 +11168,27 @@ function DashboardTeacher() {
   return(
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",justifyContent:"space-between"}}>
-        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, {getNomCourt(user?.nom)} ðŸ‘‹</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</p></div>
-        <div style={{display:"inline-flex",alignItems:"center",gap:5,background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:600,color:C.green,height:"fit-content"}}><span style={{width:5,height:5,borderRadius:"50%",background:C.green}}/>SynchronisÃ©</div>
+        <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, {getNomCourt(user?.nom)} 👋</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</p></div>
+        <div style={{display:"inline-flex",alignItems:"center",gap:5,background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:600,color:C.green,height:"fit-content"}}><span style={{width:5,height:5,borderRadius:"50%",background:C.green}}/>Synchronisé</div>
       </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Mes classes" value={myStats.classes.length} sub={`${myStats.classes.reduce((s,c)=>s+c.ef,0)} Ã©lÃ¨ves`} iconEmoji="ðŸ“š" bg={C.greenPale} loading={loading} delay={0}/>
-        <KpiCard label="LeÃ§ons dispensÃ©es" value={myStats.totalFait} sub={`sur ${myStats.totalRef} prÃ©vues`} iconEmoji="âœ…" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
-        <KpiCard label="Couverture globale" value={`${myStats.tauxGlobal}%`} sub={myStats.tauxGlobal>=75?"Objectif atteint âœ“":"Sous l'objectif"} subColor={tauCol(myStats.tauxGlobal)} iconEmoji="ðŸ“Š" bg={C.greenPale} loading={loading} delay={0.1}/>
+        <KpiCard label="Mes classes" value={myStats.classes.length} sub={`${myStats.classes.reduce((s,c)=>s+c.ef,0)} élèves`} iconEmoji="📚" bg={C.greenPale} loading={loading} delay={0}/>
+        <KpiCard label="Leçons dispensées" value={myStats.totalFait} sub={`sur ${myStats.totalRef} prévues`} iconEmoji="✅" bg={C.bluePale} subColor={C.blue} loading={loading} delay={0.05}/>
+        <KpiCard label="Couverture globale" value={`${myStats.tauxGlobal}%`} sub={myStats.tauxGlobal>=75?"Objectif atteint ✓":"Sous l'objectif"} subColor={tauCol(myStats.tauxGlobal)} iconEmoji="📊" bg={C.greenPale} loading={loading} delay={0.1}/>
       </div>
       <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:18}}>
-        <h3 style={{margin:"0 0 14px",fontSize:13,fontWeight:700,color:C.txt}}>ðŸ“š Mes classes â€” suivi en direct</h3>
+        <h3 style={{margin:"0 0 14px",fontSize:13,fontWeight:700,color:C.txt}}>📚 Mes classes — suivi en direct</h3>
         {loading?[1,2,3].map(i=><Sk key={i} h={72} br={9} style={{marginBottom:8}}/>):myStats.classes.length===0?(
-          <div style={{textAlign:"center",padding:"32px 0",color:C.txtLight}}><div style={{fontSize:32,marginBottom:8}}>ðŸ“­</div>Aucune classe assignÃ©e</div>
+          <div style={{textAlign:"center",padding:"32px 0",color:C.txtLight}}><div style={{fontSize:32,marginBottom:8}}>📭</div>Aucune classe assignée</div>
         ):(
           <div style={{display:"flex",flexDirection:"column",gap:9}}>
             {myStats.classes.map((c,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:"#f8fafc",borderRadius:10,border:`1px solid ${C.border}`,cursor:"pointer"}}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=C.green;e.currentTarget.style.boxShadow=`0 2px 8px ${C.green}18`;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.boxShadow="none";}}>
-                <div style={{width:40,height:40,borderRadius:10,background:getColor(user?.id),display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800,flexShrink:0}}>{c.cl.replace(/[Ã Ã¡Ã¢Ã¤Ã¨Ã©ÃªÃ«Ã¬Ã­Ã®Ã¯Ã²Ã³Ã´Ã¶Ã¹ÃºÃ»Ã¼]/gi,"").substring(0,3).toUpperCase()}</div>
+                <div style={{width:40,height:40,borderRadius:10,background:getColor(user?.id),display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800,flexShrink:0}}>{c.cl.replace(/[àáâäèéêëìíîïòóôöùúûü]/gi,"").substring(0,3).toUpperCase()}</div>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div><div style={{fontSize:13,fontWeight:700,color:C.txt}}>{c.clDisplay||c.cl}</div><div style={{fontSize:10,color:C.txtMuted}}>{c.ef} Ã©lÃ¨ves Â· {c.vh}h/sem</div></div>
+                    <div><div style={{fontSize:13,fontWeight:700,color:C.txt}}>{c.clDisplay||c.cl}</div><div style={{fontSize:10,color:C.txtMuted}}>{c.ef} élèves · {c.vh}h/sem</div></div>
                     <div style={{textAlign:"right"}}><div style={{fontSize:18,fontWeight:800,color:tauCol(c.taux)}}>{c.taux}%</div><div style={{fontSize:9,color:C.txtMuted}}>{c.done}/{c.ref}</div></div>
                   </div>
                   <ProgBar value={c.taux}/>
@@ -11201,7 +11202,7 @@ function DashboardTeacher() {
   );
 }
 
-// â”€â”€â”€ Page placeholder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Page placeholder ─────────────────────────────────────────────
 const PlaceholderPage = ({title,emoji}) => (
   <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",minHeight:"60vh"}}>
     <div style={{fontSize:48,marginBottom:16}}>{emoji}</div>
@@ -11210,19 +11211,19 @@ const PlaceholderPage = ({title,emoji}) => (
   </div>
 );
 
-// â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sidebar ─────────────────────────────────────────────────────────
 const SidebarSG = ({collapsed, setCollapsed}) => {
   const {user, page, setPage, data} = useApp();
   const {isMobile, mobileLandscape} = useDevice();
   const effectiveCollapsed = mobileLandscape ? true : collapsed;
 
   const sgClasses = user?.classes?.length > 0 ? user.classes : null;
-  const niveauLabel = !sgClasses ? "Toute l'Ã©cole"
-    : sgClasses[0]?.startsWith('6') ? '6Ã¨me'
-    : sgClasses[0]?.startsWith('5') ? '5Ã¨me'
-    : sgClasses[0]?.startsWith('4') ? '4Ã¨me'
-    : sgClasses[0]?.startsWith('3') ? '3Ã¨me'
-    : sgClasses[0]?.startsWith('2') ? '2nde' : '1Ã¨re & Tle';
+  const niveauLabel = !sgClasses ? "Toute l'école"
+    : sgClasses[0]?.startsWith('6') ? '6ème'
+    : sgClasses[0]?.startsWith('5') ? '5ème'
+    : sgClasses[0]?.startsWith('4') ? '4ème'
+    : sgClasses[0]?.startsWith('3') ? '3ème'
+    : sgClasses[0]?.startsWith('2') ? '2nde' : '1ère & Tle';
 
   const niveauColor = sgClasses
     ? (sgClasses[0]?.startsWith('6')?"#3b82f6":sgClasses[0]?.startsWith('5')?"#8b5cf6":sgClasses[0]?.startsWith('4')?"#f59e0b":sgClasses[0]?.startsWith('3')?"#10b981":sgClasses[0]?.startsWith('2')?"#ec4899":"#f97316")
@@ -11230,7 +11231,7 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
 
   const [classesOpen, setClassesOpen] = useState(false);
 
-  // Badges â€” calcul depuis data disponible
+  // Badges — calcul depuis data disponible
   const today = new Date().toISOString().slice(0,10);
   let absToday = 0;
   Object.entries(data?.absences||{}).forEach(([k,abs])=>{
@@ -11247,11 +11248,11 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
   };
 
   const NAV = [
-    {id:"dashboard",   emoji:"ðŸ ", label:"Tableau de bord",      tab:null},
-    {id:"absences-sg", emoji:"ðŸ“‹", label:"Appels & Absences",     tab:"absences", badge:absToday>0?absToday:null},
-    {id:"retards-sg",  emoji:"â±ï¸", label:"Billets de retard",     tab:"retards"},
-    {id:"sanctions-sg",emoji:"âš ï¸", label:"Discipline & Sanctions",tab:"sanctions"},
-    {id:"rapports-sg", emoji:"ðŸ“Š", label:"Rapports & SynthÃ¨ses",  tab:"vue"},
+    {id:"dashboard",   emoji:"🏠", label:"Tableau de bord",      tab:null},
+    {id:"absences-sg", emoji:"📋", label:"Appels & Absences",     tab:"absences", badge:absToday>0?absToday:null},
+    {id:"retards-sg",  emoji:"⏱️", label:"Billets de retard",     tab:"retards"},
+    {id:"sanctions-sg",emoji:"⚠️", label:"Discipline & Sanctions",tab:"sanctions"},
+    {id:"rapports-sg", emoji:"📊", label:"Rapports & Synthèses",  tab:"vue"},
   ];
 
   const activePage = page;
@@ -11278,32 +11279,32 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
       overflow:"hidden", flexShrink:0,
       borderRight:"1px solid rgba(212,175,55,.12)",
     }}>
-      {/* â”€â”€ HEADER â”€â”€ */}
+      {/* ── HEADER ── */}
       <div style={{padding: effectiveCollapsed?"14px 0":"16px 14px 12px", borderBottom:"1px solid rgba(212,175,55,.15)", flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <img src={LOGO_LYCEE_B64} alt="" width={30} height={30} style={{flexShrink:0,objectFit:"contain",borderRadius:"50%",border:"1.5px solid "+G}}/>
           {!effectiveCollapsed&&(
             <div style={{minWidth:0}}>
               <div style={{fontSize:12.5,fontWeight:800,color:"#fff",lineHeight:1.2}}>Lykama</div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>LycÃ©e de Kakatare Â· Maroua</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Lycée de Kakatare · Maroua</div>
             </div>
           )}
         </div>
         {!effectiveCollapsed&&(
           <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-            <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em"}}>AnnÃ©e scolaire</div>
-            <div style={{fontSize:10,fontWeight:700,color:G,background:"rgba(212,175,55,.12)",borderRadius:6,padding:"3px 8px",border:"1px solid rgba(212,175,55,.25)"}}>2025â€“2026</div>
+            <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em"}}>Année scolaire</div>
+            <div style={{fontSize:10,fontWeight:700,color:G,background:"rgba(212,175,55,.12)",borderRadius:6,padding:"3px 8px",border:"1px solid rgba(212,175,55,.25)"}}>2025–2026</div>
           </div>
         )}
       </div>
 
-      {/* â”€â”€ BADGE NIVEAU â”€â”€ */}
+      {/* ── BADGE NIVEAU ── */}
       {!effectiveCollapsed&&(
         <div style={{padding:"10px 14px",borderBottom:"1px solid rgba(212,175,55,.15)",flexShrink:0,background:"rgba(0,0,0,.15)"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{width:8,height:8,borderRadius:"50%",background:niveauColor,flexShrink:0,boxShadow:"0 0 6px "+niveauColor}}/>
             <div style={{flex:1}}>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>Niveau supervisÃ©</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>Niveau supervisé</div>
               <div style={{fontSize:14,fontWeight:900,color:"#fff",marginTop:1}}>{niveauLabel}</div>
             </div>
             <div style={{fontSize:9,fontWeight:800,color:niveauColor,background:"rgba(212,175,55,.12)",border:"1px solid rgba(212,175,55,.3)",borderRadius:12,padding:"2px 8px",whiteSpace:"nowrap"}}>{sgClasses?.length||0} classes</div>
@@ -11311,13 +11312,13 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
         </div>
       )}
 
-      {/* â”€â”€ NAVIGATION â”€â”€ */}
+      {/* ── NAVIGATION ── */}
       <nav style={{flex:1,overflowY:"auto",scrollbarWidth:"none",padding:"8px 0"}}>
 
         {/* Tableau de bord */}
         <NavItemSG active={activePage==="dashboard"&&!window.__sgTab} collapsed={effectiveCollapsed}
           onClick={()=>{window.__sgTab=null;setActiveTab_sg(null);setPage("dashboard");}}
-          emoji="ðŸ " label="Tableau de bord" gold={G}/>
+          emoji="🏠" label="Tableau de bord" gold={G}/>
 
         {/* Classes (expandable) */}
         {!effectiveCollapsed&&sgClasses&&(
@@ -11326,9 +11327,9 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
               style={{display:"flex",alignItems:"center",gap:10,padding:"9px 16px",cursor:"pointer",color:"rgba(255,255,255,.6)",fontSize:13,transition:"all .15s"}}
               onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.06)"}
               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-              <span style={{fontSize:16,flexShrink:0}}>ðŸ“</span>
+              <span style={{fontSize:16,flexShrink:0}}>📁</span>
               <span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Mes classes</span>
-              <span style={{fontSize:10,transition:"transform .2s",transform:classesOpen?"rotate(90deg)":"rotate(0deg)"}}>â€º</span>
+              <span style={{fontSize:10,transition:"transform .2s",transform:classesOpen?"rotate(90deg)":"rotate(0deg)"}}>›</span>
             </div>
             {classesOpen&&(
               <div style={{paddingLeft:42,paddingBottom:4}}>
@@ -11346,11 +11347,11 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
         )}
         {effectiveCollapsed&&(
           <div title="Mes classes" onClick={()=>setPage("eleves")} style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"10px 0",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.06)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-            <span style={{fontSize:16}}>ðŸ“</span>
+            <span style={{fontSize:16}}>📁</span>
           </div>
         )}
 
-        {/* SÃ©parateur */}
+        {/* Séparateur */}
         {!effectiveCollapsed&&<div style={{margin:"6px 14px",height:1,background:"rgba(255,255,255,.08)"}}/>}
 
         {/* Autres items */}
@@ -11363,7 +11364,7 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
         ))}
       </nav>
 
-      {/* â”€â”€ PROFIL / PIED â”€â”€ */}
+      {/* ── PROFIL / PIED ── */}
       <div style={{borderTop:"1px solid rgba(212,175,55,.15)",flexShrink:0}}>
         {!effectiveCollapsed&&(
           <div style={{padding:"12px 14px"}}>
@@ -11371,25 +11372,25 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
               <Avatar ens={user} size={34} fontSize={12}/>
               <div style={{minWidth:0,flex:1}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{user?.nom}</div>
-                <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1}}>Surveillance GÃ©nÃ©rale Â· {niveauLabel}</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.45)",marginTop:1}}>Surveillance Générale · {niveauLabel}</div>
               </div>
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setPage("settings")}
                 style={{flex:1,padding:"7px 0",borderRadius:8,border:"1px solid rgba(255,255,255,.12)",background:"rgba(255,255,255,.06)",color:"rgba(255,255,255,.6)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                âš™ï¸ ParamÃ¨tres
+                ⚙️ Paramètres
               </button>
               <button onClick={()=>{localStorage.removeItem("svt_user");window.location.reload();}}
                 style={{flex:1,padding:"7px 0",borderRadius:8,border:"1px solid rgba(180,71,46,.4)",background:"rgba(180,71,46,.12)",color:"#f87171",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                ðŸšª DÃ©connexion
+                🚪 Déconnexion
               </button>
             </div>
           </div>
         )}
         {effectiveCollapsed&&(
           <div style={{padding:"10px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-            <div onClick={()=>setPage("settings")} style={{cursor:"pointer",padding:6,borderRadius:8}} title="ParamÃ¨tres" onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.08)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-              <span style={{fontSize:16}}>âš™ï¸</span>
+            <div onClick={()=>setPage("settings")} style={{cursor:"pointer",padding:6,borderRadius:8}} title="Paramètres" onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.08)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <span style={{fontSize:16}}>⚙️</span>
             </div>
             <Avatar ens={user} size={28} fontSize={10}/>
           </div>
@@ -11399,7 +11400,7 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
       {/* Toggle collapse */}
       <button onClick={()=>setCollapsed(c=>!c)}
         style={{position:"absolute",top:18,right:8,width:22,height:22,borderRadius:"50%",background:"#0B3D20",border:"1.5px solid rgba(212,175,55,.4)",color:G,cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
-        {effectiveCollapsed?"â€º":"â€¹"}
+        {effectiveCollapsed?"›":"‹"}
       </button>
     </aside>
   );
@@ -11429,7 +11430,7 @@ const NavItemSG = ({active, collapsed, onClick, emoji, label, badge, gold="#D4AF
   </div>
 );
 
-// â”€â”€ Composant sidebar gÃ©nÃ©rique groupÃ© (Proviseur, Censeur, Animateur) â”€â”€
+// ── Composant sidebar générique groupé (Proviseur, Censeur, Animateur) ──
 const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effectiveCollapsed, nbEpAttente}) => {
   const {user, page, setPage} = useApp();
   const [expandedGroups, setExpandedGroups] = useState({departements:false});
@@ -11456,7 +11457,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
             <span style={{fontSize:16,flexShrink:0}}>{item.emoji}</span>
             {!effectiveCollapsed&&<>
               <span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>
-              <span style={{fontSize:10,transition:"transform .2s",transform:open?"rotate(90deg)":"rotate(0deg)",opacity:.5}}>â€º</span>
+              <span style={{fontSize:10,transition:"transform .2s",transform:open?"rotate(90deg)":"rotate(0deg)",opacity:.5}}>›</span>
             </>}
           </div>
           {open&&!effectiveCollapsed&&item.sub&&(
@@ -11511,20 +11512,20 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
         {!effectiveCollapsed&&(
           <div>
             <div style={{fontSize:12,fontWeight:800,color:"#fff",lineHeight:1}}>Lykama</div>
-            <div style={{fontSize:9,color:"rgba(255,255,255,.4)",marginTop:2}}>LycÃ©e de Kakatare Â· Maroua</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,.4)",marginTop:2}}>Lycée de Kakatare · Maroua</div>
           </div>
         )}
       </div>
 
-      {/* AnnÃ©e scolaire */}
+      {/* Année scolaire */}
       {!effectiveCollapsed&&(
         <div style={{padding:"8px 16px 10px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
           <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.3)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:3}}>VUE D'ENSEMBLE</div>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2025 â€“ 2026 â–¾</div>
+          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2025 – 2026 ▾</div>
         </div>
       )}
 
-      {/* Navigation groupÃ©e */}
+      {/* Navigation groupée */}
       <nav style={{flex:1,overflowY:"auto",scrollbarWidth:"none",padding:"4px 0"}}>
         {groups.map((group,gi)=>(
           <div key={gi}>
@@ -11553,7 +11554,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
         {!effectiveCollapsed&&(
           <div style={{overflow:"hidden"}}>
             <div style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{user?.nom}</div>
-            <div style={{fontSize:10,color:"rgba(255,255,255,.4)"}}>{roleLabel} Â· âš™ï¸ ParamÃ¨tres</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.4)"}}>{roleLabel} · ⚙️ Paramètres</div>
           </div>
         )}
       </div>
@@ -11564,7 +11565,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
           background:C.sidebar,border:"1.5px solid rgba(255,255,255,.2)",color:"rgba(255,255,255,.6)",
           cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",
           boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
-        {effectiveCollapsed?"â€º":"â€¹"}
+        {effectiveCollapsed?"›":"‹"}
       </button>
     </aside>
   );
@@ -11596,7 +11597,7 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
             <span style={{fontSize:16,flexShrink:0}}>{item.emoji}</span>
             {!effectiveCollapsed&&<>
               <span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>
-              <span style={{fontSize:10,transition:"transform .2s",transform:deptOpen?"rotate(90deg)":"rotate(0deg)",opacity:.6,flexShrink:0}}>â€º</span>
+              <span style={{fontSize:10,transition:"transform .2s",transform:deptOpen?"rotate(90deg)":"rotate(0deg)",opacity:.6,flexShrink:0}}>›</span>
             </>}
           </div>
           {deptOpen&&!effectiveCollapsed&&(
@@ -11656,20 +11657,20 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
         {!effectiveCollapsed&&(
           <div>
             <div style={{fontSize:12,fontWeight:800,color:"#fff",lineHeight:1}}>Lykama</div>
-            <div style={{fontSize:9,color:"rgba(255,255,255,.4)",marginTop:2}}>LycÃ©e de Kakatare Â· Maroua</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,.4)",marginTop:2}}>Lycée de Kakatare · Maroua</div>
           </div>
         )}
       </div>
 
-      {/* AnnÃ©e scolaire */}
+      {/* Année scolaire */}
       {!effectiveCollapsed&&(
         <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
           <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:3}}>VUE D'ENSEMBLE</div>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2025 â€“ 2026 â–¾</div>
+          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2025 – 2026 ▾</div>
         </div>
       )}
 
-      {/* Navigation groupÃ©e */}
+      {/* Navigation groupée */}
       <nav style={{flex:1,overflowY:"auto",scrollbarWidth:"none",padding:"6px 0"}}>
         {NAV_PROVISEUR_GROUPS.map((group,gi)=>(
           <div key={gi}>
@@ -11696,7 +11697,7 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
         {!effectiveCollapsed&&(
           <div style={{overflow:"hidden"}}>
             <div style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{user?.nom}</div>
-            <div style={{fontSize:10,color:"rgba(255,255,255,.4)"}}>Proviseur Â· âš™ï¸ ParamÃ¨tres</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.4)"}}>Proviseur · ⚙️ Paramètres</div>
           </div>
         )}
       </div>
@@ -11707,7 +11708,7 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
           background:C.sidebar,border:"1.5px solid rgba(255,255,255,.2)",color:"rgba(255,255,255,.6)",
           cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",
           boxShadow:"0 2px 8px rgba(0,0,0,.3)",zIndex:10}}>
-        {effectiveCollapsed?"â€º":"â€¹"}
+        {effectiveCollapsed?"›":"‹"}
       </button>
     </aside>
   );
@@ -11716,27 +11717,27 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
 const Sidebar = ({collapsed, setCollapsed}) => {
   const {user, page, setPage, data, t} = useApp();
   const {isMobile, mobileLandscape, isTablet} = useDevice();
-  // Forcer collapsed sur mobile/tablette en paysage pour libÃ©rer l'espace
-  // Le repli initial sur petits Ã©crans est dÃ©jÃ  gÃ©rÃ© par l'Ã©tat initial de `collapsed`
-  // (voir useState(()=>window.innerWidth<1024) dans AppLayout) â€” ici on ne force PLUS
-  // un repli permanent sur tablette, sinon le bouton de la sidebar devient inopÃ©rant.
+  // Forcer collapsed sur mobile/tablette en paysage pour libérer l'espace
+  // Le repli initial sur petits écrans est déjà géré par l'état initial de `collapsed`
+  // (voir useState(()=>window.innerWidth<1024) dans AppLayout) — ici on ne force PLUS
+  // un repli permanent sur tablette, sinon le bouton de la sidebar devient inopérant.
   const effectiveCollapsed = mobileLandscape ? true : collapsed;
   const isAdmin = isAdminRole(user?.role);
   const nav = user?.role==="proviseur" ? NAV_PROVISEUR : user?.role==="surveillant_general" ? NAV_SURVEILLANCE : user?.role==="censeur" ? NAV_CENSEUR : isAdmin ? NAV_ADMIN : NAV_TEACHER;
-  // Compter les Ã©preuves en attente pour le badge
+  // Compter les épreuves en attente pour le badge
   const nbEpAttente = isAdmin
     ? (data?.epreuves||[]).filter(e=>e.statut==="attente").length
     : (data?.epreuves||[]).filter(e=>e.ens_id===user?.id&&e.statut==="attente").length;
 
   if (user?.role === "secretaire") return <SidebarGrouped groups={[
-    {section:"",items:[{id:"dashboard",emoji:"ðŸ ",label:"Tableau de bord"}]},
-    {section:"DOCUMENTS",items:[{id:"secretariat",emoji:"ðŸ—‚ï¸",label:"SecrÃ©tariat"}]},
-    {section:"Ã‰LÃˆVES",items:[{id:"eleves",emoji:"ðŸŽ“",label:"Ã‰lÃ¨ves"}]},
-    {section:"COMMUNICATION",items:[{id:"babillard",emoji:"ðŸ“Œ",label:"Babillard"}]},
-  ]} role="secretaire" roleLabel="SecrÃ©tariat" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={0}/>;
+    {section:"",items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"}]},
+    {section:"DOCUMENTS",items:[{id:"secretariat",emoji:"🗂️",label:"Secrétariat"}]},
+    {section:"ÉLÈVES",items:[{id:"eleves",emoji:"🎓",label:"Élèves"}]},
+    {section:"COMMUNICATION",items:[{id:"babillard",emoji:"📌",label:"Babillard"}]},
+  ]} role="secretaire" roleLabel="Secrétariat" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={0}/>;
   if (user?.role === "proviseur") return <SidebarGrouped groups={NAV_PROVISEUR_GROUPS} role="proviseur" roleLabel="Proviseur" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
   if (user?.role === "censeur")   return <SidebarGrouped groups={NAV_CENSEUR_GROUPS}   role="censeur"   roleLabel="Censeur"   collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
-  if (user?.role === "animateur"||user?.role === "animatrice") return <SidebarGrouped groups={NAV_ANIMATEUR_GROUPS} role={user?.role} roleLabel="Animateur PÃ©dagogique" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
+  if (user?.role === "animateur"||user?.role === "animatrice") return <SidebarGrouped groups={NAV_ANIMATEUR_GROUPS} role={user?.role} roleLabel="Animateur Pédagogique" collapsed={collapsed} setCollapsed={setCollapsed} effectiveCollapsed={effectiveCollapsed} nbEpAttente={nbEpAttente}/>;
   if (user?.role === "proviseur") {
     return (
       <SidebarProviseur collapsed={collapsed} setCollapsed={setCollapsed}
@@ -11763,16 +11764,16 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed && (
           <div>
             <div style={{fontSize:12, fontWeight:800, color:"#fff", lineHeight:1}}>Lykama</div>
-            <div style={{fontSize:9, color:"rgba(255,255,255,.4)", marginTop:2}}>LycÃ©e de Kakatare Â· Maroua</div>
+            <div style={{fontSize:9, color:"rgba(255,255,255,.4)", marginTop:2}}>Lycée de Kakatare · Maroua</div>
           </div>
         )}
       </div>
 
-      {/* AnnÃ©e scolaire */}
+      {/* Année scolaire */}
       {!effectiveCollapsed && (
         <div style={{padding:"10px 16px", borderBottom:"1px solid rgba(255,255,255,.08)", flexShrink:0}}>
-          <div style={{fontSize:9, fontWeight:700, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:4}}>AnnÃ©e scolaire</div>
-          <div style={{fontSize:12, fontWeight:700, color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.08)", borderRadius:7, padding:"5px 10px"}}>2025 â€“ 2026 â–¾</div>
+          <div style={{fontSize:9, fontWeight:700, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:4}}>Année scolaire</div>
+          <div style={{fontSize:12, fontWeight:700, color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.08)", borderRadius:7, padding:"5px 10px"}}>2025 – 2026 ▾</div>
         </div>
       )}
 
@@ -11807,8 +11808,8 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         })}
       </nav>
 
-      {/* Profil utilisateur â€” cliquable vers ParamÃ¨tres (photo, mot de passe) */}
-      <div onClick={()=>setPage("settings")} title="ParamÃ¨tres â€” photo de profil, mot de passe"
+      {/* Profil utilisateur — cliquable vers Paramètres (photo, mot de passe) */}
+      <div onClick={()=>setPage("settings")} title="Paramètres — photo de profil, mot de passe"
         style={{borderTop:"1px solid rgba(255,255,255,.08)", padding: collapsed ? "10px 0" : "12px 14px", display:"flex", alignItems:"center", gap:9, flexShrink:0, justifyContent: effectiveCollapsed ? "center" : "flex-start", cursor:"pointer", transition:"background .15s"}}
         onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.05)"}
         onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -11816,7 +11817,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed && (
           <div style={{overflow:"hidden"}}>
             <div style={{fontSize:12, fontWeight:700, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{user?.nom}</div>
-            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":user?.role==="surveillant_general"?"Surveillance gÃ©nÃ©rale":user?.role==="censeur"?"Censeur":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur pÃ©dagogique":"Enseignant"} Â· âš™ï¸ ParamÃ¨tres</div>
+            <div style={{fontSize:10, color:"rgba(255,255,255,.4)", textTransform:"capitalize"}}>{user?.role==="proviseur"?"Proviseur":user?.role==="surveillant_general"?"Surveillance générale":user?.role==="censeur"?"Censeur":(user?.role==="animateur"||user?.role==="animatrice")?"Animateur pédagogique":"Enseignant"} · ⚙️ Paramètres</div>
           </div>
         )}
       </div>
@@ -11833,13 +11834,13 @@ const DarkModeToggle = () => {
       style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.border}`,
         background:C.white,cursor:"pointer",fontSize:14,display:"flex",
         alignItems:"center",justifyContent:"center"}}>
-      {dark?"â˜€ï¸":"ðŸŒ™"}
+      {dark?"☀️":"🌙"}
     </button>
   );
 };
 
-// â”€â”€ Topbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€ Recherche globale (Ã©lÃ¨ves, enseignants, classes) â€” admin uniquement â”€â”€
+// ── Topbar ──────────────────────────────────────────────────────────
+// ── Recherche globale (élèves, enseignants, classes) — admin uniquement ──
 const GlobalSearch = () => {
   const {data, setPage, setPendingFicheEns, setPendingClasseSelect, mobileSearchOpen, setMobileSearchOpen} = useApp();
   const {isMobile} = useDevice();
@@ -11854,7 +11855,7 @@ const GlobalSearch = () => {
   };
   const closeMobileSearch = () => {
     setQ("");
-    window.history.back(); // dÃ©clenche popstate â†’ ferme via le handler central
+    window.history.back(); // déclenche popstate → ferme via le handler central
   };
 
   useEffect(() => {
@@ -11889,17 +11890,17 @@ const GlobalSearch = () => {
   const closeAll = () => {
     setOpen(false);
     setQ("");
-    if (mobileSearchOpen) window.history.back(); // dÃ©pile l'entrÃ©e poussÃ©e Ã  l'ouverture
+    if (mobileSearchOpen) window.history.back(); // dépile l'entrée poussée à l'ouverture
   };
   const goToClasse = (cl) => { setPendingClasseSelect(cl); setPage("eleves"); closeAll(); };
   const goToEns    = (ensId) => { setPendingFicheEns(ensId); setPage("documents"); closeAll(); };
 
-  // Liste de rÃ©sultats â€” identique en contenu pour desktop (dropdown) et mobile (plein Ã©cran),
+  // Liste de résultats — identique en contenu pour desktop (dropdown) et mobile (plein écran),
   // seule la taille des zones tactiles change.
   const renderResults = (touchSize) => {
     if (query.length < 2) return null;
     if (totalResults===0) return (
-      <div style={{padding:"24px", textAlign:"center", color:"#94a3b8", fontSize:touchSize?13:12}}>Aucun rÃ©sultat pour "{q}"</div>
+      <div style={{padding:"24px", textAlign:"center", color:"#94a3b8", fontSize:touchSize?13:12}}>Aucun résultat pour "{q}"</div>
     );
     const rowPad = touchSize ? "13px 16px" : "8px 14px";
     const rowFont = touchSize ? 14 : 12.5;
@@ -11912,8 +11913,8 @@ const GlobalSearch = () => {
             {results.classes.map(cl=>(
               <div key={cl} onClick={()=>goToClasse(cl)} style={{padding:rowPad, cursor:"pointer", display:"flex", alignItems:"center", gap:10, fontSize:rowFont, borderBottom:touchSize?`1px solid #f1f5f9`:"none"}}
                 onMouseEnter={e=>!touchSize&&(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>!touchSize&&(e.currentTarget.style.background="transparent")}>
-                <span>ðŸ«</span><span style={{fontWeight:600, color:C.txt}}>{cl}</span>
-                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>Â· {(ELEVES_DB[cl]||[]).length} Ã©lÃ¨ves</span>
+                <span>🏫</span><span style={{fontWeight:600, color:C.txt}}>{cl}</span>
+                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>· {(ELEVES_DB[cl]||[]).length} élèves</span>
               </div>
             ))}
           </div>
@@ -11926,19 +11927,19 @@ const GlobalSearch = () => {
                 onMouseEnter={e=>!touchSize&&(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>!touchSize&&(e.currentTarget.style.background="transparent")}>
                 <Avatar ens={ens} size={touchSize?26:22} fontSize={touchSize?9.5:8}/>
                 <span style={{fontWeight:600, color:C.txt}}>{getNomCourt(ens.nom)}</span>
-                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>Â· {(ens.classes||[]).length} classes</span>
+                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>· {(ens.classes||[]).length} classes</span>
               </div>
             ))}
           </div>
         )}
         {results.eleves.length>0 && (
           <div>
-            <div style={{padding:`10px 16px 4px`, fontSize:labelFont, fontWeight:800, color:"#94a3b8", textTransform:"uppercase"}}>Ã‰lÃ¨ves</div>
+            <div style={{padding:`10px 16px 4px`, fontSize:labelFont, fontWeight:800, color:"#94a3b8", textTransform:"uppercase"}}>Élèves</div>
             {results.eleves.map(e=>(
               <div key={e.id} onClick={()=>goToClasse(e.classe)} style={{padding:rowPad, cursor:"pointer", display:"flex", alignItems:"center", gap:10, fontSize:rowFont, borderBottom:touchSize?`1px solid #f1f5f9`:"none"}}
                 onMouseEnter={ev=>!touchSize&&(ev.currentTarget.style.background="#f8fafc")} onMouseLeave={ev=>!touchSize&&(ev.currentTarget.style.background="transparent")}>
-                <span>{e.g==="F"?"ðŸ‘§":"ðŸ‘¦"}</span><span style={{fontWeight:600, color:C.txt}}>{e.nom}</span>
-                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>Â· {e.classe}</span>
+                <span>{e.g==="F"?"👧":"👦"}</span><span style={{fontWeight:600, color:C.txt}}>{e.nom}</span>
+                <span style={{fontSize:rowFont-2, color:"#94a3b8"}}>· {e.classe}</span>
               </div>
             ))}
           </div>
@@ -11947,22 +11948,22 @@ const GlobalSearch = () => {
     );
   };
 
-  // â”€â”€ Mobile : icÃ´ne seule dans le Topbar + overlay plein Ã©cran â”€â”€â”€â”€â”€â”€
+  // ── Mobile : icône seule dans le Topbar + overlay plein écran ──────
   if (isMobile) {
     return (
       <>
         <button onClick={openMobileSearch}
           style={{width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.white, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0}}>
-          ðŸ”
+          🔍
         </button>
         {mobileSearchOpen && (
           <div style={{position:"fixed", inset:0, background:"#fff", zIndex:300, display:"flex", flexDirection:"column"}}>
             <div style={{display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderBottom:`1px solid ${C.border}`, flexShrink:0}}>
-              <button onClick={closeMobileSearch} style={{width:34, height:34, borderRadius:8, border:"none", background:"#f1f5f9", fontSize:16, color:C.txtMuted, flexShrink:0}}>â†</button>
+              <button onClick={closeMobileSearch} style={{width:34, height:34, borderRadius:8, border:"none", background:"#f1f5f9", fontSize:16, color:C.txtMuted, flexShrink:0}}>←</button>
               <input ref={mobileInputRef} value={q} onChange={e=>setQ(e.target.value)}
-                placeholder="Ã‰lÃ¨ve, enseignant, classeâ€¦"
+                placeholder="Élève, enseignant, classe…"
                 style={{flex:1, border:"none", outline:"none", fontSize:15, fontFamily:"inherit", color:C.txt, background:"transparent"}}/>
-              {q && <button onClick={()=>setQ("")} style={{border:"none", background:"transparent", color:"#94a3b8", fontSize:16}}>âœ•</button>}
+              {q && <button onClick={()=>setQ("")} style={{border:"none", background:"transparent", color:"#94a3b8", fontSize:16}}>✕</button>}
             </div>
             <div style={{flex:1, overflowY:"auto"}}>
               {query.length<2 ? (
@@ -11975,15 +11976,15 @@ const GlobalSearch = () => {
     );
   }
 
-  // â”€â”€ Desktop : champ inline + dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Desktop : champ inline + dropdown ───────────────────────────────
   return (
     <div ref={boxRef} style={{position:"relative", width: open?320:220, transition:"width .2s"}}>
       <div style={{display:"flex", alignItems:"center", gap:7, background:"#f1f5f9", borderRadius:9, padding:"7px 12px", border:`1px solid ${open?C.green:"transparent"}`}}>
-        <span style={{fontSize:13, color:"#94a3b8"}}>ðŸ”</span>
+        <span style={{fontSize:13, color:"#94a3b8"}}>🔍</span>
         <input value={q} onChange={e=>setQ(e.target.value)} onFocus={()=>setOpen(true)}
-          placeholder="Ã‰lÃ¨ve, enseignant, classeâ€¦"
+          placeholder="Élève, enseignant, classe…"
           style={{flex:1, border:"none", background:"transparent", outline:"none", fontSize:12.5, fontFamily:"inherit", color:C.txt}}/>
-        {q && <span onClick={()=>setQ("")} style={{cursor:"pointer", color:"#94a3b8", fontSize:13}}>âœ•</span>}
+        {q && <span onClick={()=>setQ("")} style={{cursor:"pointer", color:"#94a3b8", fontSize:13}}>✕</span>}
       </div>
 
       {open && query.length>=2 && (
@@ -12014,7 +12015,7 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
 
   const REALTIME_CFG = {
     connected:    { dot:"#22c55e", label:"Synchro en direct" },
-    connecting:   { dot:"#f59e0b", label:"Connexionâ€¦" },
+    connecting:   { dot:"#f59e0b", label:"Connexion…" },
     error:        { dot:"#ef4444", label:"Synchro indisponible" },
     disconnected: { dot:"#94a3b8", label:"Synchro hors ligne" },
   };
@@ -12037,7 +12038,7 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
     <header style={{height:52, background:"rgba(255,255,255,.95)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12, padding:"0 18px", position:"sticky", top:0, zIndex:30, flexShrink:0, overflowX:"auto", scrollbarWidth:"none"}}>
       <button onClick={()=>setCollapsed(!collapsed)}
         style={{width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.white, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, color:C.txtMuted}}>
-        {collapsed ? "â†’" : "â†"}
+        {collapsed ? "→" : "←"}
       </button>
       <h1 style={{fontSize:14, fontWeight:700, color:C.txt, margin:0}}>{title}</h1>
       {(user?.role==="animatrice"||user?.role==="proviseur"||user?.role==="censeur_a") && <GlobalSearch/>}
@@ -12057,14 +12058,14 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
           style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${C.green}`,
             background:C.greenPale,fontSize:11,fontWeight:700,cursor:"pointer",
             color:C.green,fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
-          ðŸ“² Installer
+          📲 Installer
         </button>
       )}
       {user?.role==="proviseur" && (
         <select value={viewDeptId||""} onChange={e=>setViewDeptId(e.target.value?parseInt(e.target.value):null)}
-          title="Filtrer par dÃ©partement"
+          title="Filtrer par département"
           style={{padding:"5px 8px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:700, color:C.txt, fontFamily:"inherit", cursor:"pointer", maxWidth:130, flexShrink:0}}>
-          <option value="">ðŸ›ï¸ Tous les dÃ©partements</option>
+          <option value="">🏛️ Tous les départements</option>
           {DEPARTEMENTS_LIST.map(d=><option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>)}
         </select>
       )}
@@ -12077,7 +12078,7 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
           background:page==="babillard"?C.green:C.white,fontSize:13,cursor:"pointer",
           color:page==="babillard"?"#fff":C.txtMuted,fontFamily:"inherit",flexShrink:0,
           display:"flex",alignItems:"center",gap:4}}>
-        ðŸ“Œ{!isMobile&&<span style={{fontSize:11,fontWeight:700}}> Babillard</span>}
+        📌{!isMobile&&<span style={{fontSize:11,fontWeight:700}}> Babillard</span>}
         {nbNouvellesAnnonces>0&&(
           <span style={{position:"absolute",top:-4,right:-4,background:"#dc2626",color:"#fff",
             borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:900,
@@ -12087,20 +12088,20 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
         )}
       </button>
       <DarkModeToggle/>
-      <button onClick={()=>{ if(window.confirm("Se dÃ©connecter ?")) onLogout(); }}
+      <button onClick={()=>{ if(window.confirm("Se déconnecter ?")) onLogout(); }}
         style={{padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:600, cursor:"pointer", color:C.txtMuted, fontFamily:"inherit", flexShrink:0, whiteSpace:"nowrap"}}>
-        {t("DÃ©connexion")}
+        {t("Déconnexion")}
       </button>
     </header>
   );
 };
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GÃ‰NÃ‰RATION BILAN TRIMESTRIEL â€” PDF automatique animatrice
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// GÉNÉRATION BILAN TRIMESTRIEL — PDF automatique animatrice
+// ════════════════════════════════════════════════════════════════
 function genBilanTrimestre(trim, data) {
-  const trimLabels = {T1:"1er Trimestre",T2:"2Ã¨me Trimestre",T3:"3Ã¨me Trimestre",ANN:"Annuel"};
+  const trimLabels = {T1:"1er Trimestre",T2:"2ème Trimestre",T3:"3ème Trimestre",ANN:"Annuel"};
   const periode = trimLabels[trim] || trim;
   const dateJour = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
 
@@ -12150,7 +12151,7 @@ function genBilanTrimestre(trim, data) {
       <td style="padding:8px 10px;border:1px solid #ddd;text-align:center">${ens.totalRef}</td>
       <td style="padding:8px 10px;border:1px solid #ddd;text-align:center;font-weight:800;color:${pct(ens.tauxGlobal)}">${ens.tauxGlobal}%</td>
       <td style="padding:8px 10px;border:1px solid #ddd;text-align:center">
-        ${ens.tauxGlobal>=75?"âœ… Objectif":ens.tauxGlobal>=50?"âš ï¸ En cours":"ðŸ”´ Alerte"}
+        ${ens.tauxGlobal>=75?"✅ Objectif":ens.tauxGlobal>=50?"⚠️ En cours":"🔴 Alerte"}
       </td>
       <td style="padding:8px 10px;border:1px solid #ddd;font-size:11px">${(ens.classes||[]).join(", ")}</td>
     </tr>`).join("");
@@ -12175,16 +12176,16 @@ function genBilanTrimestre(trim, data) {
 </style></head>
 <body>
   <div style="text-align:center;margin-bottom:16px">
-    <div style="font-size:13px;font-weight:700;color:#1a5276">LYCÃ‰E DE KAKATARE â€” MAROUA</div>
-    <div style="font-size:10px;color:#888">Conseil d'Enseignement SVTEEHB Â· 2025â€“2026</div>
+    <div style="font-size:13px;font-weight:700;color:#1a5276">LYCÉE DE KAKATARE — MAROUA</div>
+    <div style="font-size:10px;color:#888">Conseil d'Enseignement SVTEEHB · 2025–2026</div>
   </div>
-  <h1>BILAN PÃ‰DAGOGIQUE â€” ${periode.toUpperCase()}</h1>
-  <h2>Couverture des programmes Â· Ã‰ditÃ© le ${dateJour}</h2>
+  <h1>BILAN PÉDAGOGIQUE — ${periode.toUpperCase()}</h1>
+  <h2>Couverture des programmes · Édité le ${dateJour}</h2>
 
   <div class="kpis">
     <div class="kpi"><div class="kpi-val" style="color:#1a5276">${statsEns.length}</div><div class="kpi-lbl">Enseignants</div></div>
     <div class="kpi"><div class="kpi-val" style="color:${pct(tauxMoyen)}">${tauxMoyen}%</div><div class="kpi-lbl">Taux moyen</div></div>
-    <div class="kpi"><div class="kpi-val" style="color:#166534">${enObjectif}</div><div class="kpi-lbl">Objectif â‰¥75%</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#166534">${enObjectif}</div><div class="kpi-lbl">Objectif ≥75%</div></div>
     <div class="kpi"><div class="kpi-val" style="color:#991b1b">${enAlerte}</div><div class="kpi-lbl">En alerte &lt;50%</div></div>
   </div>
 
@@ -12198,23 +12199,23 @@ function genBilanTrimestre(trim, data) {
         <th style="width:50px;text-align:center">LP</th>
         <th style="width:65px;text-align:center">Taux</th>
         <th style="width:90px;text-align:center">Statut</th>
-        <th>Classes enseignÃ©es</th>
+        <th>Classes enseignées</th>
       </tr>
     </thead>
     <tbody>${rowsHtml}</tbody>
   </table>
 
-  ${enAlerte>0?`<div style="margin-top:16px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#991b1b"><strong>âš ï¸ Enseignants en alerte :</strong> ${statsEns.filter(e=>e.tauxGlobal<50).map(e=>e.nom).join(", ")}</div>`:""}
+  ${enAlerte>0?`<div style="margin-top:16px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#991b1b"><strong>⚠️ Enseignants en alerte :</strong> ${statsEns.filter(e=>e.tauxGlobal<50).map(e=>e.nom).join(", ")}</div>`:""}
 
   <div class="sig">
     <div class="sig-bloc">
-      <strong>L'Animatrice PÃ©dagogique</strong><br>
-      AÃSSATOU SYLVIE â€” PCEG<br><br>
+      <strong>L'Animatrice Pédagogique</strong><br>
+      AÏSSATOU SYLVIE — PCEG<br><br>
       Signature :
     </div>
     <div class="sig-bloc" style="text-align:right">
-      Fait Ã  Maroua, le ${dateJour}<br><br>
-      <em>Document gÃ©nÃ©rÃ© automatiquement par la plateforme SVTEEHB</em>
+      Fait à Maroua, le ${dateJour}<br><br>
+      <em>Document généré automatiquement par la plateforme SVTEEHB</em>
     </div>
   </div>
 
@@ -12237,16 +12238,16 @@ function genBilanTrimestre(trim, data) {
   };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SUIVI PROGRAMME SYNTHÃ‰TIQUE â€” Vue animatrice : tableau global
-// Tous les enseignants Â· Toutes les classes Â· En un coup d'Å“il
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â”€â”€ Courbe d'Ã©volution T1â†’T2â†’T3 â€” SVG natif, sans dÃ©pendance externe â”€â”€â”€â”€â”€â”€
-// Mini-courbe compacte (sparkline) : utilisÃ©e dans chaque ligne de tableau
+// ══════════════════════════════════════════════════════════════════════
+// SUIVI PROGRAMME SYNTHÉTIQUE — Vue animatrice : tableau global
+// Tous les enseignants · Toutes les classes · En un coup d'œil
+// ══════════════════════════════════════════════════════════════════════
+// ── Courbe d'évolution T1→T2→T3 — SVG natif, sans dépendance externe ──────
+// Mini-courbe compacte (sparkline) : utilisée dans chaque ligne de tableau
 const MiniEvolutionChart = ({ values, width=70, height=28, color }) => {
   const vals = values.map(v => v===null||v===undefined ? null : v);
   const present = vals.filter(v=>v!==null);
-  if (present.length < 2) return <span style={{fontSize:11, color:"#cbd5e1"}}>â€”</span>;
+  if (present.length < 2) return <span style={{fontSize:11, color:"#cbd5e1"}}>—</span>;
   const min = 0, max = 100;
   const n = vals.length;
   const pts = vals.map((v,i) => v===null ? null : {
@@ -12265,7 +12266,7 @@ const MiniEvolutionChart = ({ values, width=70, height=28, color }) => {
   );
 };
 
-// Grande courbe annotÃ©e â€” vue d'ensemble avec axes, points et valeurs affichÃ©es
+// Grande courbe annotée — vue d'ensemble avec axes, points et valeurs affichées
 const EvolutionChartLarge = ({ series, height=140 }) => {
   // series: [{label:"T1", value:62}, {label:"T2", value:70}, {label:"T3", value:null}, ...]
   const width = 100; // en %, viewBox responsive
@@ -12273,7 +12274,7 @@ const EvolutionChartLarge = ({ series, height=140 }) => {
   const innerH = height - padTop - padBottom;
   const valides = series.filter(s=>s.value!==null);
   if (valides.length < 2) {
-    return <div style={{padding:"30px 14px", textAlign:"center", color:C.txtLight, fontSize:12}}>Pas assez de donnÃ©es pour tracer une courbe (au moins 2 trimestres avec des notes saisies sont nÃ©cessaires).</div>;
+    return <div style={{padding:"30px 14px", textAlign:"center", color:C.txtLight, fontSize:12}}>Pas assez de données pour tracer une courbe (au moins 2 trimestres avec des notes saisies sont nécessaires).</div>;
   }
   const n = series.length;
   const pts = series.map((s,i) => s.value===null ? null : {
@@ -12286,7 +12287,7 @@ const EvolutionChartLarge = ({ series, height=140 }) => {
   const aireD = path + ` L${ptsValides[ptsValides.length-1].x.toFixed(2)},${(padTop+innerH).toFixed(2)} L${ptsValides[0].x.toFixed(2)},${(padTop+innerH).toFixed(2)} Z`;
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none">
-      {/* Lignes de repÃ¨re horizontales (0/25/50/75/100%) */}
+      {/* Lignes de repère horizontales (0/25/50/75/100%) */}
       {[0,25,50,75,100].map(g=>{
         const y = padTop + innerH - (g/100)*innerH;
         return <g key={g}>
@@ -12320,7 +12321,7 @@ function SuiviProgrammePage() {
     return next;
   });
 
-  // Calcul du taux de couverture pour un trimestre donnÃ© (1,2,3) â€” rÃ©utilisÃ© pour la comparaison
+  // Calcul du taux de couverture pour un trimestre donné (1,2,3) — réutilisé pour la comparaison
   const calcTauxTrim = (ens, cl, trimNum, data) => {
     const code = resolveProgCode(cl);
     const meta = code ? PROG_META[code] : null;
@@ -12339,7 +12340,7 @@ function SuiviProgrammePage() {
 
   if (!data) return (
     <div style={{padding:"60px",textAlign:"center",color:C.txtMuted}}>
-      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargementâ€¦</div>
+      <Spinner size={28} color={C.green}/><div style={{marginTop:12}}>Chargement…</div>
     </div>
   );
 
@@ -12350,9 +12351,9 @@ function SuiviProgrammePage() {
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a,col:getColor(a.id),ini:getIni(a.nom),classes:ENS_CLASSES_REF[a.id]||[]}))
   );
 
-  // Calculer stats par enseignant Ã— classe
+  // Calculer stats par enseignant × classe
   const rows = enseignants.flatMap(ens => {
-    // DÃ©dupliquer les classes avant de gÃ©nÃ©rer les lignes
+    // Dédupliquer les classes avant de générer les lignes
     const classesUniques = [...new Set(ens.classes||[])];
     return classesUniques.map(cl => {
       const code  = resolveProgCode(cl);
@@ -12378,11 +12379,11 @@ function SuiviProgrammePage() {
       }).length;
 
       const taux  = lp>0 ? Math.min(100, Math.round(lfTrim/lp*100)) : 0;
-      // tpFait limitÃ© Ã  la mÃªme plage que tpP (range) â€” sinon des TP/TD faits en avance
-      // sur un autre trimestre se comptaient dans le trimestre affichÃ©, faussant le taux.
+      // tpFait limité à la même plage que tpP (range) — sinon des TP/TD faits en avance
+      // sur un autre trimestre se comptaient dans le trimestre affiché, faussant le taux.
       const tpFait= (meta?.tp||[]).filter(n => prog.includes(n) && (trim===0 || (range && n>=range[0] && n<=range[1]))).length;
       const ef    = (ELEVES_DB[cl]||[]).length;
-      // DigitalisÃ©es
+      // Digitalisées
       const digKey= `${ens.id}||${cl}||dig`;
       const digProg = (data?.prog?.[digKey]||[]);
       const leconsList = code ? (LECONS_DATA[code]||[]) : [];
@@ -12404,7 +12405,7 @@ function SuiviProgrammePage() {
   const enObjectif= rows.filter(r=>r.taux>=75).length;
   const tauxMoyen = totalRows>0 ? Math.round(rows.reduce((s,r)=>s+r.taux,0)/totalRows) : 0;
 
-  // Regroupement par enseignant â€” un seul nom affichÃ©, dÃ©pliable
+  // Regroupement par enseignant — un seul nom affiché, dépliable
   const groupedByEns = [];
   const seenEns = new Map();
   rows.forEach(r => {
@@ -12422,7 +12423,7 @@ function SuiviProgrammePage() {
   });
   groupedByEns.sort((a,b)=>a.avgTaux-b.avgTaux);
 
-  // â”€â”€ DonnÃ©es pour la vue Comparaison T1/T2/T3 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Données pour la vue Comparaison T1/T2/T3 ──────────────────────
   const rowsComparaison = enseignants.flatMap(ens => {
     const classesUniques = [...new Set(ens.classes||[])];
     return classesUniques.map(cl => ({
@@ -12458,15 +12459,15 @@ function SuiviProgrammePage() {
       {/* Header */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding: isMobile?"12px 14px":"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:10}}>
         <div>
-          <h2 style={{fontSize: isMobile?14:16, fontWeight:800, color:C.txt, margin:0}}>ðŸ“Š Suivi programme</h2>
-          <p style={{fontSize: isMobile?10.5:12, color:C.txtMuted, margin:"4px 0 0"}}>Tous les enseignants Â· Toutes les classes Â· 2025â€“2026</p>
+          <h2 style={{fontSize: isMobile?14:16, fontWeight:800, color:C.txt, margin:0}}>📊 Suivi programme</h2>
+          <p style={{fontSize: isMobile?10.5:12, color:C.txtMuted, margin:"4px 0 0"}}>Tous les enseignants · Toutes les classes · 2025–2026</p>
         </div>
         <div style={{display:"flex", gap:8, alignItems:"center"}}>
           <button onClick={()=>genBilanTrimestre(["ANN","T1","T2","T3"][trim], data)}
             style={{padding: isMobile?"7px 12px":"8px 16px",background:`linear-gradient(135deg,${C.greenDark},${C.green})`,
               color:"#fff",border:"none",borderRadius:10,fontSize: isMobile?11:12,fontWeight:700,
               cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-            ðŸ“„ {isMobile?"Bilan":"GÃ©nÃ©rer bilan"}
+            📄 {isMobile?"Bilan":"Générer bilan"}
           </button>
         </div>
         {/* Filtre trimestre */}
@@ -12483,10 +12484,10 @@ function SuiviProgrammePage() {
       {/* KPIs */}
       <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)", gap:10}}>
         {[
-          {label:"Classes suivies",  val:totalRows,   col:C.blue,  bg:C.bluePale,   emoji:"ðŸ“š"},
-          {label:"Taux moyen",       val:`${tauxMoyen}%`, col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen), emoji:"ðŸ“Š"},
-          {label:"Objectif â‰¥75%",   val:enObjectif,  col:C.green, bg:C.greenPale,  emoji:"âœ…"},
-          {label:"En alerte <50%",  val:enAlerte,    col:enAlerte>0?C.red:C.green, bg:enAlerte>0?C.redPale:C.greenPale, emoji:"âš ï¸"},
+          {label:"Classes suivies",  val:totalRows,   col:C.blue,  bg:C.bluePale,   emoji:"📚"},
+          {label:"Taux moyen",       val:`${tauxMoyen}%`, col:taux2col(tauxMoyen), bg:taux2bg(tauxMoyen), emoji:"📊"},
+          {label:"Objectif ≥75%",   val:enObjectif,  col:C.green, bg:C.greenPale,  emoji:"✅"},
+          {label:"En alerte <50%",  val:enAlerte,    col:enAlerte>0?C.red:C.green, bg:enAlerte>0?C.redPale:C.greenPale, emoji:"⚠️"},
         ].map((k,i)=>(
           <div key={i} style={{background:k.bg, borderRadius:11, border:`1px solid ${C.border}`, padding:"12px 14px"}}>
             <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
@@ -12503,8 +12504,8 @@ function SuiviProgrammePage() {
         <div style={{display:"flex", gap:8}}>
           {[
             {id:"tous",     label:"Tous",           count:rows.length},
-            {id:"alerte",   label:"âš  En alerte",    count:enAlerte},
-            {id:"objectif", label:"âœ… Objectif atteint", count:enObjectif},
+            {id:"alerte",   label:"⚠ En alerte",    count:enAlerte},
+            {id:"objectif", label:"✅ Objectif atteint", count:enObjectif},
           ].map(f=>(
             <button key={f.id} onClick={()=>setFiltre(f.id)}
               style={{padding:"6px 14px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
@@ -12524,32 +12525,32 @@ function SuiviProgrammePage() {
                     "Tendance": (r.t1!==null&&r.t3!==null) ? (r.t3-r.t1) : ""
                   }))
                 : rows.map(r=>({
-                    "Enseignant": getNomCourt(r.ens.nom), "Classe": r.cl, "Ã‰lÃ¨ves": r.ef,
-                    "LeÃ§ons faites": r.lf, "LeÃ§ons prÃ©vues": r.lp, "Taux couverture (%)": r.taux,
-                    "TP fait": r.tpFait, "TP prÃ©vu": r.tpP,
+                    "Enseignant": getNomCourt(r.ens.nom), "Classe": r.cl, "Élèves": r.ef,
+                    "Leçons faites": r.lf, "Leçons prévues": r.lp, "Taux couverture (%)": r.taux,
+                    "TP fait": r.tpFait, "TP prévu": r.tpP,
                     "Digital fait": r.ldFait, "Digital total": r.ldTot, "Taux digital (%)": r.tauxDig,
                     "Statut": r.taux<50?"Alerte":r.taux>=75?"Objectif":"En cours"
                   }));
               if (exportRows.length === 0) {
-                showToast("âš  Aucune donnÃ©e Ã  exporter pour ce filtre", false);
+                showToast("⚠ Aucune donnée à exporter pour ce filtre", false);
                 return;
               }
               const ok = exportToExcel(
                 `Suivi_programme_${vueMode==="comparaison"?"comparaison":TRIM_LABELS[["ANN","T1","T2","T3"][trim]]||"annuel"}`,
                 "Suivi", exportRows
               );
-              showToast(ok ? "âœ“ Fichier Excel tÃ©lÃ©chargÃ©" : "âš  Ã‰chec de l'export", ok);
+              showToast(ok ? "✓ Fichier Excel téléchargé" : "⚠ Échec de l'export", ok);
             }}
             style={{padding:"6px 14px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
               border:`1.5px solid #15803d`, background:"#f0fdf4", color:"#15803d", display:"flex", alignItems:"center", gap:6}}>
-            ðŸ“¥ Exporter Excel
+            📥 Exporter Excel
           </button>
           <button onClick={()=>setVueMode(vueMode==="normal"?"comparaison":"normal")}
           style={{padding:"6px 14px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
             border:`1.5px solid ${vueMode==="comparaison"?"#7c3aed":C.border}`,
             background:vueMode==="comparaison"?"#f5f3ff":"transparent",
             color:vueMode==="comparaison"?"#7c3aed":C.txtMuted, display:"flex", alignItems:"center", gap:6}}>
-          ðŸ“ˆ {vueMode==="comparaison" ? "Vue normale" : "Comparer T1 Â· T2 Â· T3"}
+          📈 {vueMode==="comparaison" ? "Vue normale" : "Comparer T1 · T2 · T3"}
         </button>
         </div>
       </div>
@@ -12557,7 +12558,7 @@ function SuiviProgrammePage() {
       {vueMode==="comparaison" ? (
       <div style={{display:"flex", flexDirection:"column", gap:14}}>
       <div style={{background:C.white, borderRadius:14, border:`1px solid ${C.border}`, padding:"16px 18px"}}>
-        <h3 style={{fontSize:12.5, fontWeight:800, color:C.txt, margin:"0 0 8px"}}>ðŸ“ˆ Ã‰volution du taux de couverture global Â· Tous enseignants</h3>
+        <h3 style={{fontSize:12.5, fontWeight:800, color:C.txt, margin:"0 0 8px"}}>📈 Évolution du taux de couverture global · Tous enseignants</h3>
         <EvolutionChartLarge series={serieGlobale}/>
       </div>
       <div style={{background:C.white, borderRadius:14, border:`1px solid ${C.border}`, overflow:"hidden", boxShadow:"0 1px 3px rgba(0,0,0,.04)"}}>
@@ -12565,7 +12566,7 @@ function SuiviProgrammePage() {
         <table style={{width:"100%", minWidth: 640, borderCollapse:"collapse", fontSize:12.5}}>
           <thead>
             <tr style={{background:"#fafbfc", borderBottom:`2px solid ${C.border}`}}>
-              {["Enseignant / Classe","T1","T2","T3","Ã‰volution","Tendance"].map((h,i)=>(
+              {["Enseignant / Classe","T1","T2","T3","Évolution","Tendance"].map((h,i)=>(
                 <th key={i} style={{padding:"11px 14px", textAlign:i===0?"left":"center", color:"#64748b", fontSize:10.5, fontWeight:700, textTransform:"uppercase", letterSpacing:".04em"}}>{h}</th>
               ))}
             </tr>
@@ -12576,14 +12577,14 @@ function SuiviProgrammePage() {
               const avgT = (k) => { const vals=g.classes.map(r=>r[k]).filter(v=>v!==null); return vals.length>0?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length):null; };
               const gT1=avgT("t1"), gT2=avgT("t2"), gT3=avgT("t3");
               const cellTaux = (v) => v===null
-                ? <span style={{fontSize:11,color:"#cbd5e1"}}>â€”</span>
+                ? <span style={{fontSize:11,color:"#cbd5e1"}}>—</span>
                 : <span style={{fontSize:12, fontWeight:800, color:taux2col(v)}}>{v}%</span>;
               const tendance = (v1,v3) => {
-                if (v1===null||v3===null) return <span style={{color:"#cbd5e1"}}>â€”</span>;
+                if (v1===null||v3===null) return <span style={{color:"#cbd5e1"}}>—</span>;
                 const diff = v3-v1;
-                if (diff>5) return <span style={{color:"#16a34a",fontWeight:800}}>â†‘ +{diff}</span>;
-                if (diff<-5) return <span style={{color:"#ef4444",fontWeight:800}}>â†“ {diff}</span>;
-                return <span style={{color:"#94a3b8",fontWeight:700}}>â†’ stable</span>;
+                if (diff>5) return <span style={{color:"#16a34a",fontWeight:800}}>↑ +{diff}</span>;
+                if (diff<-5) return <span style={{color:"#ef4444",fontWeight:800}}>↓ {diff}</span>;
+                return <span style={{color:"#94a3b8",fontWeight:700}}>→ stable</span>;
               };
               return [
                 <tr key={`h-${g.ens.id}`} onClick={()=>toggleExpand(g.ens.id)}
@@ -12592,7 +12593,7 @@ function SuiviProgrammePage() {
                   onMouseLeave={e=>e.currentTarget.style.background=isOpen?"#fafbfc":"transparent"}>
                   <td style={{padding:"13px 14px"}}>
                     <div style={{display:"flex", alignItems:"center", gap:10}}>
-                      <span style={{fontSize:11, color:"#94a3b8", transform:isOpen?"rotate(90deg)":"none", display:"inline-block"}}>â–¶</span>
+                      <span style={{fontSize:11, color:"#94a3b8", transform:isOpen?"rotate(90deg)":"none", display:"inline-block"}}>▶</span>
                       <Avatar ens={g.ens} size={28} fontSize={9}/>
                       <div>
                         <div style={{fontSize:12.5,fontWeight:700,color:"#1e293b"}}>{getNomCourt(g.ens.nom)}</div>
@@ -12622,18 +12623,18 @@ function SuiviProgrammePage() {
         </table>
         </div>
         <div style={{padding:"10px 16px", fontSize:10.5, color:"#94a3b8", borderTop:`1px solid ${C.border}`}}>
-          Tendance = Ã©volution entre T1 et T3 Â· â†‘ amÃ©lioration &gt;5pts Â· â†“ recul &gt;5pts Â· â†’ stable
+          Tendance = évolution entre T1 et T3 · ↑ amélioration &gt;5pts · ↓ recul &gt;5pts · → stable
         </div>
       </div>
       </div>
       ) : (
       <>
-      {/* Tableau synthÃ©tique (desktop) / Cartes (mobile) */}
+      {/* Tableau synthétique (desktop) / Cartes (mobile) */}
       {isMobile ? (
         <div style={{display:"flex", flexDirection:"column", gap:8}}>
           {rows.length===0 ? (
             <div style={{padding:"40px",textAlign:"center",color:C.txtLight,background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}>
-              <div style={{fontSize:28,marginBottom:8}}>ðŸ”</div>Aucune classe dans ce filtre
+              <div style={{fontSize:28,marginBottom:8}}>🔍</div>Aucune classe dans ce filtre
             </div>
           ) : rows.map((r,i)=>{
             const alerte  = r.taux < 50;
@@ -12642,13 +12643,13 @@ function SuiviProgrammePage() {
             return (
               <div key={i} style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`,
                 borderLeft:`4px solid ${alerte?C.red:objectif?C.green:C.border}`, padding:"12px 14px"}}>
-                {/* En-tÃªte : enseignant + classe */}
+                {/* En-tête : enseignant + classe */}
                 <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8}}>
                   <div style={{display:"flex", alignItems:"center", gap:8}}>
                     <Avatar ens={r.ens} size={28} fontSize={10}/>
                     <div>
                       <div style={{fontSize:12.5,fontWeight:700,color:C.txt}}>{getNomCourt(r.ens.nom)}</div>
-                      <div style={{fontSize:11,color:C.txtMuted}}>{r.cl} Â· {r.ef} Ã©lÃ¨ves</div>
+                      <div style={{fontSize:11,color:C.txtMuted}}>{r.cl} · {r.ef} élèves</div>
                     </div>
                   </div>
                   <span style={{fontSize:16,fontWeight:900,color:taux2col(r.taux)}}>{r.taux}%</span>
@@ -12659,23 +12660,23 @@ function SuiviProgrammePage() {
                   <div style={{flex:1,height:7,borderRadius:4,overflow:"hidden",background:"#e2e8f0"}}>
                     <div style={{width:`${r.taux}%`,height:"100%",background:taux2col(r.taux),transition:"width .5s"}}/>
                   </div>
-                  {alerte  && <span style={{fontSize:10,color:C.red,fontWeight:700,flexShrink:0}}>âš  Alerte</span>}
-                  {objectif && <span style={{fontSize:10,color:C.green,fontWeight:700,flexShrink:0}}>âœ“ Objectif</span>}
+                  {alerte  && <span style={{fontSize:10,color:C.red,fontWeight:700,flexShrink:0}}>⚠ Alerte</span>}
+                  {objectif && <span style={{fontSize:10,color:C.green,fontWeight:700,flexShrink:0}}>✓ Objectif</span>}
                 </div>
 
-                {/* DÃ©tails en grille 2x2 */}
+                {/* Détails en grille 2x2 */}
                 <div style={{display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, fontSize:11}}>
                   <div style={{background:"#f8fafc",borderRadius:8,padding:"6px 9px"}}>
-                    <div style={{color:C.txtMuted,fontSize:9.5}}>LeÃ§ons</div>
+                    <div style={{color:C.txtMuted,fontSize:9.5}}>Leçons</div>
                     <div style={{fontWeight:700,color:C.txt}}>{r.lf} / {r.lp}</div>
                   </div>
                   <div style={{background:"#f8fafc",borderRadius:8,padding:"6px 9px"}}>
-                    <div style={{color:C.txtMuted,fontSize:9.5}}>TP rÃ©alisÃ©s</div>
+                    <div style={{color:C.txtMuted,fontSize:9.5}}>TP réalisés</div>
                     <div style={{fontWeight:700,color:C.txt}}>{r.tpFait} / {r.tpP} {tauxTP!==null && <span style={{color:taux2col(tauxTP)}}>({tauxTP}%)</span>}</div>
                   </div>
                   <div style={{background:"#e0f2fe",borderRadius:8,padding:"6px 9px", gridColumn:"span 2"}}>
-                    <div style={{color:"#0369a1",fontSize:9.5}}>ðŸ–¥ï¸ Digitalisation</div>
-                    <div style={{fontWeight:700,color:"#0369a1"}}>{r.ldFait} / {r.ldTot} leÃ§ons ({r.tauxDig}%)</div>
+                    <div style={{color:"#0369a1",fontSize:9.5}}>🖥️ Digitalisation</div>
+                    <div style={{fontWeight:700,color:"#0369a1"}}>{r.ldFait} / {r.ldTot} leçons ({r.tauxDig}%)</div>
                   </div>
                 </div>
               </div>
@@ -12695,7 +12696,7 @@ function SuiviProgrammePage() {
           <tbody>
             {groupedByEns.length===0 ? (
               <tr><td colSpan={6} style={{padding:"48px",textAlign:"center",color:C.txtLight}}>
-                <div style={{fontSize:30,marginBottom:10}}>ðŸ”</div>Aucune classe dans ce filtre
+                <div style={{fontSize:30,marginBottom:10}}>🔍</div>Aucune classe dans ce filtre
               </td></tr>
             ) : groupedByEns.flatMap((g) => {
               const isOpen = expandedEns.has(g.ens.id);
@@ -12712,7 +12713,7 @@ function SuiviProgrammePage() {
                   onMouseLeave={e=>e.currentTarget.style.background=isOpen?"#fafbfc":"transparent"}>
                   <td style={{padding:"13px 14px"}} colSpan={2}>
                     <div style={{display:"flex", alignItems:"center", gap:10}}>
-                      <span style={{fontSize:11, color:"#94a3b8", transition:"transform .15s", display:"inline-block", transform:isOpen?"rotate(90deg)":"none"}}>â–¶</span>
+                      <span style={{fontSize:11, color:"#94a3b8", transition:"transform .15s", display:"inline-block", transform:isOpen?"rotate(90deg)":"none"}}>▶</span>
                       <Avatar ens={g.ens} size={30} fontSize={10}/>
                       <div>
                         <div style={{fontSize:12.5,fontWeight:700,color:"#1e293b"}}>{getNomCourt(g.ens.nom)}</div>
@@ -12745,7 +12746,7 @@ function SuiviProgrammePage() {
                     {taux!==null ? (
                       <span style={{fontSize:10.5, fontWeight:800, padding:"2px 7px", borderRadius:20, background:`${color}15`, color}}>{taux}%</span>
                     ) : (
-                      <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>â€”</span>
+                      <span style={{fontSize:10.5, fontWeight:600, padding:"2px 7px", borderRadius:20, background:"#f1f5f9", color:"#94a3b8"}}>—</span>
                     )}
                   </div>
                 );
@@ -12758,7 +12759,7 @@ function SuiviProgrammePage() {
                   <tr key={`${g.ens.id}-${r.cl}`} style={{borderBottom:`1px solid #f1f5f9`, background:"#fcfdfe"}}>
                     <td style={{padding:"10px 14px 10px 30px", borderLeft:`2px solid ${C.border}`}} colSpan={2}>
                       <div style={{fontSize:12.5,fontWeight:600,color:"#1e293b"}}>{r.cl}</div>
-                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} Ã©lÃ¨ve{r.ef>1?"s":""}</div>
+                      <div style={{fontSize:10.5,color:"#94a3b8",marginTop:1}}>{r.ef} élève{r.ef>1?"s":""}</div>
                     </td>
                     <td style={{padding:"10px 14px"}}>{badge(`${r.lf}/${r.lp}`, r.taux, taux2col(r.taux))}</td>
                     <td style={{padding:"10px 14px"}}>{badge(`${r.tpFait}/${r.tpP}`, tauxTP, tauxTP!==null?taux2col(tauxTP):"#94a3b8")}</td>
@@ -12787,17 +12788,17 @@ function SuiviProgrammePage() {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 // PAGE CHANGER MOT DE PASSE
-// Accessible depuis les paramÃ¨tres enseignant
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Accessible depuis les paramètres enseignant
+// ════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PAGE GESTION ANNUELLE â€” Mise Ã  jour des donnÃ©es (animatrice)
-//   - Import CSV des Ã©lÃ¨ves par classe
-//   - Visualisation de l'Ã©tat des donnÃ©es
-//   - PrÃ©paration nouvelle annÃ©e scolaire
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// PAGE GESTION ANNUELLE — Mise à jour des données (animatrice)
+//   - Import CSV des élèves par classe
+//   - Visualisation de l'état des données
+//   - Préparation nouvelle année scolaire
+// ════════════════════════════════════════════════════════════════
 function AccountBotPage() {
   const {rawData:data, setRawData} = useApp();
   const {isMobile} = useDevice();
@@ -12836,7 +12837,7 @@ function AccountBotPage() {
       p_mdp: form.mdp
     });
     if (error) return showMsg("Erreur: " + error.message, false);
-    showMsg("Compte crÃ©Ã© avec succÃ¨s");
+    showMsg("Compte créé avec succès");
     setModal(null); loadUsers();
   }
 
@@ -12847,7 +12848,7 @@ function AccountBotPage() {
       p_mdp: newMdp
     });
     if (error) return showMsg("Erreur: " + error.message, false);
-    showMsg("Mot de passe rÃ©initialisÃ©");
+    showMsg("Mot de passe réinitialisé");
     setModal(null); setNewMdp("");
   }
 
@@ -12857,14 +12858,14 @@ function AccountBotPage() {
       .update({nom: form.nom.trim(), role: form.role, departement_id: form.departement_id ? parseInt(form.departement_id) : null})
       .eq("id", selected.id);
     if (error) return showMsg("Erreur: " + error.message, false);
-    showMsg("Compte modifiÃ©");
+    showMsg("Compte modifié");
     setModal(null); loadUsers();
   }
 
   async function handleDelete() {
     const {error} = await supabase.from("utilisateurs").delete().eq("id", selected.id);
     if (error) return showMsg("Erreur: " + error.message, false);
-    showMsg("Compte supprimÃ©");
+    showMsg("Compte supprimé");
     setModal(null); loadUsers();
   }
 
@@ -12906,8 +12907,8 @@ function AccountBotPage() {
     <div style={{padding:isMobile?"14px":"24px 28px",background:"#f8fafc",minHeight:"100%"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
-          <h1 style={{fontSize:isMobile?17:20,fontWeight:800,color:"#0f172a",margin:0}}>ðŸ‘¤ Gestion des comptes</h1>
-          <p style={{color:"#64748b",margin:"3px 0 0",fontSize:12}}>{users.length} comptes â€” Proviseur uniquement</p>
+          <h1 style={{fontSize:isMobile?17:20,fontWeight:800,color:"#0f172a",margin:0}}>👤 Gestion des comptes</h1>
+          <p style={{color:"#64748b",margin:"3px 0 0",fontSize:12}}>{users.length} comptes — Proviseur uniquement</p>
         </div>
         <button onClick={()=>{setForm({id:"",nom:"",role:"enseignant",departement_id:"",mdp:""});setModal("create");}}
           style={btnPrimary}>+ Nouveau compte</button>
@@ -12916,7 +12917,7 @@ function AccountBotPage() {
       {msg && <div style={{padding:"10px 16px",borderRadius:8,marginBottom:14,fontSize:13,fontWeight:600,
         background:msg.ok?"#d1fae5":"#fee2e2",color:msg.ok?"#065f46":"#991b1b"}}>{msg.text}</div>}
 
-      <input placeholder="Rechercher par nom, ID ou rÃ´le..." value={search} onChange={e=>setSearch(e.target.value)}
+      <input placeholder="Rechercher par nom, ID ou rôle..." value={search} onChange={e=>setSearch(e.target.value)}
         style={{...inputStyle,marginBottom:16,background:"#fff"}} />
 
       {loading ? <div style={{textAlign:"center",padding:40,color:"#64748b"}}>Chargement...</div> : (
@@ -12931,7 +12932,7 @@ function AccountBotPage() {
               </div>
               <div style={{flex:1,minWidth:120}}>
                 <div style={{fontWeight:700,fontSize:13,color:"#0f172a"}}>{u.nom}</div>
-                <div style={{fontSize:11,color:"#64748b"}}>{u.id} Â· <span style={{color:roleColor[u.role]||"#374151",fontWeight:600}}>{u.role}</span></div>
+                <div style={{fontSize:11,color:"#64748b"}}>{u.id} · <span style={{color:roleColor[u.role]||"#374151",fontWeight:600}}>{u.role}</span></div>
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0}}>
                 <button onClick={()=>{setSelected(u);setForm({id:u.id,nom:u.nom,role:u.role,departement_id:u.departement_id||""});setModal("edit");}}
@@ -12946,7 +12947,7 @@ function AccountBotPage() {
         </div>
       )}
 
-      {/* Modal CrÃ©er */}
+      {/* Modal Créer */}
       {modal==="create" && (
         <div style={modalStyle} onClick={()=>setModal(null)}>
           <div style={cardStyle} onClick={e=>e.stopPropagation()}>
@@ -12957,13 +12958,13 @@ function AccountBotPage() {
               {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
             </select>
             <select value={form.departement_id} onChange={e=>setForm(f=>({...f,departement_id:e.target.value}))} style={inputStyle}>
-              <option value="">-- DÃ©partement (optionnel) --</option>
+              <option value="">-- Département (optionnel) --</option>
               {(DEPARTEMENTS_LIST||[]).map(d=><option key={d.id} value={d.id}>{d.nom}</option>)}
             </select>
             <input placeholder="Mot de passe" type="password" value={form.mdp} onChange={e=>setForm(f=>({...f,mdp:e.target.value}))} style={inputStyle}/>
             <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
               <button onClick={()=>setModal(null)} style={btnGhost}>Annuler</button>
-              <button onClick={handleCreate} style={btnPrimary}>CrÃ©er</button>
+              <button onClick={handleCreate} style={btnPrimary}>Créer</button>
             </div>
           </div>
         </div>
@@ -12973,14 +12974,14 @@ function AccountBotPage() {
       {modal==="edit" && (
         <div style={modalStyle} onClick={()=>setModal(null)}>
           <div style={cardStyle} onClick={e=>e.stopPropagation()}>
-            <h3 style={{margin:"0 0 4px",fontSize:15,fontWeight:800}}>Modifier â€” {selected?.id}</h3>
-            <p style={{margin:"0 0 14px",fontSize:12,color:"#64748b"}}>L'identifiant ne peut pas Ãªtre modifiÃ©</p>
+            <h3 style={{margin:"0 0 4px",fontSize:15,fontWeight:800}}>Modifier — {selected?.id}</h3>
+            <p style={{margin:"0 0 14px",fontSize:12,color:"#64748b"}}>L'identifiant ne peut pas être modifié</p>
             <input placeholder="Nom complet" value={form.nom} onChange={e=>setForm(f=>({...f,nom:e.target.value}))} style={inputStyle}/>
             <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))} style={inputStyle}>
               {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
             </select>
             <select value={form.departement_id} onChange={e=>setForm(f=>({...f,departement_id:e.target.value}))} style={inputStyle}>
-              <option value="">-- DÃ©partement (optionnel) --</option>
+              <option value="">-- Département (optionnel) --</option>
               {(DEPARTEMENTS_LIST||[]).map(d=><option key={d.id} value={d.id}>{d.nom}</option>)}
             </select>
             <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
@@ -13000,7 +13001,7 @@ function AccountBotPage() {
             <input placeholder="Nouveau mot de passe" type="password" value={newMdp} onChange={e=>setNewMdp(e.target.value)} style={inputStyle}/>
             <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
               <button onClick={()=>setModal(null)} style={btnGhost}>Annuler</button>
-              <button onClick={handleReset} style={btnPrimary}>RÃ©initialiser</button>
+              <button onClick={handleReset} style={btnPrimary}>Réinitialiser</button>
             </div>
           </div>
         </div>
@@ -13012,7 +13013,7 @@ function AccountBotPage() {
           <div style={cardStyle} onClick={e=>e.stopPropagation()}>
             <h3 style={{margin:"0 0 8px",fontSize:15,fontWeight:800,color:"#dc2626"}}>Supprimer le compte</h3>
             <p style={{margin:"0 0 20px",fontSize:13,color:"#374151"}}>
-              Supprimer <strong>{selected?.nom}</strong> ({selected?.id}) ? Cette action est irrÃ©versible.
+              Supprimer <strong>{selected?.nom}</strong> ({selected?.id}) ? Cette action est irréversible.
             </p>
             <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
               <button onClick={()=>setModal(null)} style={btnGhost}>Annuler</button>
@@ -13028,21 +13029,21 @@ function AccountBotPage() {
 function GestionAnnuellePage() {
   const {showToast, data, setPage} = useApp();
   const {isMobile} = useDevice();
-  const [selClasse, setSelClasse] = useState("6Ã¨me 1");
+  const [selClasse, setSelClasse] = useState("6ème 1");
   const [csvText, setCsvText]     = useState("");
   const [preview, setPreview]     = useState([]);
   const [importing, setImporting] = useState(false);
 
   const toutesClasses = Object.keys(ELEVES_DB).sort();
 
-  // Parser le CSV : format "NOM PrÃ©nom;M" ou "NOM PrÃ©nom,F" â€” une ligne par Ã©lÃ¨ve
+  // Parser le CSV : format "NOM Prénom;M" ou "NOM Prénom,F" — une ligne par élève
   const parseCsv = (text) => {
     const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
     return lines.map((line,i) => {
       const parts = line.split(/[;,\t]/).map(p=>p.trim());
       const nom = parts[0] || "";
       let g = (parts[1]||"").toUpperCase();
-      if(g!=="M" && g!=="F") g = "M"; // dÃ©faut
+      if(g!=="M" && g!=="F") g = "M"; // défaut
       return { nom, g, valid: nom.length>2 };
     }).filter(e=>e.nom);
   };
@@ -13050,16 +13051,16 @@ function GestionAnnuellePage() {
   const handlePreview = () => {
     const parsed = parseCsv(csvText);
     setPreview(parsed);
-    if(parsed.length===0) showToast("Aucun Ã©lÃ¨ve dÃ©tectÃ© dans le texte", false);
-    else showToast(`${parsed.length} Ã©lÃ¨ves dÃ©tectÃ©s`, true);
+    if(parsed.length===0) showToast("Aucun élève détecté dans le texte", false);
+    else showToast(`${parsed.length} élèves détectés`, true);
   };
 
   const handleImport = async () => {
     const valides = preview.filter(e=>e.valid);
-    if(valides.length===0) return showToast("Aucun Ã©lÃ¨ve valide Ã  importer", false);
+    if(valides.length===0) return showToast("Aucun élève valide à importer", false);
     setImporting(true);
 
-    // GÃ©nÃ©rer les IDs et construire la nouvelle liste
+    // Générer les IDs et construire la nouvelle liste
     const clId = selClasse.replace(/[^a-zA-Z0-9]/g,"_");
     const nouveauxEleves = valides.map((e,i)=>({
       id: `${clId}_${i+1}`,
@@ -13067,7 +13068,7 @@ function GestionAnnuellePage() {
       g: e.g
     }));
 
-    // Mettre Ã  jour ELEVES_DB en mÃ©moire
+    // Mettre à jour ELEVES_DB en mémoire
     ELEVES_DB[selClasse] = nouveauxEleves;
 
     // Sauvegarder dans Supabase (table eleves)
@@ -13077,10 +13078,10 @@ function GestionAnnuellePage() {
 
     setImporting(false);
     if(ok) {
-      showToast(`âœ… ${valides.length} Ã©lÃ¨ves importÃ©s dans ${selClasse}`, true);
+      showToast(`✅ ${valides.length} élèves importés dans ${selClasse}`, true);
       setCsvText(""); setPreview([]);
     } else {
-      showToast("âœ… Import local effectuÃ© (Supabase non configurÃ©)", true);
+      showToast("✅ Import local effectué (Supabase non configuré)", true);
       setCsvText(""); setPreview([]);
     }
   };
@@ -13088,13 +13089,13 @@ function GestionAnnuellePage() {
   return (
     <div style={{padding:20, maxWidth:720, margin:"0 auto", display:"flex", flexDirection:"column", gap:16}}>
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"18px 20px"}}>
-        <h2 style={{fontSize:17, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>ðŸ”„ Gestion annuelle des donnÃ©es</h2>
-        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>Importer les listes d'Ã©lÃ¨ves Â· PrÃ©parer une nouvelle annÃ©e scolaire</p>
+        <h2 style={{fontSize:17, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>🔄 Gestion annuelle des données</h2>
+        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>Importer les listes d'élèves · Préparer une nouvelle année scolaire</p>
       </div>
 
-      {/* Ã‰tat actuel */}
+      {/* État actuel */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 18px"}}>
-        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:"0 0 10px"}}>ðŸ“Š Ã‰tat des donnÃ©es</h3>
+        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:"0 0 10px"}}>📊 État des données</h3>
         <div style={{display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(3,1fr)", gap:10}}>
           <div style={{background:C.greenPale, borderRadius:9, padding:"12px 14px", textAlign:"center"}}>
             <div style={{fontSize:24, fontWeight:900, color:C.green}}>{toutesClasses.length}</div>
@@ -13102,30 +13103,30 @@ function GestionAnnuellePage() {
           </div>
           <div style={{background:"#eff6ff", borderRadius:9, padding:"12px 14px", textAlign:"center"}}>
             <div style={{fontSize:24, fontWeight:900, color:"#1e40af"}}>{Object.values(ELEVES_DB).reduce((s,e)=>s+e.length,0)}</div>
-            <div style={{fontSize:10, color:"#1e40af", fontWeight:600}}>Ã‰lÃ¨ves total</div>
+            <div style={{fontSize:10, color:"#1e40af", fontWeight:600}}>Élèves total</div>
           </div>
           <div style={{background:"#fef3c7", borderRadius:9, padding:"12px 14px", textAlign:"center"}}>
             <div style={{fontSize:24, fontWeight:900, color:"#92400e"}}>2025-26</div>
-            <div style={{fontSize:10, color:"#92400e", fontWeight:600}}>AnnÃ©e scolaire</div>
+            <div style={{fontSize:10, color:"#92400e", fontWeight:600}}>Année scolaire</div>
           </div>
         </div>
       </div>
 
       {/* Import CSV */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 18px", display:"flex", flexDirection:"column", gap:12}}>
-        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:0}}>ðŸ“¥ Importer une liste d'Ã©lÃ¨ves</h3>
+        <h3 style={{fontSize:13, fontWeight:700, color:C.txt, margin:0}}>📥 Importer une liste d'élèves</h3>
 
         <div>
           <label style={{display:"block", fontSize:11, fontWeight:700, color:C.txtMuted, marginBottom:5}}>Classe cible</label>
           <select value={selClasse} onChange={e=>setSelClasse(e.target.value)}
             style={{width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:9, fontSize:13, fontFamily:"inherit", background:C.white}}>
-            {toutesClasses.map(cl=><option key={cl} value={cl}>{cl} ({(ELEVES_DB[cl]||[]).length} Ã©lÃ¨ves actuels)</option>)}
+            {toutesClasses.map(cl=><option key={cl} value={cl}>{cl} ({(ELEVES_DB[cl]||[]).length} élèves actuels)</option>)}
           </select>
         </div>
 
         <div>
           <label style={{display:"block", fontSize:11, fontWeight:700, color:C.txtMuted, marginBottom:5}}>
-            Liste des Ã©lÃ¨ves (un par ligne : <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM PrÃ©nom;M</code> ou <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM PrÃ©nom;F</code>)
+            Liste des élèves (un par ligne : <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM Prénom;M</code> ou <code style={{background:"#f1f5f9",padding:"1px 5px",borderRadius:4}}>NOM Prénom;F</code>)
           </label>
           <textarea value={csvText} onChange={e=>setCsvText(e.target.value)}
             placeholder={"MBASSA Jean;M\nFOTSO Marie;F\nNGONO Paul;M"}
@@ -13136,60 +13137,60 @@ function GestionAnnuellePage() {
         <div style={{display:"flex", gap:10}}>
           <button onClick={handlePreview}
             style={{padding:"10px 18px", background:C.white, border:`1.5px solid ${C.green}`, borderRadius:9, fontSize:13, fontWeight:700, color:C.green, cursor:"pointer", fontFamily:"inherit"}}>
-            ðŸ‘ AperÃ§u
+            👁 Aperçu
           </button>
           {preview.length>0 && (
             <button onClick={handleImport} disabled={importing}
               style={{flex:1, padding:"10px 18px", background:importing?"#94a3b8":`linear-gradient(135deg,${C.greenDark},${C.green})`, border:"none", borderRadius:9, fontSize:13, fontWeight:700, color:"#fff", cursor:importing?"not-allowed":"pointer", fontFamily:"inherit"}}>
-              {importing?"Importâ€¦":`âœ“ Importer ${preview.filter(e=>e.valid).length} Ã©lÃ¨ves dans ${selClasse}`}
+              {importing?"Import…":`✓ Importer ${preview.filter(e=>e.valid).length} élèves dans ${selClasse}`}
             </button>
           )}
         </div>
 
-        {/* AperÃ§u */}
+        {/* Aperçu */}
         {preview.length>0 && (
           <div style={{border:`1px solid ${C.border}`, borderRadius:9, overflow:"hidden", maxHeight:260, overflowY:"auto"}}>
             <div style={{padding:"8px 12px", background:"#f8fafc", fontSize:11, fontWeight:700, color:C.txtMuted, position:"sticky", top:0}}>
-              {preview.length} Ã©lÃ¨ves Â· {preview.filter(e=>e.valid).length} valides
+              {preview.length} élèves · {preview.filter(e=>e.valid).length} valides
             </div>
             {preview.map((e,i)=>(
               <div key={i} style={{padding:"7px 12px", borderTop:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:e.valid?1:0.4}}>
                 <span style={{width:24, textAlign:"center", color:C.txtLight, fontSize:10}}>{i+1}</span>
-                <span style={{width:24, textAlign:"center", fontSize:13}}>{e.g==="F"?"ðŸ‘§":"ðŸ‘¦"}</span>
+                <span style={{width:24, textAlign:"center", fontSize:13}}>{e.g==="F"?"👧":"👦"}</span>
                 <span style={{flex:1, fontWeight:600, color:C.txt}}>{e.nom}</span>
-                {!e.valid && <span style={{fontSize:10, color:C.red}}>âš  nom trop court</span>}
+                {!e.valid && <span style={{fontSize:10, color:C.red}}>⚠ nom trop court</span>}
               </div>
             ))}
           </div>
         )}
 
         <div style={{background:"#fffbeb", border:"1px solid #fde68a", borderRadius:9, padding:"11px 14px", fontSize:11.5, color:"#92400e"}}>
-          âš ï¸ <strong>Attention :</strong> l'import remplace TOUTE la liste actuelle de la classe sÃ©lectionnÃ©e. VÃ©rifiez l'aperÃ§u avant de confirmer. Cette action est dÃ©finitive.
+          ⚠️ <strong>Attention :</strong> l'import remplace TOUTE la liste actuelle de la classe sélectionnée. Vérifiez l'aperçu avant de confirmer. Cette action est définitive.
         </div>
       </div>
 
       {/* Aide format */}
       <div style={{background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:10, padding:"14px 16px", fontSize:12, color:"#1e40af"}}>
-        <strong>ðŸ’¡ Comment prÃ©parer votre liste depuis Excel :</strong>
+        <strong>💡 Comment préparer votre liste depuis Excel :</strong>
         <ol style={{margin:"8px 0 0", paddingLeft:20, lineHeight:1.7}}>
-          <li>Dans Excel : colonne A = NOM PrÃ©nom, colonne B = M ou F</li>
-          <li>SÃ©lectionnez les cellules â†’ Copier (Ctrl+C)</li>
+          <li>Dans Excel : colonne A = NOM Prénom, colonne B = M ou F</li>
+          <li>Sélectionnez les cellules → Copier (Ctrl+C)</li>
           <li>Collez ici dans la zone de texte ci-dessus</li>
-          <li>Cliquez Â« AperÃ§u Â» puis Â« Importer Â»</li>
+          <li>Cliquez « Aperçu » puis « Importer »</li>
         </ol>
       </div>
 
-      {/* â”€â”€ Lien vers l'Ã©diteur d'emploi du temps (unifiÃ© dans la page Emploi du temps) â”€â”€ */}
+      {/* ── Lien vers l'éditeur d'emploi du temps (unifié dans la page Emploi du temps) ── */}
       <div style={{background:C.greenPale, borderRadius:12, border:`1px solid ${C.greenBorder}`, padding:"16px 18px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:14, flexWrap:"wrap"}}>
         <div>
-          <h3 style={{fontSize:13, fontWeight:700, color:C.greenDark, margin:0}}>ðŸ“… Emploi du temps</h3>
+          <h3 style={{fontSize:13, fontWeight:700, color:C.greenDark, margin:0}}>📅 Emploi du temps</h3>
           <p style={{fontSize:11.5, color:C.txtMuted, margin:"4px 0 0", lineHeight:1.5}}>
-            La modification de l'EDT (par enseignant) se fait maintenant directement dans la page Â« Emploi du temps Â», onglet Â« Par enseignant Â».
+            La modification de l'EDT (par enseignant) se fait maintenant directement dans la page « Emploi du temps », onglet « Par enseignant ».
           </p>
         </div>
         <button onClick={()=>setPage("edt")}
           style={{flexShrink:0, padding:"10px 18px", background:`linear-gradient(135deg,${C.greenDark},${C.green})`, border:"none", borderRadius:9, fontSize:13, fontWeight:700, color:"#fff", cursor:"pointer", fontFamily:"inherit"}}>
-          â†’ Aller Ã  l'Emploi du temps
+          → Aller à l'Emploi du temps
         </button>
       </div>
     </div>
@@ -13203,7 +13204,7 @@ function DepartementsPage() {
   const [loading, setLoading] = useState(true);
   const [openDept, setOpenDept] = useState(null);
 
-  // Ã‰couter l'event dept:open dispatchÃ© depuis la sidebar
+  // Écouter l'event dept:open dispatché depuis la sidebar
   useEffect(()=>{
     const handler = (e) => {
       const nom = e.detail;
@@ -13212,7 +13213,7 @@ function DepartementsPage() {
       if (dept) setOpenDept(dept.id);
     };
     window.addEventListener("dept:open", handler);
-    // Appliquer aussi si __deptFilter dÃ©jÃ  dÃ©fini (navigation initiale)
+    // Appliquer aussi si __deptFilter déjà défini (navigation initiale)
     if (window.__deptFilter) {
       const nom = window.__deptFilter;
       window.__deptFilter = null;
@@ -13245,8 +13246,8 @@ function DepartementsPage() {
     if (!newMatiere.trim()) return;
     setSavingId(`new-${deptId}`);
     const ok = await sb.rpc("admin_add_matiere", { p_nom: newMatiere.trim(), p_departement_id: deptId });
-    if (ok) { showToast(`âœ“ ${newMatiere.trim()} ajoutÃ©e`); setNewMatiere(""); await loadMatieres(); }
-    else showToast("âš  Ã‰chec de l'ajout", false);
+    if (ok) { showToast(`✓ ${newMatiere.trim()} ajoutée`); setNewMatiere(""); await loadMatieres(); }
+    else showToast("⚠ Échec de l'ajout", false);
     setSavingId(null);
   };
 
@@ -13254,8 +13255,8 @@ function DepartementsPage() {
     if (!window.confirm(`Supprimer "${m.nom}" ?`)) return;
     setSavingId(m.id);
     const ok = await sb.rpc("admin_delete_matiere", { p_id: m.id });
-    if (ok) { showToast(`âœ“ ${m.nom} supprimÃ©e`); await loadMatieres(); }
-    else showToast("âš  Ã‰chec de la suppression", false);
+    if (ok) { showToast(`✓ ${m.nom} supprimée`); await loadMatieres(); }
+    else showToast("⚠ Échec de la suppression", false);
     setSavingId(null);
   };
 
@@ -13263,24 +13264,24 @@ function DepartementsPage() {
     if (!nom.trim() || nom.trim()===m.nom) { setEditingNom(null); return; }
     setSavingId(m.id);
     const ok = await sb.rpc("admin_rename_matiere", { p_id: m.id, p_nom: nom.trim() });
-    if (ok) { showToast("âœ“ RenommÃ©e"); await loadMatieres(); }
-    else showToast("âš  Ã‰chec du renommage", false);
+    if (ok) { showToast("✓ Renommée"); await loadMatieres(); }
+    else showToast("⚠ Échec du renommage", false);
     setEditingNom(null); setSavingId(null);
   };
 
   return (
     <div style={{padding:"20px 20px 40px", display:"flex", flexDirection:"column", gap:16}}>
       <div>
-        <h2 style={{fontSize:18, fontWeight:800, color:C.txt, margin:0}}>ðŸ›ï¸ DÃ©partements & MatiÃ¨res</h2>
-        <p style={{color:C.txtMuted, margin:"3px 0 0", fontSize:12}}>8 dÃ©partements pÃ©dagogiques Â· LycÃ©e de Kakatare</p>
+        <h2 style={{fontSize:18, fontWeight:800, color:C.txt, margin:0}}>🏛️ Départements & Matières</h2>
+        <p style={{color:C.txtMuted, margin:"3px 0 0", fontSize:12}}>8 départements pédagogiques · Lycée de Kakatare</p>
       </div>
 
-      {/* Bouton retour si filtrÃ© depuis sidebar */}
+      {/* Bouton retour si filtré depuis sidebar */}
       {openDept && (
         <button onClick={()=>setOpenDept(null)}
           style={{alignSelf:"flex-start",padding:"6px 14px",borderRadius:8,border:`1px solid ${C.border}`,background:C.white,
             color:C.txtMuted,fontSize:11.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-          â† Tous les dÃ©partements
+          ← Tous les départements
         </button>
       )}
       <div style={{display:"grid", gridTemplateColumns: isMobile?"1fr":"repeat(auto-fill, minmax(320px, 1fr))", gap:12}}>
@@ -13310,12 +13311,12 @@ function DepartementsPage() {
                 <span style={{fontSize:22}}>{d.emoji}</span>
                 <div style={{flex:1}}>
                   <div style={{fontSize:14, fontWeight:800, color:C.txt}}>{d.nom}</div>
-                  <div style={{fontSize:10.5, color:C.txtMuted}}>{enseignantsDept.length} enseignant{enseignantsDept.length>1?"s":""} Â· {deptMatieres.length} matiÃ¨re{deptMatieres.length>1?"s":""}</div>
+                  <div style={{fontSize:10.5, color:C.txtMuted}}>{enseignantsDept.length} enseignant{enseignantsDept.length>1?"s":""} · {deptMatieres.length} matière{deptMatieres.length>1?"s":""}</div>
                 </div>
                 {tauxProg!==null&&<span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:10,
                   background:tauxProg>=75?"#f0fdf4":tauxProg>=50?"#fefce8":"#fef2f2",
                   color:tauxProg>=75?"#15803d":tauxProg>=50?"#92400e":"#b91c1c"}}>{tauxProg}%</span>}
-                <span style={{fontSize:12, color:C.txtMuted}}>{openDept===d.id?"â–²":"â–¼"}</span>
+                <span style={{fontSize:12, color:C.txtMuted}}>{openDept===d.id?"▲":"▼"}</span>
               </div>
 
               {openDept===d.id && (
@@ -13325,8 +13326,8 @@ function DepartementsPage() {
                   <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#f8fafc",borderRadius:10}}>
                     <Avatar ens={animateur||{nom:""}} size={32} fontSize={11}/>
                     <div>
-                      <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em"}}>Animateur pÃ©dagogique</div>
-                      <div style={{fontSize:12,fontWeight:700,color:C.txt}}>{animateur?.nom||"Non assignÃ©"}</div>
+                      <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em"}}>Animateur pédagogique</div>
+                      <div style={{fontSize:12,fontWeight:700,color:C.txt}}>{animateur?.nom||"Non assigné"}</div>
                     </div>
                   </div>
 
@@ -13334,8 +13335,8 @@ function DepartementsPage() {
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                     {[
                       {label:"Enseignants",value:enseignantsDept.length,color:"#3b82f6"},
-                      {label:"Ã‰preuves soumises",value:epSoumises,color:C.green},
-                      {label:"Couverture prog.",value:tauxProg!==null?tauxProg+"%":"â€”",color:tauxProg>=75?"#15803d":tauxProg>=50?"#d97706":"#b91c1c"},
+                      {label:"Épreuves soumises",value:epSoumises,color:C.green},
+                      {label:"Couverture prog.",value:tauxProg!==null?tauxProg+"%":"—",color:tauxProg>=75?"#15803d":tauxProg>=50?"#d97706":"#b91c1c"},
                     ].map((k,i)=>(
                       <div key={i} style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",border:`1px solid ${C.border}`,textAlign:"center"}}>
                         <div style={{fontSize:18,fontWeight:800,color:k.color}}>{k.value}</div>
@@ -13344,7 +13345,7 @@ function DepartementsPage() {
                     ))}
                   </div>
 
-                  {/* Enseignants du dÃ©partement */}
+                  {/* Enseignants du département */}
                   {enseignantsDept.length>0&&(
                     <div>
                       <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}}>Enseignants</div>
@@ -13362,11 +13363,11 @@ function DepartementsPage() {
                     </div>
                   )}
 
-                  {/* MatiÃ¨res + gestion */}
+                  {/* Matières + gestion */}
                   <div>
-                    <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}}>MatiÃ¨res</div>
+                    <div style={{fontSize:10,fontWeight:700,color:C.txtMuted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}}>Matières</div>
                     {loading ? <Sk h={16} w="60%"/> : deptMatieres.length===0 ? (
-                      <div style={{fontSize:11, color:C.txtLight, fontStyle:"italic"}}>Aucune matiÃ¨re</div>
+                      <div style={{fontSize:11, color:C.txtLight, fontStyle:"italic"}}>Aucune matière</div>
                     ) : deptMatieres.map(m => (
                       <div key={m.id} style={{display:"flex", alignItems:"center", gap:8, padding:"6px 8px", background:"#f8fafc", borderRadius:7, marginBottom:4}}>
                         {editingNom===m.id ? (
@@ -13379,14 +13380,14 @@ function DepartementsPage() {
                         )}
                         <button onClick={()=>supprimerMatiere(m)} disabled={savingId===m.id}
                           style={{border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:13, padding:2}}>
-                          {savingId===m.id ? <Spinner size={11} color={C.red}/> : "ðŸ—‘ï¸"}
+                          {savingId===m.id ? <Spinner size={11} color={C.red}/> : "🗑️"}
                         </button>
                       </div>
                     ))}
                     <div style={{display:"flex", gap:6, marginTop:6}}>
                       <input value={openDept===d.id?newMatiere:""} onChange={e=>setNewMatiere(e.target.value)}
                         onKeyDown={e=>{ if(e.key==="Enter") ajouterMatiere(d.id); }}
-                        placeholder="Nouvelle matiÃ¨reâ€¦"
+                        placeholder="Nouvelle matière…"
                         style={{flex:1, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 8px", fontSize:11.5, fontFamily:"inherit"}}/>
                       <button onClick={()=>ajouterMatiere(d.id)} disabled={savingId===`new-${d.id}`}
                         style={{padding:"6px 12px", borderRadius:6, border:"none", background:C.green, color:"#fff", fontSize:11.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
@@ -13420,8 +13421,8 @@ function ChangePasswordPage() {
 
   const choisirPhoto = (file) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { showToast("âš  Choisis une image (jpg, pngâ€¦)", false); return; }
-    if (file.size > 8*1024*1024) { showToast("âš  Image trop lourde (max 8 Mo)", false); return; }
+    if (!file.type.startsWith("image/")) { showToast("⚠ Choisis une image (jpg, png…)", false); return; }
+    if (file.size > 8*1024*1024) { showToast("⚠ Image trop lourde (max 8 Mo)", false); return; }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };
@@ -13439,11 +13440,11 @@ function ChangePasswordPage() {
           setUser(prev => ({...prev, photo:path}));
           setData(prev => ({...prev, users:{...(prev?.users||{}), [user.id]:{...(prev?.users?.[user.id]||{}), photo:path}}}));
           setPhotoFile(null); setPhotoPreview(null);
-          showToast("âœ“ Photo de profil mise Ã  jour");
-        } else showToast(`âš  Non enregistrÃ©e : ${(sb.lastError||"erreur inconnue").slice(0,80)}`, false);
-      } else showToast("âš  Ã‰chec de l'envoi de la photo", false);
+          showToast("✓ Photo de profil mise à jour");
+        } else showToast(`⚠ Non enregistrée : ${(sb.lastError||"erreur inconnue").slice(0,80)}`, false);
+      } else showToast("⚠ Échec de l'envoi de la photo", false);
     } catch {
-      showToast("âš  Erreur lors du traitement de la photo", false);
+      showToast("⚠ Erreur lors du traitement de la photo", false);
     }
     setUploadingPhoto(false);
   };
@@ -13455,16 +13456,16 @@ function ChangePasswordPage() {
       setUser(prev => ({...prev, photo:null}));
       setData(prev => ({...prev, users:{...(prev?.users||{}), [user.id]:{...(prev?.users?.[user.id]||{}), photo:null}}}));
       setPhotoFile(null); setPhotoPreview(null);
-      showToast("âœ“ Photo retirÃ©e");
-    } else showToast("âš  Erreur lors du retrait", false);
+      showToast("✓ Photo retirée");
+    } else showToast("⚠ Erreur lors du retrait", false);
     setUploadingPhoto(false);
   };
 
   const handleChange = async() => {
     if(!oldPw) return showToast("Saisissez votre mot de passe actuel", false);
-    if(newPw.length < 6) return showToast("Le nouveau mot de passe doit faire au moins 6 caractÃ¨res", false);
+    if(newPw.length < 6) return showToast("Le nouveau mot de passe doit faire au moins 6 caractères", false);
     if(newPw !== conf) return showToast("Les mots de passe ne correspondent pas", false);
-    if(newPw === oldPw) return showToast("Le nouveau mot de passe doit Ãªtre diffÃ©rent", false);
+    if(newPw === oldPw) return showToast("Le nouveau mot de passe doit être différent", false);
 
     setSaving(true);
     const ok = await sb.rpc("change_password", {p_id: user.id, p_old_mdp: oldPw, p_new_mdp: newPw});
@@ -13472,23 +13473,23 @@ function ChangePasswordPage() {
 
     if(ok) {
       setDone(true);
-      showToast("âœ“ Mot de passe modifiÃ© avec succÃ¨s");
+      showToast("✓ Mot de passe modifié avec succès");
       setOldPw(""); setNewPw(""); setConf("");
     } else {
-      showToast("âš  Mot de passe actuel incorrect ou erreur serveur", false);
+      showToast("⚠ Mot de passe actuel incorrect ou erreur serveur", false);
     }
   };
 
   return (
     <div style={{padding:20, maxWidth:440, margin:"0 auto", display:"flex", flexDirection:"column", gap:16}}>
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"18px 20px"}}>
-        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>ðŸ” Changer mon mot de passe</h2>
-        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>{user?.nom} Â· {user?.role}</p>
+        <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:"0 0 4px"}}>🔐 Changer mon mot de passe</h2>
+        <p style={{fontSize:12, color:C.txtMuted, margin:0}}>{user?.nom} · {user?.role}</p>
       </div>
 
       {/* Photo de profil */}
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding: isMobile?"18px 16px":"18px 20px"}}>
-        <h2 style={{fontSize:14, fontWeight:800, color:C.txt, margin:"0 0 14px"}}>ðŸ“· Ma photo de profil</h2>
+        <h2 style={{fontSize:14, fontWeight:800, color:C.txt, margin:"0 0 14px"}}>📷 Ma photo de profil</h2>
         <div style={{display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"center":"center", gap: isMobile?14:16}}>
           <div style={{width: isMobile?88:72, height: isMobile?88:72, borderRadius:"50%",overflow:"hidden",flexShrink:0,background:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${C.border}`}}>
             {photoPreview ? (
@@ -13496,7 +13497,7 @@ function ChangePasswordPage() {
             ) : photoActuelle ? (
               <img src={sb.photoUrl(photoActuelle)} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
             ) : (
-              <span style={{fontSize: isMobile?30:26,color:"#cbd5e1"}}>ðŸ‘¤</span>
+              <span style={{fontSize: isMobile?30:26,color:"#cbd5e1"}}>👤</span>
             )}
           </div>
           <div style={{display:"flex", flexDirection:"column", gap:8, width: isMobile?"100%":"auto", alignItems: isMobile?"stretch":"flex-start"}}>
@@ -13506,7 +13507,7 @@ function ChangePasswordPage() {
               <>
                 <button type="button" disabled={uploadingPhoto} onClick={enregistrerPhoto}
                   style={{padding: isMobile?"12px 16px":"8px 16px",borderRadius:9,border:"none",background:C.green,color:"#fff",fontSize: isMobile?13.5:12.5,fontWeight:700,cursor:uploadingPhoto?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6,width:"100%"}}>
-                  {uploadingPhoto ? <><Spinner size={12} color="#fff"/> Envoiâ€¦</> : "âœ“ Enregistrer cette photo"}
+                  {uploadingPhoto ? <><Spinner size={12} color="#fff"/> Envoi…</> : "✓ Enregistrer cette photo"}
                 </button>
                 <button type="button" onClick={()=>{setPhotoFile(null);setPhotoPreview(null);}}
                   style={{padding: isMobile?"10px":"6px 10px",borderRadius:8,border:"none",background:"transparent",color:C.txtMuted,fontSize: isMobile?12.5:11.5,cursor:"pointer",fontFamily:"inherit",textAlign:"center",width:"100%"}}>
@@ -13517,7 +13518,7 @@ function ChangePasswordPage() {
               <>
                 <button type="button" onClick={()=>fileInputRef.current?.click()}
                   style={{padding: isMobile?"12px 16px":"8px 16px",borderRadius:9,border:`1.5px solid ${C.green}`,background:C.greenPale,color:C.green,fontSize: isMobile?13.5:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%",textAlign:"center"}}>
-                  ðŸ“· {photoActuelle ? "Changer la photo" : "Ajouter une photo"}
+                  📷 {photoActuelle ? "Changer la photo" : "Ajouter une photo"}
                 </button>
                 {photoActuelle && (
                   <button type="button" disabled={uploadingPhoto} onClick={retirerPhoto}
@@ -13533,16 +13534,16 @@ function ChangePasswordPage() {
 
       {done && (
         <div style={{background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", gap:10, alignItems:"center"}}>
-          <span style={{fontSize:20}}>âœ…</span>
-          <span style={{fontSize:13, fontWeight:600, color:C.green}}>Mot de passe modifiÃ© avec succÃ¨s</span>
+          <span style={{fontSize:20}}>✅</span>
+          <span style={{fontSize:13, fontWeight:600, color:C.green}}>Mot de passe modifié avec succès</span>
         </div>
       )}
 
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"18px 20px", display:"flex", flexDirection:"column", gap:14}}>
         {[
           {label:"Mot de passe actuel", val:oldPw, set:setOldPw, placeholder:"Votre mot de passe actuel"},
-          {label:"Nouveau mot de passe", val:newPw, set:setNewPw, placeholder:"Minimum 6 caractÃ¨res"},
-          {label:"Confirmer le nouveau", val:conf, set:setConf, placeholder:"RÃ©pÃ©ter le nouveau mot de passe"},
+          {label:"Nouveau mot de passe", val:newPw, set:setNewPw, placeholder:"Minimum 6 caractères"},
+          {label:"Confirmer le nouveau", val:conf, set:setConf, placeholder:"Répéter le nouveau mot de passe"},
         ].map(({label, val, set, placeholder}, i) => (
           <div key={i}>
             <label style={{display:"block", fontSize:11, fontWeight:700, color:C.txtMuted, marginBottom:5, textTransform:"uppercase", letterSpacing:".06em"}}>
@@ -13577,31 +13578,31 @@ function ChangePasswordPage() {
             background:saving?"#94a3b8":`linear-gradient(135deg,${C.greenDark},${C.green})`,
             color:"#fff", fontSize:14, fontWeight:700, cursor:saving?"not-allowed":"pointer",
             fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", gap:7}}>
-          {saving ? <><Spinner size={16} color="#fff"/>&nbsp;Modificationâ€¦</> : "âœ“ Modifier mon mot de passe"}
+          {saving ? <><Spinner size={16} color="#fff"/>&nbsp;Modification…</> : "✓ Modifier mon mot de passe"}
         </button>
       </div>
 
       <div style={{background:"#fef9e7", border:"1px solid #f9ca24", borderRadius:10, padding:"12px 16px", fontSize:12, color:"#7d6608"}}>
-        <strong>Conseils :</strong> Utilisez un mot de passe d'au moins 8 caractÃ¨res avec des chiffres et des lettres. Ne partagez jamais votre mot de passe.
+        <strong>Conseils :</strong> Utilisez un mot de passe d'au moins 8 caractères avec des chiffres et des lettres. Ne partagez jamais votre mot de passe.
       </div>
     </div>
   );
 }
 
-// â”€â”€â”€ Placeholder â”€â”€â”€â”€
+// ─── Placeholder ────
 const AppLayout = ({onLogout}) => {
   const {user,page,data,setData,toast,showToast} = useApp();
   const [collapsed,setCollapsed] = useState(()=>window.innerWidth < 1024);
   const isAdmin = isAdminRole(user?.role);
-  // Pages qui gÃ¨rent leur propre flex+scroll (retournent flex:1, overflow:hidden)
+  // Pages qui gèrent leur propre flex+scroll (retournent flex:1, overflow:hidden)
   const SELF_SCROLL = ["mes-classes","cahier","documents","eleves"];
   const renderPage = () => {
-    // â”€â”€ Pages AUTO-SCROLLANTES (flex:1 + overflow:hidden sur leur root) â”€â”€
+    // ── Pages AUTO-SCROLLANTES (flex:1 + overflow:hidden sur leur root) ──
     if(page==="mes-classes") return <MesClassesPage/>
     if(page==="cahier")      return <CahierDeTextePage/>
     if(page==="documents")   return isAdmin?<DocumentsPage/>:null
     if(page==="eleves")      return (isAdmin||user?.role==="censeur"||user?.role==="secretaire")?<ElevesPage/>:<MesClassesPage/>
-    // â”€â”€ Pages SIMPLES â€” enveloppÃ©es dans un scroller â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Pages SIMPLES — enveloppées dans un scroller ───────────────────
     const W = ({children}) => (
       <div style={{flex:1, minHeight:0, overflowY:"auto"}}>
         {children}
@@ -13625,13 +13626,13 @@ const AppLayout = ({onLogout}) => {
     if(page==="fiche-inspection")   return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<FicheInspectionPage/>:null}</W>
     if(page==="documents-ap")       return <W>{(user?.role==="animateur"||user?.role==="animatrice")?<DocumentsAnimateurPage/>:null}</W>
     if(page==="settings")          return <W><ChangePasswordPage/></W>
-    return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="ðŸš§"/></W>
+    return <W><PlaceholderPage title={PAGE_TITLES[page]||page} emoji="🚧"/></W>
   };
   return(
     <div style={{display:"flex",height:"100vh",overflow:"hidden",background:C.bg}}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflow:"hidden"}}>
-        <Topbar title={PAGE_TITLES[page]||"â€”"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed}/>
+        <Topbar title={PAGE_TITLES[page]||"—"} onLogout={onLogout} collapsed={collapsed} setCollapsed={setCollapsed}/>
         <div style={{flex:1, minHeight:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
           {renderPage()}
         </div>
@@ -13641,12 +13642,12 @@ const AppLayout = ({onLogout}) => {
   );
 };
 
-// â”€â”€â”€ Splash â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Splash ───────────────────────────────────────────────────────
 function Splash({onDone}){
   const [prog,setProg]=useState(0);
-  const [label,setLabel]=useState("Initialisationâ€¦");
+  const [label,setLabel]=useState("Initialisation…");
   useEffect(()=>{
-    const steps=[[300,20,"Connexion Supabaseâ€¦"],[700,55,"Chargement des donnÃ©esâ€¦"],[1100,85,"VÃ©rification des droitsâ€¦"],[1500,100,"PrÃªt !"]];
+    const steps=[[300,20,"Connexion Supabase…"],[700,55,"Chargement des données…"],[1100,85,"Vérification des droits…"],[1500,100,"Prêt !"]];
     const timers=steps.map(([d,p,l])=>setTimeout(()=>{setProg(p);setLabel(l);},d));
     const done=setTimeout(onDone,1900);
     return()=>{timers.forEach(clearTimeout);clearTimeout(done);};
@@ -13656,7 +13657,7 @@ function Splash({onDone}){
       <div style={{animation:"logoIn .7s cubic-bezier(.2,.8,.2,1)"}}><img src={LOGO_LYCEE_B64} alt="Lykama" width={100} height={100} style={{borderRadius:"50%", objectFit:"contain"}}/></div>
       <div style={{textAlign:"center"}}>
         <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:36,color:"#fff",letterSpacing:".06em",margin:"0 0 8px"}}>Lykama</h1>
-        <p style={{color:"rgba(255,255,255,.55)",fontSize:13}}>LycÃ©e de Kakatare Â· Maroua Â· Cameroun</p>
+        <p style={{color:"rgba(255,255,255,.55)",fontSize:13}}>Lycée de Kakatare · Maroua · Cameroun</p>
       </div>
       <div style={{width:220}}>
         <div style={{height:3,background:"rgba(255,255,255,.15)",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${prog}%`,background:C.gold,borderRadius:3,transition:"width .4s ease"}}/></div>
@@ -13666,11 +13667,11 @@ function Splash({onDone}){
   );
 }
 
-// â”€â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Login ────────────────────────────────────────────────────────
 function LoginPage({onLogin}){
   const {isMobile} = useDevice();
 
-  /* â”€â”€ Auth state (inchangÃ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Auth state (inchangé) ──────────────────────────── */
   const [id,setId]           = useState(()=>localStorage.getItem("svt_remember_id")||"");
   const [pw,setPw]           = useState("");
   const [showPw,setShowPw]   = useState(false);
@@ -13679,7 +13680,7 @@ function LoginPage({onLogin}){
   const [rememberMe,setRememberMe] = useState(()=>!!localStorage.getItem("svt_remember_id"));
   const [selDept,setSelDept] = useState("");
 
-  /* â”€â”€ Compteurs rÃ©els â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Compteurs réels ────────────────────────────────── */
   const [counter,setCounter]   = useState({eleves:0,ens:0});
   const [ensCountReal,setEnsCountReal] = useState(null);
   useEffect(()=>{
@@ -13697,43 +13698,43 @@ function LoginPage({onLogin}){
     return()=>clearInterval(timer);
   },[ensCountReal]);
 
-  /* â”€â”€ Navigation portail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Navigation portail ─────────────────────────────── */
   const [portalStep,setPortalStep] = useState(0); // 0=landing, 1=portail
 
-  /* â”€â”€ Profil sÃ©lectionnÃ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Profil sélectionné ─────────────────────────────── */
   const [selProfile,setSelProfile] = useState("enseignant");
   const [mobileFormOpen,setMobileFormOpen] = useState(false);
   const [selNiveau,setSelNiveau] = useState("");
 
   const SG_NIVEAUX = [
-    {label:"6Ã¨me",        id:"sg_6eme"},
-    {label:"5Ã¨me",        id:"sg_5eme"},
-    {label:"4Ã¨me",        id:"sg_4eme"},
-    {label:"3Ã¨me",        id:"sg_3eme"},
+    {label:"6ème",        id:"sg_6eme"},
+    {label:"5ème",        id:"sg_5eme"},
+    {label:"4ème",        id:"sg_4eme"},
+    {label:"3ème",        id:"sg_3eme"},
     {label:"2nde",        id:"sg_2nde"},
-    {label:"1Ã¨re et Tle", id:"sg_lycee"},
-    {label:"Toute Ã©cole", id:"surveillance"},
+    {label:"1ère et Tle", id:"sg_lycee"},
+    {label:"Toute école", id:"surveillance"},
   ];
 
   const PROFILES = [
-    {key:"direction",  label:"Direction",             sub:"Proviseur",             desc:"Gestion globale de l'Ã©tablissement", emoji:"ðŸ‘¨ðŸ¾â€ðŸ’¼", role:"proviseur",          needsDept:false},
-    {key:"censeur",    label:"Censeur",               sub:"Organisation pÃ©dagogique", desc:"Classes, notes, suivi discipline",  emoji:"ðŸ“š",  role:"censeur",            needsDept:false},
-    {key:"sg",         label:"Surveillance GÃ©nÃ©rale", sub:"Vie scolaire & discipline", desc:"Absences, retards, incidents",    emoji:"ðŸ›¡ï¸", role:"surveillant_general", needsDept:false},
-    {key:"animateur",  label:"Animateur PÃ©dagogique", sub:"Suivi pÃ©dagogique",     desc:"Supervision du dÃ©partement & programmes", emoji:"ðŸ“‹", role:"animateur", needsDept:false},
-    {key:"secretaire", label:"SecrÃ©tariat",            sub:"Administration",          desc:"Documents, attestations & listes Ã©lÃ¨ves", emoji:"ðŸ—‚ï¸", role:"secretaire",  needsDept:false},
-    {key:"enseignant", label:"Enseignant",            sub:"Corps professoral",      desc:"Cours, cahier de textes, Ã©valuations", emoji:"ðŸ‘¨ðŸ¾â€ðŸ«", role:"enseignant",   needsDept:true},
-    {key:"eleve",      label:"Ã‰lÃ¨ve",                 sub:"Espace apprenant",       desc:"RÃ©sultats, emploi du temps",         emoji:"ðŸŽ“",  role:null, soon:true},
-    {key:"parent",     label:"Parent",                sub:"Suivi scolaire",         desc:"Suivi scolaire de l'Ã©lÃ¨ve",          emoji:"ðŸ‘ª",  role:null, soon:true},
+    {key:"direction",  label:"Direction",             sub:"Proviseur",             desc:"Gestion globale de l'établissement", emoji:"👨🏾‍💼", role:"proviseur",          needsDept:false},
+    {key:"censeur",    label:"Censeur",               sub:"Organisation pédagogique", desc:"Classes, notes, suivi discipline",  emoji:"📚",  role:"censeur",            needsDept:false},
+    {key:"sg",         label:"Surveillance Générale", sub:"Vie scolaire & discipline", desc:"Absences, retards, incidents",    emoji:"🛡️", role:"surveillant_general", needsDept:false},
+    {key:"animateur",  label:"Animateur Pédagogique", sub:"Suivi pédagogique",     desc:"Supervision du département & programmes", emoji:"📋", role:"animateur", needsDept:false},
+    {key:"secretaire", label:"Secrétariat",            sub:"Administration",          desc:"Documents, attestations & listes élèves", emoji:"🗂️", role:"secretaire",  needsDept:false},
+    {key:"enseignant", label:"Enseignant",            sub:"Corps professoral",      desc:"Cours, cahier de textes, évaluations", emoji:"👨🏾‍🏫", role:"enseignant",   needsDept:true},
+    {key:"eleve",      label:"Élève",                 sub:"Espace apprenant",       desc:"Résultats, emploi du temps",         emoji:"🎓",  role:null, soon:true},
+    {key:"parent",     label:"Parent",                sub:"Suivi scolaire",         desc:"Suivi scolaire de l'élève",          emoji:"👪",  role:null, soon:true},
   ];
 
   const profile = PROFILES.find(p=>p.key===selProfile);
 
-  /* â”€â”€ Soumission (logique inchangÃ©e) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Soumission (logique inchangée) ─────────────────── */
   const submit = async()=>{
     setErr("");
     if(!id.trim()){setErr("Veuillez saisir votre identifiant.");return;}
     if(!pw){setErr("Veuillez saisir votre mot de passe.");return;}
-    if(profile.needsDept&&!selDept){setErr("SÃ©lectionnez un dÃ©partement.");return;}
+    if(profile.needsDept&&!selDept){setErr("Sélectionnez un département.");return;}
     setLoading(true);
     let authUser=null;
     try{ authUser=await sb.rpc("authenticate_user",{p_id:id.trim().toLowerCase(),p_mdp:pw}); }
@@ -13741,17 +13742,17 @@ function LoginPage({onLogin}){
     if(!authUser){setErr("Identifiant ou mot de passe incorrect.");setLoading(false);return;}
     if(profile.role==="proviseur"          && authUser.role!=="proviseur")          {setErr("Ce compte n'est pas un compte Direction.");setLoading(false);return;}
     if(profile.role==="censeur"            && authUser.role!=="censeur")            {setErr("Ce compte n'est pas un compte Censeur.");setLoading(false);return;}
-    if(profile.role==="animateur" && authUser.role!=="animateur" && authUser.role!=="animatrice"){setErr("Ce compte n'est pas un compte Animateur PÃ©dagogique.");setLoading(false);return;}
-    if(profile.role==="surveillant_general"&& authUser.role!=="surveillant_general"){setErr("Ce compte n'est pas un compte Surveillance GÃ©nÃ©rale.");setLoading(false);return;}
-    if(profile.role==="enseignant" && (authUser.role==="proviseur"||authUser.role==="censeur"||authUser.role==="surveillant_general")){setErr("Utilisez l'accÃ¨s correspondant Ã  ce compte.");setLoading(false);return;}
-    if(profile.needsDept && authUser.departement_id && String(authUser.departement_id)!==String(selDept)){setErr("Ce compte n'appartient pas Ã  ce dÃ©partement.");setLoading(false);return;}
+    if(profile.role==="animateur" && authUser.role!=="animateur" && authUser.role!=="animatrice"){setErr("Ce compte n'est pas un compte Animateur Pédagogique.");setLoading(false);return;}
+    if(profile.role==="surveillant_general"&& authUser.role!=="surveillant_general"){setErr("Ce compte n'est pas un compte Surveillance Générale.");setLoading(false);return;}
+    if(profile.role==="enseignant" && (authUser.role==="proviseur"||authUser.role==="censeur"||authUser.role==="surveillant_general")){setErr("Utilisez l'accès correspondant à ce compte.");setLoading(false);return;}
+    if(profile.needsDept && authUser.departement_id && String(authUser.departement_id)!==String(selDept)){setErr("Ce compte n'appartient pas à ce département.");setLoading(false);return;}
     if(rememberMe)localStorage.setItem("svt_remember_id",id.trim().toLowerCase());
     else localStorage.removeItem("svt_remember_id");
     const demoRef=DEMO_ACCOUNTS.find(a=>a.id===authUser.id)||{};
     onLogin({...demoRef,...authUser,col:getColor(authUser.id),ini:getIni(authUser.nom),mustChangePwd:!!authUser.must_change_pwd});
   };
 
-  /* â”€â”€ Couleurs tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Couleurs tokens ─────────────────────────────────── */
   const clr = {
     forest:"#0B4D2C", forestDark:"#083D22", forestLight:"#E8F5EE",
     gold:"#D4AF37", goldLight:"#FBF5D8",
@@ -13759,9 +13760,9 @@ function LoginPage({onLogin}){
     white:"#FFFFFF", border:"#E2E8F0",
   };
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     Ã‰TAPE 0 : LANDING
-  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+  /* ════════════════════════════════════════════════
+     ÉTAPE 0 : LANDING
+  ════════════════════════════════════════════════ */
   if(portalStep===0) return (
     <div style={{
       minHeight:"100vh", overflowY:"auto", position:"relative",
@@ -13802,7 +13803,7 @@ function LoginPage({onLogin}){
       {/* Contenu scrollable */}
       <div style={{position:"relative",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",padding:isMobile?"28px 20px 40px":"40px 24px 60px",textAlign:"center"}}>
 
-        {/* En-tÃªte RÃ©publique */}
+        {/* En-tête République */}
         <div style={{animation:"fadeDown .6s ease",marginBottom:20}}>
           <svg viewBox="0 0 45 30" width={isMobile?32:38} height={isMobile?21:25} style={{borderRadius:3,boxShadow:"0 2px 8px rgba(0,0,0,.35)",margin:"0 auto 10px",display:"block"}}>
             <rect width="15" height="30" fill="#007A5E"/>
@@ -13811,10 +13812,10 @@ function LoginPage({onLogin}){
             <polygon points="22.5,8 23.9,12.6 28.7,12.6 24.9,15.4 26.3,20 22.5,17.2 18.7,20 20.1,15.4 16.3,12.6 21.1,12.6" fill="#FCD116"/>
           </svg>
           <p style={{fontSize:isMobile?10:11,fontWeight:800,letterSpacing:".18em",textTransform:"uppercase",color:"rgba(255,255,255,.9)",margin:"0 0 3px"}}>
-            RÃ©publique du Cameroun
+            République du Cameroun
           </p>
           <p style={{fontSize:isMobile?10:11,fontWeight:500,color:"#D4AF37",margin:0,letterSpacing:".06em"}}>
-            Paix â€¢ Travail â€¢ Patrie
+            Paix • Travail • Patrie
           </p>
         </div>
 
@@ -13840,17 +13841,17 @@ function LoginPage({onLogin}){
             lineHeight:1.1, margin:"0 0 12px",
             textShadow:"0 2px 20px rgba(0,0,0,.4)",
           }}>
-            LycÃ©e de<br/>Kakatare â€“ Maroua
+            Lycée de<br/>Kakatare – Maroua
           </h1>
           <p style={{fontSize:isMobile?14:16,color:"rgba(255,255,255,.8)",margin:"0 0 20px",lineHeight:1.5,maxWidth:480}}>
-            Plateforme numÃ©rique de gestion<br/>et de suivi scolaire
+            Plateforme numérique de gestion<br/>et de suivi scolaire
           </p>
 
-          {/* Pill annÃ©e */}
+          {/* Pill année */}
           <div style={{display:"inline-flex",alignItems:"center",gap:8,border:"1.5px solid #D4AF37",borderRadius:30,padding:"8px 20px",marginBottom:28}}>
-            <span style={{fontSize:14}}>ðŸ“…</span>
+            <span style={{fontSize:14}}>📅</span>
             <span style={{fontSize:isMobile?11:12,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",color:"#D4AF37"}}>
-              AnnÃ©e scolaire 2025 â€“ 2026
+              Année scolaire 2025 – 2026
             </span>
           </div>
         </div>
@@ -13867,20 +13868,20 @@ function LoginPage({onLogin}){
               display:"flex", alignItems:"center", justifyContent:"center", gap:12,
               boxShadow:"0 8px 28px rgba(212,175,55,.35)",
             }}>
-            <span style={{fontSize:20}}>ðŸ”’</span>
+            <span style={{fontSize:20}}>🔒</span>
             <span style={{fontSize:isMobile?15:17,fontWeight:800,letterSpacing:".06em",textTransform:"uppercase",color:"#0B3D20"}}>
-              AccÃ©der au Portail
+              Accéder au Portail
             </span>
-            <span style={{fontSize:18,color:"#0B3D20",fontWeight:900}}>â†’</span>
+            <span style={{fontSize:18,color:"#0B3D20",fontWeight:900}}>→</span>
           </button>
           <p style={{fontSize:12,color:"rgba(255,255,255,.5)",margin:"10px 0 0"}}>
-            AccÃ¨s rÃ©servÃ© au personnel autorisÃ©
+            Accès réservé au personnel autorisé
           </p>
         </div>
 
-        {/* 3 rÃ´les */}
+        {/* 3 rôles */}
         <div style={{display:"flex",gap:isMobile?16:28,marginBottom:36,animation:"fadeUp .6s ease .45s both",flexWrap:"wrap",justifyContent:"center"}}>
-          {[["ðŸ›¡ï¸","Administration"],["ðŸŽ“","Enseignants"],["ðŸ‘¥","Vie scolaire"]].map(([ico,lbl])=>(
+          {[["🛡️","Administration"],["🎓","Enseignants"],["👥","Vie scolaire"]].map(([ico,lbl])=>(
             <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,color:"rgba(255,255,255,.7)",fontSize:isMobile?12:13,fontWeight:600}}>
               <span style={{fontSize:16}}>{ico}</span>{lbl}
             </div>
@@ -13898,14 +13899,14 @@ function LoginPage({onLogin}){
           animation:"fadeUp .7s ease .55s both",
         }}>
           <p style={{fontSize:isMobile?10:11,fontWeight:800,letterSpacing:".18em",textTransform:"uppercase",color:"#D4AF37",margin:"0 0 22px"}}>
-            Notre Ã©tablissement en chiffres
+            Notre établissement en chiffres
           </p>
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:isMobile?12:20}}>
             {[
-              {ico:"ðŸ‘¥", val:counter.eleves||getTotalEleves(), lbl:"Ã‰lÃ¨ves inscrits",   color:"#4ade80"},
-              {ico:"ðŸŽ“", val:counter.ens||0,                  lbl:"Enseignants",        color:"#D4AF37"},
-              {ico:"ðŸ«", val:CLASSES_REELLES.length,          lbl:"Classes",            color:"#60a5fa"},
-              {ico:"ðŸ›ï¸", val:52,                              lbl:"Personnel\nadministratif", color:"#f472b6"},
+              {ico:"👥", val:counter.eleves||getTotalEleves(), lbl:"Élèves inscrits",   color:"#4ade80"},
+              {ico:"🎓", val:counter.ens||0,                  lbl:"Enseignants",        color:"#D4AF37"},
+              {ico:"🏫", val:CLASSES_REELLES.length,          lbl:"Classes",            color:"#60a5fa"},
+              {ico:"🏛️", val:52,                              lbl:"Personnel\nadministratif", color:"#f472b6"},
             ].map(({ico,val,lbl,color})=>(
               <div key={lbl} style={{textAlign:"center"}}>
                 <div style={{fontSize:isMobile?22:28,marginBottom:4}}>{ico}</div>
@@ -13916,7 +13917,7 @@ function LoginPage({onLogin}){
           </div>
         </div>
 
-        {/* Carte fonctionnalitÃ©s */}
+        {/* Carte fonctionnalités */}
         <div style={{
           width:"100%", maxWidth:600,
           background:"rgba(5,30,15,.75)",
@@ -13927,16 +13928,16 @@ function LoginPage({onLogin}){
           animation:"fadeUp .7s ease .65s both",
         }}>
           <p style={{fontSize:isMobile?10:11,fontWeight:800,letterSpacing:".18em",textTransform:"uppercase",color:"#D4AF37",margin:"0 0 20px"}}>
-            Une plateforme pour mieux gÃ©rer
+            Une plateforme pour mieux gérer
           </p>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:isMobile?12:16}}>
             {[
-              {ico:"ðŸ“–","lbl":"Suivi\npÃ©dagogique"},
-              {ico:"ðŸ“","lbl":"Notes &\nÃ©valuations"},
-              {ico:"ðŸ“…","lbl":"Emplois du\ntemps"},
-              {ico:"â°","lbl":"Absences &\nretards"},
-              {ico:"ðŸ“š","lbl":"Cahier de texte\nnumÃ©rique"},
-              {ico:"ðŸ””","lbl":"Communications"},
+              {ico:"📖","lbl":"Suivi\npédagogique"},
+              {ico:"📝","lbl":"Notes &\névaluations"},
+              {ico:"📅","lbl":"Emplois du\ntemps"},
+              {ico:"⏰","lbl":"Absences &\nretards"},
+              {ico:"📚","lbl":"Cahier de texte\nnumérique"},
+              {ico:"🔔","lbl":"Communications"},
             ].map(({ico,lbl})=>(
               <div key={lbl} className="lp-feat" style={{padding:"12px 8px",borderRadius:10,transition:"all .2s",cursor:"default",background:"rgba(255,255,255,.04)"}}>
                 <div style={{fontSize:isMobile?22:26,marginBottom:6}}>{ico}</div>
@@ -13949,10 +13950,10 @@ function LoginPage({onLogin}){
         {/* Footer */}
         <div style={{animation:"fadeUp .6s ease .75s both",textAlign:"center"}}>
           <p style={{fontSize:12,color:"rgba(255,255,255,.4)",margin:"0 0 4px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            ðŸ”’ AccÃ¨s sÃ©curisÃ© â€¢ DonnÃ©es protÃ©gÃ©es
+            🔒 Accès sécurisé • Données protégées
           </p>
           <p style={{fontSize:11,color:"rgba(255,255,255,.25)",margin:0}}>
-            Â© LycÃ©e de Kakatare â€“ Maroua
+            © Lycée de Kakatare – Maroua
           </p>
         </div>
 
@@ -13960,25 +13961,25 @@ function LoginPage({onLogin}){
     </div>
   );
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     Ã‰TAPE 1 : PORTAIL (sÃ©lection profil + formulaire)
-  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+  /* ════════════════════════════════════════════════
+     ÉTAPE 1 : PORTAIL (sélection profil + formulaire)
+  ════════════════════════════════════════════════ */
 
   const formPanelJSX = (
     <div style={{background:clr.white,borderRadius:20,border:`1px solid ${clr.border}`,boxShadow:"0 8px 32px rgba(0,0,0,.1)",padding:"28px 24px",position:"relative",overflow:"hidden"}}>
-      {/* LiserÃ© dÃ©gradÃ© */}
+      {/* Liseré dégradé */}
       <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:`linear-gradient(90deg,${clr.forest},${clr.gold},${clr.navy})`}}/>
 
       <h3 style={{fontSize:17,fontWeight:800,color:clr.navy,margin:"0 0 4px",fontFamily:"'Playfair Display',serif"}}>
         Connexion {PROFILES.find(p=>p.key===selProfile)?.label||""}
       </h3>
       <p style={{fontSize:12,color:clr.slate,margin:"0 0 20px",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-        Saisissez vos identifiants pour accÃ©der Ã  votre espace
+        Saisissez vos identifiants pour accéder à votre espace
       </p>
 
       {err && (
         <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#b91c1c",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-          âš ï¸ {err}
+          ⚠️ {err}
         </div>
       )}
 
@@ -13986,13 +13987,13 @@ function LoginPage({onLogin}){
       {selProfile==="sg" && (
         <div style={{marginBottom:14}}>
           <label style={{display:"block",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,marginBottom:6,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-            Niveau supervisÃ©
+            Niveau supervisé
           </label>
           <select
             value={selNiveau}
             onChange={e=>{setSelNiveau(e.target.value);const sg=SG_NIVEAUX.find(n=>n.label===e.target.value);if(sg)setId(sg.id);}}
             style={{width:"100%",padding:"11px 14px",border:"1.5px solid "+clr.border,borderRadius:10,fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",background:clr.slateLight,color:selNiveau?clr.navy:"#94a3b8",transition:"all .2s",boxSizing:"border-box",appearance:"none"}}>
-            <option value="">â€” SÃ©lectionner votre niveau â€”</option>
+            <option value="">— Sélectionner votre niveau —</option>
             {SG_NIVEAUX.map(n=>(
               <option key={n.id} value={n.label}>{n.label}</option>
             ))}
@@ -14014,17 +14015,17 @@ function LoginPage({onLogin}){
         />
       </div>
 
-      {/* DÃ©partement (seulement Enseignant) */}
+      {/* Département (seulement Enseignant) */}
       {profile.needsDept && (
         <div style={{marginBottom:14}}>
           <label style={{display:"block",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,marginBottom:6,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-            DÃ©partement
+            Département
           </label>
           <select
             className="lp-input"
             value={selDept} onChange={e=>setSelDept(e.target.value)}
             style={{width:"100%",padding:"11px 14px",border:`1.5px solid ${clr.border}`,borderRadius:10,fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",background:clr.slateLight,color:selDept?clr.navy:"#94a3b8",transition:"all .2s",boxSizing:"border-box",appearance:"none"}}>
-            <option value="">â€” SÃ©lectionner â€”</option>
+            <option value="">— Sélectionner —</option>
             {DEPARTEMENTS_LIST.map(d=>(
               <option key={d.id} value={d.id}>{d.emoji} {d.nom}</option>
             ))}
@@ -14048,7 +14049,7 @@ function LoginPage({onLogin}){
             style={{width:"100%",padding:"11px 42px 11px 14px",border:`1.5px solid ${clr.border}`,borderRadius:10,fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",background:clr.slateLight,color:clr.navy,transition:"all .2s",boxSizing:"border-box"}}
           />
           <button onClick={()=>setShowPw(!showPw)} type="button" style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:14,color:clr.slate}}>
-            {showPw?"ðŸ™ˆ":"ðŸ‘ï¸"}
+            {showPw?"🙈":"👁️"}
           </button>
         </div>
       </div>
@@ -14070,21 +14071,21 @@ function LoginPage({onLogin}){
           boxShadow:loading?"none":`0 4px 16px ${clr.forest}40`,
           transition:"all .2s ease", display:"flex",alignItems:"center",justifyContent:"center",gap:8,
         }}>
-        {loading?<><Spinner size={14} color="#fff"/> Connexion en coursâ€¦</>:"Se connecter â†’"}
+        {loading?<><Spinner size={14} color="#fff"/> Connexion en cours…</>:"Se connecter →"}
       </button>
 
       <p style={{textAlign:"center",marginTop:14,fontSize:11,color:clr.slate,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-        ðŸ”’ Connexion sÃ©curisÃ©e â€¢ LycÃ©e de Kakatare
+        🔒 Connexion sécurisée • Lycée de Kakatare
       </p>
 
       {/* Retour */}
       <button onClick={()=>{if(isMobile&&mobileFormOpen){setMobileFormOpen(false);}else{setPortalStep(0);}}} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",cursor:"pointer",fontSize:12,color:clr.slate,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:600}}>
-        â† Retour
+        ← Retour
       </button>
     </div>
   );
 
-  /* â”€â”€ Carte profil â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Carte profil ───────────────────────────────────── */
   const ProfileCard = ({p})=>{
     const isSelected = selProfile===p.key;
     return (
@@ -14106,13 +14107,13 @@ function LoginPage({onLogin}){
           opacity:p.soon?.5:1, userSelect:"none",
           boxShadow:isSelected?"0 4px 16px rgba(11,77,44,.15)":"none",
         }}>
-        {/* Badge sÃ©lectionnÃ© */}
+        {/* Badge sélectionné */}
         {isSelected && !p.soon && (
-          <div style={{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:"50%",background:clr.forest,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:800}}>âœ“</div>
+          <div style={{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:"50%",background:clr.forest,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:800}}>✓</div>
         )}
-        {/* BientÃ´t */}
+        {/* Bientôt */}
         {p.soon && (
-          <span style={{position:"absolute",top:8,right:8,fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",background:"#f1f5f9",color:clr.slate,padding:"2px 7px",borderRadius:8,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>BientÃ´t</span>
+          <span style={{position:"absolute",top:8,right:8,fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",background:"#f1f5f9",color:clr.slate,padding:"2px 7px",borderRadius:8,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Bientôt</span>
         )}
         <div style={{width:44,height:44,borderRadius:12,background:isSelected?clr.forest:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginBottom:10,transition:"all .2s"}}>
           {p.emoji}
@@ -14124,7 +14125,7 @@ function LoginPage({onLogin}){
     );
   };
 
-  /* â”€â”€ Layout desktop / mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Layout desktop / mobile ───────────────────────── */
   const isDesktop = !isMobile;
 
   return (
@@ -14146,16 +14147,16 @@ function LoginPage({onLogin}){
         @media(max-width:768px){.portal-grid{grid-template-columns:1fr!important;}}
       `}</style>
 
-      {/* En-tÃªte portail */}
+      {/* En-tête portail */}
       <div style={{textAlign:"center",marginBottom:isDesktop?36:24,animation:"fadeUp .5s ease"}}>
         <button onClick={()=>setPortalStep(0)} style={{background:"none",border:"none",cursor:"pointer",marginBottom:12,display:"inline-flex",alignItems:"center",gap:6,color:clr.slate,fontSize:13,fontWeight:600,padding:"6px 12px",borderRadius:8}}>
-          â† Accueil
+          ← Accueil
         </button>
         <h2 style={{fontSize:isDesktop?"clamp(24px,3vw,32px)":"clamp(20px,6vw,26px)",fontWeight:800,color:clr.navy,margin:"0 0 8px",fontFamily:"'Playfair Display',serif"}}>
-          Bienvenue sur votre espace numÃ©rique
+          Bienvenue sur votre espace numérique
         </h2>
         <p style={{fontSize:14,color:clr.slate,margin:0}}>
-          Choisissez votre profil pour accÃ©der Ã  votre environnement
+          Choisissez votre profil pour accéder à votre environnement
         </p>
       </div>
 
@@ -14172,7 +14173,7 @@ function LoginPage({onLogin}){
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
             {PROFILES.map(p=><ProfileCard key={p.key} p={p}/>)}
           </div>
-          {/* Mobile : formulaire en accordÃ©on sous les cartes */}
+          {/* Mobile : formulaire en accordéon sous les cartes */}
           {isMobile&&mobileFormOpen&&(
             <div style={{marginTop:20,animation:"scaleIn .25s ease"}}>
               {formPanelJSX}
@@ -14192,9 +14193,9 @@ function LoginPage({onLogin}){
 }
 
 
-// â”€â”€â”€ App Root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── App Root ─────────────────────────────────────────────────────
 
-// â”€â”€ Error Boundary global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Error Boundary global ──────────────────────────────────────────
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -14212,7 +14213,7 @@ class ErrorBoundary extends React.Component {
         <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",
           alignItems:"center",justifyContent:"center",background:"#f8fafc",
           fontFamily:"system-ui",padding:20,textAlign:"center"}}>
-          <div style={{fontSize:48,marginBottom:16}}>âš ï¸</div>
+          <div style={{fontSize:48,marginBottom:16}}>⚠️</div>
           <h2 style={{fontSize:18,fontWeight:800,color:"#1e293b",marginBottom:8}}>
             Une erreur est survenue
           </h2>
@@ -14222,7 +14223,7 @@ class ErrorBoundary extends React.Component {
           <button onClick={()=>window.location.reload()}
             style={{padding:"10px 24px",background:"#16a34a",color:"#fff",
               border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer"}}>
-            ðŸ”„ Recharger l'application
+            🔄 Recharger l'application
           </button>
         </div>
       );
@@ -14232,7 +14233,7 @@ class ErrorBoundary extends React.Component {
 }
 
 
-// â”€â”€â”€ Filtrage dÃ©partement (scope Proviseur) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Filtrage département (scope Proviseur) ────────────────────────
 function filterDataByDept(data, deptId) {
   if (!data || !deptId) return data;
   const deptOf = {};
@@ -14257,8 +14258,8 @@ function filterDataByDept(data, deptId) {
 
   const classesF = (data.classes||[]).filter(c=>c.departement_id===deptId);
 
-  // Filtrer les notes par dÃ©partement (clÃ© format: "classe||matiere-Sn")
-  // On filtre via les classes des enseignants du dÃ©partement
+  // Filtrer les notes par département (clé format: "classe||matiere-Sn")
+  // On filtre via les classes des enseignants du département
   const classesOfDept = new Set(Object.values(users).flatMap(u=>u.classes||[]));
   const notes = {};
   Object.entries(data.notes||{}).forEach(([k,v])=>{
@@ -14279,7 +14280,7 @@ export default function App() {
   const [pendingClasseSelect, setPendingClasseSelect] = useState(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [data,setData]     = useState(null);
-  const [viewDeptId,setViewDeptId] = useState(null); // filtre dÃ©partement actif (Proviseur uniquement)
+  const [viewDeptId,setViewDeptId] = useState(null); // filtre département actif (Proviseur uniquement)
   const [lang,setLang] = useState(()=>{ try { return localStorage.getItem("svt_lang")||"fr"; } catch { return "fr"; } });
   useEffect(()=>{ try { localStorage.setItem("svt_lang", lang); } catch {} },[lang]);
   const t = (fr) => (lang === "en" ? (TRANSLATIONS_EN[fr] || fr) : fr);
@@ -14291,15 +14292,15 @@ export default function App() {
 
   useEffect(()=>{ try{localStorage.setItem("svt_last_page",page);}catch{} },[page]);
   useEffect(()=>{
-    const on=()=>{setOnline(true); showToast("ðŸŸ¢ Connexion rÃ©tablie");};
-    const off=()=>{setOnline(false); showToast("ðŸ“¡ Mode hors ligne â€” donnÃ©es locales utilisÃ©es", false);};
+    const on=()=>{setOnline(true); showToast("🟢 Connexion rétablie");};
+    const off=()=>{setOnline(false); showToast("📡 Mode hors ligne — données locales utilisées", false);};
     window.addEventListener("online",on);window.addEventListener("offline",off);
     return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);};
   },[]);
 
-  // â”€â”€ Synchronisation multi-sessions (Supabase Realtime) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Ã‰coute les changements sur les tables clÃ©s et dÃ©clenche un refreshData silencieux
-  // (anti-rafale : attend 900ms sans nouvel Ã©vÃ©nement avant de rafraÃ®chir, pour Ã©viter
+  // ── Synchronisation multi-sessions (Supabase Realtime) ────────────
+  // Écoute les changements sur les tables clés et déclenche un refreshData silencieux
+  // (anti-rafale : attend 900ms sans nouvel événement avant de rafraîchir, pour éviter
   // de spammer Supabase si plusieurs changements arrivent d'un coup).
   useEffect(()=>{
     if (!user) { setRealtimeStatus("disconnected"); return; }
@@ -14339,12 +14340,12 @@ export default function App() {
       const d = await loadAllData(deptIdRef.current);
       if (d) {
         setData(prev=>({...prev, ...d}));
-        if (!silent) showToast("âœ“ DonnÃ©es actualisÃ©es");
+        if (!silent) showToast("✓ Données actualisées");
       } else {
-        if (!silent) showToast("âš  Actualisation impossible â€” vÃ©rifiez la connexion", false);
+        if (!silent) showToast("⚠ Actualisation impossible — vérifiez la connexion", false);
       }
     } catch {
-      if (!silent) showToast("âš  Actualisation impossible", false);
+      if (!silent) showToast("⚠ Actualisation impossible", false);
     } finally {
       setSyncing(false);
     }
@@ -14353,12 +14354,12 @@ export default function App() {
   const handleLogin = useCallback(async(acc)=>{
     setSyncing(true);setScreen("loading");
     window.__svtSessionToken = acc.token || null;
-    await loadStaticData(); // Charger les donnÃ©es statiques en parallÃ¨le
+    await loadStaticData(); // Charger les données statiques en parallèle
     deptIdRef.current = isAdminRole(acc.role) && acc.role !== "proviseur" ? acc.departement_id : null;
     const d = await loadAllData(deptIdRef.current);
     const safeD = d || { users:{}, prog:{}, epreuves:[], classes:[], exceptions:{} };
     const sbUser = safeD.users?.[acc.id];
-    // Fallback: si Supabase ne retourne pas les classes, utiliser les donnÃ©es EDT
+    // Fallback: si Supabase ne retourne pas les classes, utiliser les données EDT
     const classes = (sbUser?.classes||[]).length > 0
       ? sbUser.classes
       : (acc.classes||ENS_CLASSES_REF[acc.id]||[]);
@@ -14371,7 +14372,7 @@ export default function App() {
 
   const handleLogout = ()=>{setUser(null);setData(null);setPage("dashboard");setScreen("login");};
 
-  // Bouton retour Android â€” intercepter pour naviguer dans l'app
+  // Bouton retour Android — intercepter pour naviguer dans l'app
   useEffect(()=>{
     const handlePop = ()=>{
       if(mobileSearchOpen){ setMobileSearchOpen(false); return; }
@@ -14397,7 +14398,7 @@ export default function App() {
       {screen==="login"   && <LoginPage onLogin={handleLogin}/>}
       {screen==="loading" && (
         <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,flexDirection:"column",gap:16}}>
-          <Spinner size={36} color={C.green}/><p style={{color:C.txtMuted,fontSize:13}}>Chargement des donnÃ©es Supabaseâ€¦</p>
+          <Spinner size={36} color={C.green}/><p style={{color:C.txtMuted,fontSize:13}}>Chargement des données Supabase…</p>
         </div>
       )}
       {screen==="app" && <AppLayout onLogout={handleLogout}/>}
