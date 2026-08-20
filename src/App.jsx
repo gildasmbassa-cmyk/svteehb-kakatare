@@ -12799,7 +12799,6 @@ function SuiviProgrammePage() {
 // ════════════════════════════════════════════════════════════════
 function AccountBotPage() {
   const {rawData:data, setRawData} = useApp();
-  const C = useColors();
   const {isMobile} = useDevice();
   const [users, setUsers] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
