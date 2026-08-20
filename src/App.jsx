@@ -6581,6 +6581,9 @@ const NAV_PROVISEUR_GROUPS = [
   { section:"CYCLE ANNUEL", items:[
     {id:"gestion-annuelle",emoji:"🔄",label:"Gestion annuelle"},
   ]},
+  { section:"ADMINISTRATION", items:[
+    {id:"comptes",emoji:"👤",label:"Gestion des comptes"},
+  ]},
 ];
 
 const NAV_CENSEUR_GROUPS = [
@@ -12794,6 +12797,234 @@ function SuiviProgrammePage() {
 //   - Visualisation de l'état des données
 //   - Préparation nouvelle année scolaire
 // ════════════════════════════════════════════════════════════════
+function AccountBotPage() {
+  const {rawData:data, setRawData} = useApp();
+  const C = useColors();
+  const {isMobile} = useDevice();
+  const [users, setUsers] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [modal, setModal] = React.useState(null); // "create"|"edit"|"reset"|"delete"
+  const [selected, setSelected] = React.useState(null);
+  const [form, setForm] = React.useState({id:"",nom:"",role:"enseignant",departement_id:"",mdp:""});
+  const [newMdp, setNewMdp] = React.useState("");
+  const [msg, setMsg] = React.useState(null);
+  const [search, setSearch] = React.useState("");
+
+  const ROLES = ["proviseur","censeur","surveillant_general","animateur","secretaire","enseignant"];
+
+  async function loadUsers() {
+    setLoading(true);
+    const res = await sb.get("utilisateurs","?select=id,nom,role,departement_id,classes&order=role,nom");
+    setUsers(res||[]);
+    setLoading(false);
+  }
+
+  useEffect(()=>{ loadUsers(); },[]);
+
+  function showMsg(text, ok=true) {
+    setMsg({text, ok});
+    setTimeout(()=>setMsg(null), 3000);
+  }
+
+  async function handleCreate() {
+    if (!form.id||!form.nom||!form.mdp) return showMsg("ID, nom et mot de passe obligatoires", false);
+    const {data:_, error} = await supabase.rpc("admin_create_account", {
+      p_id: form.id.toLowerCase().trim(),
+      p_nom: form.nom.trim(),
+      p_role: form.role,
+      p_dept: form.departement_id ? parseInt(form.departement_id) : null,
+      p_mdp: form.mdp
+    });
+    if (error) return showMsg("Erreur: " + error.message, false);
+    showMsg("Compte créé avec succès");
+    setModal(null); loadUsers();
+  }
+
+  async function handleReset() {
+    if (!newMdp) return showMsg("Nouveau mot de passe obligatoire", false);
+    const {error} = await supabase.rpc("admin_reset_password", {
+      p_id: selected.id,
+      p_mdp: newMdp
+    });
+    if (error) return showMsg("Erreur: " + error.message, false);
+    showMsg("Mot de passe réinitialisé");
+    setModal(null); setNewMdp("");
+  }
+
+  async function handleEdit() {
+    const {error} = await supabase
+      .from("utilisateurs")
+      .update({nom: form.nom.trim(), role: form.role, departement_id: form.departement_id ? parseInt(form.departement_id) : null})
+      .eq("id", selected.id);
+    if (error) return showMsg("Erreur: " + error.message, false);
+    showMsg("Compte modifié");
+    setModal(null); loadUsers();
+  }
+
+  async function handleDelete() {
+    const {error} = await supabase.from("utilisateurs").delete().eq("id", selected.id);
+    if (error) return showMsg("Erreur: " + error.message, false);
+    showMsg("Compte supprimé");
+    setModal(null); loadUsers();
+  }
+
+  const filtered = users.filter(u =>
+    u.nom?.toLowerCase().includes(search.toLowerCase()) ||
+    u.id?.toLowerCase().includes(search.toLowerCase()) ||
+    u.role?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const roleColor = {
+    proviseur:"#0B4D2C", censeur:"#1e40af", surveillant_general:"#7c3aed",
+    animateur:"#b45309", secretaire:"#0f766e", enseignant:"#374151"
+  };
+
+  const modalStyle = {
+    position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:1000,
+    display:"flex",alignItems:"center",justifyContent:"center",padding:16
+  };
+  const cardStyle = {
+    background:"#fff",borderRadius:14,padding:24,width:"100%",maxWidth:420,
+    boxShadow:"0 20px 60px rgba(0,0,0,.2)"
+  };
+  const inputStyle = {
+    width:"100%",padding:"9px 12px",border:"1px solid #d1d5db",borderRadius:8,
+    fontSize:13,fontFamily:"inherit",boxSizing:"border-box",marginBottom:10
+  };
+  const btnPrimary = {
+    padding:"10px 20px",background:"#0B4D2C",color:"#fff",border:"none",
+    borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"
+  };
+  const btnDanger = {
+    ...btnPrimary, background:"#dc2626"
+  };
+  const btnGhost = {
+    ...btnPrimary, background:"#f3f4f6", color:"#374151"
+  };
+
+  return (
+    <div style={{padding:isMobile?"14px":"24px 28px",background:"#f8fafc",minHeight:"100%"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h1 style={{fontSize:isMobile?17:20,fontWeight:800,color:"#0f172a",margin:0}}>👤 Gestion des comptes</h1>
+          <p style={{color:"#64748b",margin:"3px 0 0",fontSize:12}}>{users.length} comptes — Proviseur uniquement</p>
+        </div>
+        <button onClick={()=>{setForm({id:"",nom:"",role:"enseignant",departement_id:"",mdp:""});setModal("create");}}
+          style={btnPrimary}>+ Nouveau compte</button>
+      </div>
+
+      {msg && <div style={{padding:"10px 16px",borderRadius:8,marginBottom:14,fontSize:13,fontWeight:600,
+        background:msg.ok?"#d1fae5":"#fee2e2",color:msg.ok?"#065f46":"#991b1b"}}>{msg.text}</div>}
+
+      <input placeholder="Rechercher par nom, ID ou rôle..." value={search} onChange={e=>setSearch(e.target.value)}
+        style={{...inputStyle,marginBottom:16,background:"#fff"}} />
+
+      {loading ? <div style={{textAlign:"center",padding:40,color:"#64748b"}}>Chargement...</div> : (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {filtered.map(u=>(
+            <div key={u.id} style={{background:"#fff",borderRadius:10,border:"1px solid #e2e8f0",
+              padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <div style={{width:36,height:36,borderRadius:18,background:roleColor[u.role]||"#374151",
+                display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",
+                fontSize:13,fontWeight:800,flexShrink:0}}>
+                {u.nom?.charAt(0)||"?"}
+              </div>
+              <div style={{flex:1,minWidth:120}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#0f172a"}}>{u.nom}</div>
+                <div style={{fontSize:11,color:"#64748b"}}>{u.id} · <span style={{color:roleColor[u.role]||"#374151",fontWeight:600}}>{u.role}</span></div>
+              </div>
+              <div style={{display:"flex",gap:6,flexShrink:0}}>
+                <button onClick={()=>{setSelected(u);setForm({id:u.id,nom:u.nom,role:u.role,departement_id:u.departement_id||""});setModal("edit");}}
+                  style={{...btnGhost,padding:"6px 12px",fontSize:12}}>Modifier</button>
+                <button onClick={()=>{setSelected(u);setNewMdp("");setModal("reset");}}
+                  style={{...btnGhost,padding:"6px 12px",fontSize:12}}>Reset mdp</button>
+                <button onClick={()=>{setSelected(u);setModal("delete");}}
+                  style={{...btnDanger,padding:"6px 12px",fontSize:12}}>Supprimer</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal Créer */}
+      {modal==="create" && (
+        <div style={modalStyle} onClick={()=>setModal(null)}>
+          <div style={cardStyle} onClick={e=>e.stopPropagation()}>
+            <h3 style={{margin:"0 0 16px",fontSize:15,fontWeight:800}}>Nouveau compte</h3>
+            <input placeholder="Identifiant (ex: censeur_g)" value={form.id} onChange={e=>setForm(f=>({...f,id:e.target.value}))} style={inputStyle}/>
+            <input placeholder="Nom complet" value={form.nom} onChange={e=>setForm(f=>({...f,nom:e.target.value}))} style={inputStyle}/>
+            <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))} style={inputStyle}>
+              {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+            </select>
+            <select value={form.departement_id} onChange={e=>setForm(f=>({...f,departement_id:e.target.value}))} style={inputStyle}>
+              <option value="">-- Département (optionnel) --</option>
+              {(DEPARTEMENTS_LIST||[]).map(d=><option key={d.id} value={d.id}>{d.nom}</option>)}
+            </select>
+            <input placeholder="Mot de passe" type="password" value={form.mdp} onChange={e=>setForm(f=>({...f,mdp:e.target.value}))} style={inputStyle}/>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
+              <button onClick={()=>setModal(null)} style={btnGhost}>Annuler</button>
+              <button onClick={handleCreate} style={btnPrimary}>Créer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Modifier */}
+      {modal==="edit" && (
+        <div style={modalStyle} onClick={()=>setModal(null)}>
+          <div style={cardStyle} onClick={e=>e.stopPropagation()}>
+            <h3 style={{margin:"0 0 4px",fontSize:15,fontWeight:800}}>Modifier — {selected?.id}</h3>
+            <p style={{margin:"0 0 14px",fontSize:12,color:"#64748b"}}>L'identifiant ne peut pas être modifié</p>
+            <input placeholder="Nom complet" value={form.nom} onChange={e=>setForm(f=>({...f,nom:e.target.value}))} style={inputStyle}/>
+            <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))} style={inputStyle}>
+              {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+            </select>
+            <select value={form.departement_id} onChange={e=>setForm(f=>({...f,departement_id:e.target.value}))} style={inputStyle}>
+              <option value="">-- Département (optionnel) --</option>
+              {(DEPARTEMENTS_LIST||[]).map(d=><option key={d.id} value={d.id}>{d.nom}</option>)}
+            </select>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
+              <button onClick={()=>setModal(null)} style={btnGhost}>Annuler</button>
+              <button onClick={handleEdit} style={btnPrimary}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reset mdp */}
+      {modal==="reset" && (
+        <div style={modalStyle} onClick={()=>setModal(null)}>
+          <div style={cardStyle} onClick={e=>e.stopPropagation()}>
+            <h3 style={{margin:"0 0 4px",fontSize:15,fontWeight:800}}>Reset mot de passe</h3>
+            <p style={{margin:"0 0 14px",fontSize:12,color:"#64748b"}}>{selected?.nom} ({selected?.id})</p>
+            <input placeholder="Nouveau mot de passe" type="password" value={newMdp} onChange={e=>setNewMdp(e.target.value)} style={inputStyle}/>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
+              <button onClick={()=>setModal(null)} style={btnGhost}>Annuler</button>
+              <button onClick={handleReset} style={btnPrimary}>Réinitialiser</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Supprimer */}
+      {modal==="delete" && (
+        <div style={modalStyle} onClick={()=>setModal(null)}>
+          <div style={cardStyle} onClick={e=>e.stopPropagation()}>
+            <h3 style={{margin:"0 0 8px",fontSize:15,fontWeight:800,color:"#dc2626"}}>Supprimer le compte</h3>
+            <p style={{margin:"0 0 20px",fontSize:13,color:"#374151"}}>
+              Supprimer <strong>{selected?.nom}</strong> ({selected?.id}) ? Cette action est irréversible.
+            </p>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <button onClick={()=>setModal(null)} style={btnGhost}>Annuler</button>
+              <button onClick={handleDelete} style={btnDanger}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GestionAnnuellePage() {
   const {showToast, data, setPage} = useApp();
   const {isMobile} = useDevice();
@@ -13383,6 +13614,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="edt")               return <W>{(isAdmin||user?.role==="censeur")?<EdtPage/>:<MonEdtPage/>}</W>
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
+    if(page==="comptes")           return <W>{user?.role==="proviseur"?<AccountBotPage/>:null}</W>
     if(page==="departements")      return <W>{(user?.role==="proviseur"||user?.role==="censeur"||user?.role==="animateur"||user?.role==="animatrice")?<DepartementsPage/>:null}</W>
     if(page==="conseil-classe")      return <W><ConseilClassePage/></W>
     if(page==="babillard")          return <W><BabillardPage/></W>
