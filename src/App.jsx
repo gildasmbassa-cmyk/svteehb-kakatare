@@ -9345,7 +9345,7 @@ function SecretariatPage() {
   const [docType, setDocType] = useState("attestation");
   const [previewHtml, setPreviewHtml] = useState(null);
   const [motif, setMotif] = useState("");
-  const [annee, setAnnee] = useState("2025-2026");
+  const [annee, setAnnee] = useState("2026-2027");
 
   const classes = Object.keys(ELEVES_DB).sort();
   const elevesClasse = selClasse ? (ELEVES_DB[selClasse]||[]) : [];
@@ -14411,6 +14411,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
+
 
 
 
