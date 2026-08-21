@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
+﻿import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
@@ -5964,7 +5964,7 @@ const EdtToast = ({ msg, ok }) => (
 // 5. MON EMPLOI DU TEMPS — classes de l'enseignant uniquement
 // ══════════════════════════════════════════════════════════════════════
 function MonEdtPage() {
-  const {user} = useApp();
+  const {user, data} = useApp();
   const {jk: nowJk, hi: nowHi} = getNowInfo();
   const ensId = user?.id;
   const edtRt = buildEdtRuntime(data?.exceptions||{}, data?.edtBase||{});
