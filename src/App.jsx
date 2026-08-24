@@ -825,7 +825,7 @@ function MesClassesPage() {
     if (!selClasse && mesClasses.length>0) setSelClasse(mesClasses[0]);
   }, [mesClasses]);
 
-  const eleves = selClasse ? (ELEVES_DB[selClasse]||[]) : [];
+  const eleves = selClasse ? [...(ELEVES_DB[selClasse]||[])].sort((a,b)=>(a.nom||"").localeCompare(b.nom||"","fr",{sensitivity:"base"})) : [];
   const elevesFiltres = eleves.filter(e => {
     if (filtreG!=="all" && e.g!==filtreG) return false;
     if (search.trim() && !e.nom.toLowerCase().includes(search.trim().toLowerCase())) return false;
@@ -14434,7 +14434,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
-
 
 
 
