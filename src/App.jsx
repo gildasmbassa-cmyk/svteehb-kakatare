@@ -8,7 +8,7 @@ import { RealtimeClient } from "@supabase/realtime-js";
 
 // ════════════════════════════════════════════════════════════════════
 // SVTEEHB — Application Pédagogique Unifiée
-// Lycée de Kakatare · Maroua · Cameroun · 2025–2026
+// Lycée de Kakatare · Maroua · Cameroun · 2026–2027
 // Version : React SaaS v1.0 — Toutes pages intégrées
 // ════════════════════════════════════════════════════════════════════
 
@@ -267,7 +267,7 @@ const ENS_CLASSES_REF = {
 
 // Noms d'affichage courts (feuille de calcul MINESEC)
 const CLASS_DISPLAY = {
-  // Source : Relevé de notes officiel — Lycée de Kakatare 2025–2026
+  // Source : Relevé de notes officiel — Lycée de Kakatare 2026–2027
   // 38 classes séparées + alias EDT
   "6ème 1":"6ème I","6ème 2":"6ème II","6ème 3":"6ème III",
   "5ème 1":"5ème I","5ème 2":"5ème II","5ème 3":"5ème III",
@@ -289,7 +289,7 @@ const CLASS_DISPLAY = {
 "Tle A4 ESP/ITA":"Tle A4 Espagnol / Italien",};
 
 const DEMO_ACCOUNTS = [
-  // Source : ENSEIGNANTS1.pdf + CLASSES.pdf Lantiv — Lycée de Kakatare 2025–2026
+  // Source : ENSEIGNANTS1.pdf + CLASSES.pdf Lantiv — Lycée de Kakatare 2026–2027
   // Mots de passe à personnaliser avant déploiement définitif
   {id:"sylvie",nom:"AÏSSATOU SYLVIE",   role:"animatrice", sub:"Animatrice Pédagogique · PCEG", classes:[]},
   {id:"mbassam", nom:"MBASSA André Gildas",role:"enseignant", sub:"5ème 2 · 1ère C/Ti · Tle A4 ESP", classes:["5ème 2","1ère C","1ère Ti","Tle A4 ESP","Tle A4 ITA"]},
@@ -557,7 +557,7 @@ const GLOBAL_CSS = `
 
 // ═══════════════════════════════════════════════════
 // BASE NOMINALE COMPLÈTE — 1163 élèves / 38 classes
-// Source : Fiche_Suivi_Annuel_Kakatare_2025_2026.xlsx
+// Source : Fiche_Suivi_Annuel_Kakatare_2026_2027.xlsx
 // ═══════════════════════════════════════════════════
 // ELEVES_DB importé depuis ./data/eleves.json (38 classes, 1166 élèves) // 38 classes, 1166 élèves — données inline
 
@@ -665,7 +665,7 @@ function imprimerListeClasse(code, eleves) {
     LISTE OFFICIELLE DES ÉLÈVES — CLASSE : ${code}
   </h2>
   <div style="font-size:9px;margin-bottom:8px;display:flex;gap:20px">
-    <span>Année scolaire : <strong>2025–2026</strong></span>
+    <span>Année scolaire : <strong>2026–2027</strong></span>
     <span>Effectif total : <strong>${eleves.length}</strong></span>
     <span>Filles : <strong>${filles}</strong></span>
     <span>Garçons : <strong>${garcons}</strong></span>
@@ -715,7 +715,7 @@ function genererConvocation(eleve, classe, absH, retards, sanctions) {
     + '.sign{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:40px;font-size:12px}'
     + '.sign div{border-top:1px solid #d1d5db;padding-top:8px;text-align:center}'
     + '@media print{.np{display:none}}</style></head><body>'
-    + '<div style="text-align:right;font-size:11px;color:#6b7280">Lycee de Kakatare-Maroua | 2025-2026 | Le '+date+'</div>'
+    + '<div style="text-align:right;font-size:11px;color:#6b7280">Lycee de Kakatare-Maroua | 2026-2027 | Le '+date+'</div>'
     + '<h1>CONVOCATION DES PARENTS / TUTEURS</h1>'
     + '<div class="bloc"><b>Nom :</b> '+eleve.nom+'<br><b>Classe :</b> '+classe+'<br><b>Motif :</b> '+motif+'<br>'
     + '<b>Detail :</b> '+absH+'h absence'+(retards>0?', '+retards+' retard(s)':'')+(sanctions>0?', '+sanctions+' sanction(s)':'')+'</div>'
@@ -1564,7 +1564,7 @@ function ElevesPage() {
                 <div>
                   <h2 style={{fontSize:18,fontWeight:800,color:C.txt,margin:0}}>{selClasse}</h2>
                   <div style={{fontSize:12,color:C.txtMuted,marginTop:4}}>
-                    Lycée de Kakatare · Maroua · 2025–2026
+                    Lycée de Kakatare · Maroua · 2026–2027
                     {niveau && <span style={{marginLeft:8,padding:"1px 8px",background:C.greenPale,border:`1px solid ${C.greenBorder}`,borderRadius:20,fontSize:10,fontWeight:700,color:C.green}}>{niveau}</span>}
                   </div>
                   {prog && (
@@ -1693,7 +1693,7 @@ function ElevesPage() {
           {/* ══ VUE STATISTIQUES ══════════════════════════════════ */}
           {vue==="stats" && (
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>📊 Statistiques — 2025–2026</h2>
+              <h2 style={{fontSize:16,fontWeight:800,color:C.txt}}>📊 Statistiques — 2026–2027</h2>
               <div style={{display:"grid",gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12}}>
                 {[
                   {v:TOTAL_LOC,  l:"Total élèves", col:C.green,  bg:C.greenPale,  emoji:"🎓"},
@@ -4960,7 +4960,7 @@ function enteteOfficiel(titre, sousTitre, dept) {
   </div>
   <h2 style="text-align:center;font-size:13px;font-weight:900;text-transform:uppercase;border:2px solid #222;padding:7px;margin:8px 0;letter-spacing:.04em">${titre}</h2>
   ${sousTitre ? `<p style="text-align:center;font-size:10px;color:#444;margin:0 0 8px">${sousTitre}</p>` : ""}
-  <div style="text-align:center;font-size:9px;margin-bottom:2px">Établissement : Lycée de Kakatare &nbsp;|&nbsp; Discipline : SVTEEHB &nbsp;|&nbsp; Année scolaire : 2025-2026</div>`;
+  <div style="text-align:center;font-size:9px;margin-bottom:2px">Établissement : Lycée de Kakatare &nbsp;|&nbsp; Discipline : SVTEEHB &nbsp;|&nbsp; Année scolaire : 2026-2027</div>`;
 }
 
 // Fiche de suivi pédagogique (vue animatrice par enseignant)
@@ -5204,7 +5204,7 @@ function genFicheSuivi(enseignant, classes, progIndex, trim = "ANN", notesIndex 
 <table class="titre-tbl">
   <tr><td>
     <div class="titre-principal">Fiche de Suivi Pédagogique de l'Enseignant(e)</div>
-    <div class="titre-annee">Année Scolaire : 2025 / 2026</div>
+    <div class="titre-annee">Année Scolaire : 2026 / 2027</div>
     <div class="titre-minesec">MINESEC / DRES / EXTRÊME-NORD</div>
   </td></tr>
 </table>
@@ -6000,7 +6000,7 @@ function MonEdtPage() {
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
         <div>
           <h2 style={{fontSize:16, fontWeight:800, color:C.txt, margin:0}}>🗓 Mon emploi du temps SVTEEHB</h2>
-          <p style={{fontSize:11, color:C.txtMuted, margin:"4px 0 0"}}>{user?.nom} · {(user?.classes||[]).length} classe{(user?.classes||[]).length>1?"s":""} · 2025–2026</p>
+          <p style={{fontSize:11, color:C.txtMuted, margin:"4px 0 0"}}>{user?.nom} · {(user?.classes||[]).length} classe{(user?.classes||[]).length>1?"s":""} · 2026–2027</p>
         </div>
         {nowJk && nowHi>=0 && edt[nowJk]?.[nowHi] && (
           <div style={{background:C.greenPale, border:`1px solid ${C.greenBorder}`, borderRadius:9, padding:"8px 14px", textAlign:"center"}}>
@@ -6739,7 +6739,7 @@ function DashboardAdmin() {
     <div style={{padding:"20px 20px 40px",display:"flex",flexDirection:"column",gap:18}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
         <div><h2 style={{fontSize:20,fontWeight:800,color:C.txt,margin:0}}>Bonjour, Administration 👋</h2><p style={{color:C.txtMuted,margin:"3px 0 0",fontSize:12}}>{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
-        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.txtMuted}}>2025–2026</div><div style={{fontSize:13,fontWeight:700,color:C.green}}>Données en direct ↗</div></div>
+        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.txtMuted}}>2026–2027</div><div style={{fontSize:13,fontWeight:700,color:C.green}}>Données en direct ↗</div></div>
       </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
         <KpiCard label="Enseignants" value={stats.nbEns} sub="SVTEEHB Kakatare" iconEmoji="👥" bg={C.greenPale} loading={loading} delay={0}/>
@@ -6980,7 +6980,7 @@ function DashboardProviseur() {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>2025–2026</div>
+            <div style={{fontSize:12,fontWeight:700,color:"#0f172a"}}>2026–2027</div>
             <div style={{fontSize:10.5,color:"#64748b"}}>
               {refreshing ? "Synchronisation…" : `Sync ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`}
             </div>
@@ -7814,8 +7814,8 @@ function DashboardSurveillance() {
 }
 
 
-// ── Calendrier scolaire 2025-2026 : date → {trim, sem} ──────────
-// Trimestres chargés depuis Supabase (table annee_scolaire), fallback 2025-2026
+// ── Calendrier scolaire 2026-2027 : date → {trim, sem} ──────────
+// Trimestres chargés depuis Supabase (table annee_scolaire), fallback 2026-2027
 let TRIMESTRES_DYNAMIQUES = [
   {trim:1, debut:new Date("2025-10-06")},
   {trim:2, debut:new Date("2026-01-05")},
@@ -7827,7 +7827,7 @@ async function loadTrimestres() {
     if (rows && rows.length >= 3) {
       TRIMESTRES_DYNAMIQUES = rows.map(r=>({trim:r.trim, debut:new Date(r.debut), fin:new Date(r.fin)}));
     }
-  } catch(e) { /* fallback 2025-2026 */ }
+  } catch(e) { /* fallback 2026-2027 */ }
 }
 function getSemaineTrimestre(dateStr) {
   const dt = new Date(dateStr);
@@ -7964,7 +7964,7 @@ function getAppreciation(n) {
 
 function genBulletin(opts) {
   const {
-    eleve, classe, sequence, annee="2025-2026",
+    eleve, classe, sequence, annee="2026-2027",
     notesIndex={}, absencesIndex={}, elevesClasse=[],
     appreciation="", decision="", mention="",
     profPrincipalNom="À définir",
@@ -8529,7 +8529,7 @@ function ConduiteClassePage() {
   useEffect(()=>{
     if(!selClasse) return;
     setLoading(true);
-    sb.get("conduite_eleve",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`)
+    sb.get("conduite_eleve",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2026-2027`)
       .then(rows=>{
         const map={};
         (rows||[]).forEach(r=>{ map[r.eleve_id]={
@@ -8556,7 +8556,7 @@ function ConduiteClassePage() {
       p_eleve_id: String(eleve.id),
       p_classe: selClasse,
       p_sequence: selSeq,
-      p_annee_scolaire: "2025-2026",
+      p_annee_scolaire: "2026-2027",
       p_note_conduite: c.note_conduite!==""?+c.note_conduite:null,
       p_retards: +c.retards||0,
       p_exclusions_heures: +c.exclusions_heures||0,
@@ -8757,7 +8757,7 @@ function ConseilClassePage() {
   const loadConseil = async () => {
     setLoading(true);
     const rows = await sb.get("conseil_classe",
-      `?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`);
+      `?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2026-2027`);
     const c = (rows||[])[0]||null;
     setConseil(c);
     if(c?.appreciation_generale) setAppreciationGen(c.appreciation_generale);
@@ -8790,7 +8790,7 @@ function ConseilClassePage() {
       p_statut:statut
     });
     if(!res?.ok){setSaving(false);showToast("Erreur: "+(res?.error||"inconnue"),false);return;}
-    const conseilId = res.id || (await sb.get("conseil_classe",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`))?.[0]?.id;
+    const conseilId = res.id || (await sb.get("conseil_classe",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2026-2027`))?.[0]?.id;
     if(!conseilId){setSaving(false);showToast("Erreur: conseil introuvable",false);return;}
 
     // 2. Sauvegarder les décisions
@@ -8859,7 +8859,7 @@ th:first-child{text-align:left;}
 <script>window.onload=()=>window.print();</script>
 </head><body>
 <div class="header">
-  <div style="font-size:10px;color:#6b7280;margin-bottom:4px;">LYCÉE DE KAKATARE-MAROUA — Année scolaire 2025-2026</div>
+  <div style="font-size:10px;color:#6b7280;margin-bottom:4px;">LYCÉE DE KAKATARE-MAROUA — Année scolaire 2026-2027</div>
   <div class="title">Procès-Verbal du Conseil de Classe</div>
   <div class="subtitle">Séquence ${seq} — Trimestre ${trim} · ${selClasse}</div>
   <div style="font-size:10px;color:#6b7280;margin-top:4px;">Tenu le ${dateConseil?new Date(dateConseil).toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}):now}</div>
@@ -8944,7 +8944,7 @@ ${appreciationGen?`<div style="margin-bottom:14px;"><div style="font-size:10px;f
               };
             });
             exportToExcel(
-              `Conseil_${selClasse.replace(/\s+/g,"_")}_S${selSeq}_2025-2026`,
+              `Conseil_${selClasse.replace(/\s+/g,"_")}_S${selSeq}_2026-2027`,
               `Conseil S${selSeq}`,
               rows
             );
@@ -9150,7 +9150,7 @@ function BulletinsPage() {
   // Charger les conduites quand classe/seq change
   useEffect(()=>{
     if(!selClasse) return;
-    sb.get("conduite_eleve",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2025-2026`)
+    sb.get("conduite_eleve",`?classe=eq.${encodeURIComponent(selClasse)}&sequence=eq.${selSeq}&annee_scolaire=eq.2026-2027`)
       .then(rows=>{ const m={}; (rows||[]).forEach(r=>{m[r.eleve_id]=r;}); setConduiteIndex(m); })
       .catch(()=>{});
   },[selClasse, selSeq]);
@@ -9228,7 +9228,7 @@ function BulletinsPage() {
     });
     rows.push(statsRow);
 
-    const filename = `Notes_${selClasse.replace(/\s+/g,"_")}_S${selSeq}_2025-2026`;
+    const filename = `Notes_${selClasse.replace(/\s+/g,"_")}_S${selSeq}_2026-2027`;
     const ok = exportToExcel(filename, `S${selSeq}`, rows);
     if(!ok) alert("Erreur lors de l'export Excel");
   };
@@ -9583,7 +9583,7 @@ ${headerHtml}
           <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:4,
             textTransform:"uppercase",letterSpacing:".5px"}}>Année scolaire</div>
           <select value={annee} onChange={e=>setAnnee(e.target.value)} style={{...inp}}>
-            <option value="2025-2026">2025–2026</option>
+            <option value="2026-2027">2026–2027</option>
             <option value="2024-2025">2024–2025</option>
           </select>
         </div>
@@ -10189,7 +10189,7 @@ function DashboardCenseur() {
 
 function genRapportDept(stats, user, trim) {
   const deptNom=DEPARTEMENTS_LIST.find(d=>d.id===user.departement_id)?.nom||"SVTEEHB";
-  const periode={ANN:"Année 2025-2026",T1:"Trimestre 1",T2:"Trimestre 2",T3:"Trimestre 3"}[trim]||trim;
+  const periode={ANN:"Année 2026-2027",T1:"Trimestre 1",T2:"Trimestre 2",T3:"Trimestre 3"}[trim]||trim;
   const date=new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
   const rows=stats.enseignants.map(e=>{
     const c=e.taux>=75?"#15803d":e.taux>=50?"#92400e":"#b91c1c";
@@ -11313,7 +11313,7 @@ const SidebarSG = ({collapsed, setCollapsed}) => {
         {!effectiveCollapsed&&(
           <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
             <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em"}}>Année scolaire</div>
-            <div style={{fontSize:10,fontWeight:700,color:G,background:"rgba(212,175,55,.12)",borderRadius:6,padding:"3px 8px",border:"1px solid rgba(212,175,55,.25)"}}>2025–2026</div>
+            <div style={{fontSize:10,fontWeight:700,color:G,background:"rgba(212,175,55,.12)",borderRadius:6,padding:"3px 8px",border:"1px solid rgba(212,175,55,.25)"}}>2026–2027</div>
           </div>
         )}
       </div>
@@ -11541,7 +11541,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
       {!effectiveCollapsed&&(
         <div style={{padding:"8px 16px 10px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
           <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.3)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:3}}>VUE D'ENSEMBLE</div>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2025 – 2026 ▾</div>
+          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2026 – 2027 ▾</div>
         </div>
       )}
 
@@ -11686,7 +11686,7 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
       {!effectiveCollapsed&&(
         <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
           <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:3}}>VUE D'ENSEMBLE</div>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2025 – 2026 ▾</div>
+          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2026 – 2027 ▾</div>
         </div>
       )}
 
@@ -11793,7 +11793,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
       {!effectiveCollapsed && (
         <div style={{padding:"10px 16px", borderBottom:"1px solid rgba(255,255,255,.08)", flexShrink:0}}>
           <div style={{fontSize:9, fontWeight:700, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:4}}>Année scolaire</div>
-          <div style={{fontSize:12, fontWeight:700, color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.08)", borderRadius:7, padding:"5px 10px"}}>2025 – 2026 ▾</div>
+          <div style={{fontSize:12, fontWeight:700, color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.08)", borderRadius:7, padding:"5px 10px"}}>2026 – 2027 ▾</div>
         </div>
       )}
 
@@ -12197,7 +12197,7 @@ function genBilanTrimestre(trim, data) {
 <body>
   <div style="text-align:center;margin-bottom:16px">
     <div style="font-size:13px;font-weight:700;color:#1a5276">LYCÉE DE KAKATARE — MAROUA</div>
-    <div style="font-size:10px;color:#888">Conseil d'Enseignement SVTEEHB · 2025–2026</div>
+    <div style="font-size:10px;color:#888">Conseil d'Enseignement SVTEEHB · 2026–2027</div>
   </div>
   <h1>BILAN PÉDAGOGIQUE — ${periode.toUpperCase()}</h1>
   <h2>Couverture des programmes · Édité le ${dateJour}</h2>
@@ -12480,7 +12480,7 @@ function SuiviProgrammePage() {
       <div style={{background:C.white, borderRadius:12, border:`1px solid ${C.border}`, padding: isMobile?"12px 14px":"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:10}}>
         <div>
           <h2 style={{fontSize: isMobile?14:16, fontWeight:800, color:C.txt, margin:0}}>📊 Suivi programme</h2>
-          <p style={{fontSize: isMobile?10.5:12, color:C.txtMuted, margin:"4px 0 0"}}>Tous les enseignants · Toutes les classes · 2025–2026</p>
+          <p style={{fontSize: isMobile?10.5:12, color:C.txtMuted, margin:"4px 0 0"}}>Tous les enseignants · Toutes les classes · 2026–2027</p>
         </div>
         <div style={{display:"flex", gap:8, alignItems:"center"}}>
           <button onClick={()=>genBilanTrimestre(["ANN","T1","T2","T3"][trim], data)}
@@ -13871,7 +13871,7 @@ function LoginPage({onLogin}){
           <div style={{display:"inline-flex",alignItems:"center",gap:8,border:"1.5px solid #D4AF37",borderRadius:30,padding:"8px 20px",marginBottom:28}}>
             <span style={{fontSize:14}}>📅</span>
             <span style={{fontSize:isMobile?11:12,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",color:"#D4AF37"}}>
-              Année scolaire 2025 – 2026
+              Année scolaire 2026 – 2027
             </span>
           </div>
         </div>
