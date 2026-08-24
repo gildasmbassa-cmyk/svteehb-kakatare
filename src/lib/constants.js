@@ -20,6 +20,26 @@ export const TRANSLATIONS_EN = {
 };
 
 export const DEPARTEMENTS_LIST = [
+    {id:1,nom:"SVT",emoji:"🌿"},
+    {id:2,nom:"Mathématiques",emoji:"📐"},
+    {id:3,nom:"Sciences Physiques / PCT",emoji:"🧪"},
+    {id:4,nom:"Lettres Françaises",emoji:"📖"},
+    {id:5,nom:"Histoire-Géographie",emoji:"🌍"},
+    {id:6,nom:"Espagnol",emoji:"🇪🇸"},
+    {id:7,nom:"EPS",emoji:"🏃"},
+    {id:8,nom:"Informatique",emoji:"💻"},
+    {id:9,nom:"ESF",emoji:"🏠"},
+    {id:10,nom:"ECM",emoji:"⚖️"},
+    {id:11,nom:"Philosophie",emoji:"🤔"},
+    {id:12,nom:"Anglais",emoji:"🇬🇧"},
+    {id:13,nom:"Allemand",emoji:"🇩🇪"},
+    {id:14,nom:"Chinois",emoji:"🇨🇳"},
+    {id:15,nom:"Italien",emoji:"🇮🇹"},
+    {id:16,nom:"Arabe",emoji:"🇸🇦"},
+    {id:17,nom:"Orientation Scolaire",emoji:"🧭"},
+  ];
+
+const _OLD_DEPTS = [
   {id:1,nom:"SVT",emoji:"🌿"},
   {id:2,nom:"Mathématiques",emoji:"📐"},
   {id:3,nom:"Sciences Physiques",emoji:"🧪"},
