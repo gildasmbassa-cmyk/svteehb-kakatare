@@ -897,7 +897,7 @@ function MesClassesPage() {
     if (!selClasse || nom.length < 3) { showToast("⚠ Nom trop court (min 3 car.)", false); return; }
     const id = selClasse.replace(/[^a-zA-Z0-9]/g,"_") + "_" + Date.now();
     const nouvel = {id, nom, g:newEleveGenre};
-    const nouvelleListe = [...(ELEVES_DB[selClasse]||[]), nouvel];
+    const nouvelleListe = [...(ELEVES_DB[selClasse]||[]), nouvel].sort((a,b)=>(a.nom||"").localeCompare(b.nom||"","fr",{sensitivity:"base"}));
     ELEVES_DB[selClasse] = nouvelleListe;
     setNewEleveNom(""); setShowAddEleve(false);
     showToast(`✓ ${nom} ajouté(e) à ${selClasse}`);
@@ -14434,7 +14434,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
-
 
 
 
