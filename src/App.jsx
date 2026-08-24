@@ -319,7 +319,8 @@ async function syncElevesImport() {
   } catch { /* échec silencieux — on garde les données par défaut */ }
 }
 
-async function loadAllData(departementId = null) {
+async function loadAllData(departementId = null, annee = "2026-2027") {
+  const AY = `&annee_scolaire=eq.${annee}`;
   await loadTrimestres();
   await loadCoefficients();
   await syncElevesImport();
