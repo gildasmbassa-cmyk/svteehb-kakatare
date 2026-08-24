@@ -1432,7 +1432,26 @@ function ElevesPage() {
   const ALL_CLS     = Object.keys(localDB);
 
   // ── Groupement sidebar ────────────────────────────────────────────
-  const GROUPES_ORDRE = [
+  const GROUPES_ORDRE = (() => {
+    const ordre = ["6e","5e","4e","3e","2nde A4","2nde C","1ère A4","1ère S/D","Tle A4","Tle S/D"];
+    const g = {};
+    Object.keys(ELEVES_DB).forEach(c => {
+      let lbl;
+      if (/^6e /.test(c)) lbl = "6e";
+      else if (/^5e /.test(c)) lbl = "5e";
+      else if (/^4e /.test(c)) lbl = "4e";
+      else if (/^3e /.test(c)) lbl = "3e";
+      else if (/^2nde A4/.test(c)) lbl = "2nde A4";
+      else if (/^2nde C/.test(c)) lbl = "2nde C";
+      else if (/^1ère A4/.test(c)) lbl = "1ère A4";
+      else if (/^1ère /.test(c)) lbl = "1ère S/D";
+      else if (/^Tle A4/.test(c)) lbl = "Tle A4";
+      else lbl = "Tle S/D";
+      (g[lbl] = g[lbl] || []).push(c);
+    });
+    return ordre.filter(l => g[l]).map(l => ({ label: l, classes: g[l].sort() }));
+  })();
+  const _GROUPES_OLD = [
     {label:"6ème",     classes:["6ème 1","6ème 2","6ème 3"]},
     {label:"5ème",     classes:["5ème 1","5ème 2","5ème 3"]},
     {label:"4ème",     classes:["4ème ALL","4ème ARB","4ème CHN","4ème ITA","4ème ESP"]},
