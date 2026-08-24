@@ -243,6 +243,7 @@ function loadElevesDB() {
   TOTAL_ELEVES = getTotalEleves();
   TOTAL_FILLES = getTotalFilles();
   TOTAL_GARCONS = getTotalGarcons();
+  CLASSES_REELLES = Object.keys(ELEVES_DB).sort().map(code => ({ code, effectif: (ELEVES_DB[code]||[]).length }));
 }
 
 // LECONS_DATA est désormais dans le bundle — chargement direct
@@ -562,7 +563,7 @@ const GLOBAL_CSS = `
 
 // Liste fiable classes+effectifs, dérivée d'ELEVES_DB — à utiliser PARTOUT
 // au lieu de la table Supabase "classes" (peu fiable : vide ou codes désynchronisés)
-const CLASSES_REELLES = Object.keys(ELEVES_DB).sort().map(code => ({
+let CLASSES_REELLES = Object.keys(ELEVES_DB).sort().map(code => ({
   code, effectif: (ELEVES_DB[code]||[]).length,
 }));
 
