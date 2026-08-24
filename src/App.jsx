@@ -24,7 +24,8 @@ const REALTIME_TABLES = ["notes","absences","prog_suivi","epreuves","edt_excepti
 
 // ── API Supabase (fetch léger, pas de SDK) ────────────────────────
 const sb = {
-  h: () => ({ apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, "Content-Type":"application/json" }),
+  h: () => { const st = sb.token || (typeof localStorage!=="undefined" ? localStorage.getItem("sb_session_token") : "") || ""; return { apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, "Content-Type":"application/json", ...(st ? {"x-session-token": st} : {}) }; },
+  token: null,
   async get(t, q="") {
     try { const r=await fetch(`${SB_URL}/rest/v1/${t}${q}`,{headers:sb.h()}); return r.ok?r.json():null; }
     catch { return null; }
@@ -13767,6 +13768,7 @@ function LoginPage({onLogin}){
     if(profile.role==="surveillant_general"&& authUser.role!=="surveillant_general"){setErr("Ce compte n'est pas un compte Surveillance Générale.");setLoading(false);return;}
     if(profile.role==="enseignant" && (authUser.role==="proviseur"||authUser.role==="censeur"||authUser.role==="surveillant_general")){setErr("Utilisez l'accès correspondant à ce compte.");setLoading(false);return;}
     if(profile.needsDept && authUser.departement_id && String(authUser.departement_id)!==String(selDept)){setErr("Ce compte n'appartient pas à ce département.");setLoading(false);return;}
+    if(authUser.token){ sb.token = authUser.token; try{ localStorage.setItem("sb_session_token", authUser.token); }catch(e){} }
     if(rememberMe)localStorage.setItem("svt_remember_id",id.trim().toLowerCase());
     else localStorage.removeItem("svt_remember_id");
     const demoRef=DEMO_ACCOUNTS.find(a=>a.id===authUser.id)||{};
