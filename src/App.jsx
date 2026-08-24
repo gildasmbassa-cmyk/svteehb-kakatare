@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
@@ -247,7 +247,7 @@ function loadElevesDB() {
 
 // LECONS_DATA est désormais dans le bundle — chargement direct
 async function loadStaticData() {
-  await loadElevesDB(); // Seul ELEVES_DB est chargé dynamiquement
+  await loadElevesDB("2026-2027"); // Live Supabase query
 }
 
 const ENS_CLASSES_REF = {
