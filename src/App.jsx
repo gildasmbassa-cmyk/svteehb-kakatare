@@ -1419,7 +1419,7 @@ function ElevesPage() {
   }
 
   // ── Données de la classe sélectionnée ────────────────────────────
-  const eleves   = localDB[selClasse] || [];
+  const eleves   = [...(localDB[selClasse] || [])].sort((a,b)=>(a.nom||"").localeCompare(b.nom||"","fr",{sensitivity:"base"}));
   const filles   = eleves.filter(e=>e.g==="F").length;
   const garcons  = eleves.length - filles;
 
@@ -14444,4 +14444,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
-
