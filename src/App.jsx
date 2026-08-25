@@ -1353,7 +1353,7 @@ function CahierDeTextePage() {
 
 function ElevesPage() {
   const {isMobile} = useDevice();
-  const {pendingClasseSelect, setPendingClasseSelect} = useApp();
+  const {pendingClasseSelect, setPendingClasseSelect, data: appData} = useApp();
   // ── État principal ────────────────────────────────────────────────
   const [selClasse, setSelClasse] = useState(() => "6ème 1");
   const [search, setSearch]       = useState("");
@@ -1374,6 +1374,13 @@ function ElevesPage() {
     for (const k in ELEVES_DB) clone[k] = [...ELEVES_DB[k]];
     return clone;
   });
+
+  // Resynchronise localDB quand ELEVES_DB est rechargé depuis Supabase
+  useEffect(() => {
+    const clone = {};
+    for (const k in ELEVES_DB) clone[k] = [...ELEVES_DB[k]];
+    setLocalDB(clone);
+  }, [appData]);
 
   // ── Modal ajout / retrait ─────────────────────────────────────────
   const [modal, setModal]           = useState(null); // null | "ajout" | {type:"retrait",eleve}
