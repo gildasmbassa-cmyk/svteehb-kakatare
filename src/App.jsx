@@ -12,6 +12,8 @@ import { RealtimeClient } from "@supabase/realtime-js";
 // Version : React SaaS v1.0 — Toutes pages intégrées
 // ════════════════════════════════════════════════════════════════════
 
+const fmtDateFR = (d) => { if(!d) return "—"; const [y,m,j] = String(d).slice(0,10).split("-"); return (y&&m&&j) ? `${j}/${m}/${y}` : "—"; };
+const calcAge = (d) => { if(!d) return "—"; const n = new Date(d); if(isNaN(n)) return "—"; const t = new Date(); let a = t.getFullYear()-n.getFullYear(); const mm = t.getMonth()-n.getMonth(); if(mm<0 || (mm===0 && t.getDate()<n.getDate())) a--; return (a>=0 && a<120) ? a : "—"; };
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -1638,18 +1640,22 @@ function ElevesPage() {
               </div>
 
               {/* Table des élèves */}
-              <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}><div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{minWidth:480,width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}><div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{minWidth:920,width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#f8fafc",borderBottom:`1px solid ${C.border}`}}>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:48}}>N°</th>
                       <th style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted}}>NOM ET PRÉNOM(S)</th>
+                      <th style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted,width:110}}>MATRICULE</th>
+                      <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:90}}>NÉ(E) LE</th>
+                      <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:50}}>ÂGE</th>
+                      <th style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.txtMuted,width:130}}>LIEU DE NAISSANCE</th>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:80}}>GENRE</th>
                       <th style={{padding:"9px 12px",textAlign:"center",fontSize:10,fontWeight:700,color:C.txtMuted,width:80}}>ACTION</th>
                     </tr>
                   </thead>
                   <tbody>
                     {elevesFiltres.length===0 ? (
-                      <tr><td colSpan={4} style={{padding:"32px",textAlign:"center",color:C.txtLight}}>
+                      <tr><td colSpan={8} style={{padding:"32px",textAlign:"center",color:C.txtLight}}>
                         <div style={{fontSize:28,marginBottom:6}}>🔍</div>Aucun élève trouvé
                       </td></tr>
                     ) : elevesFiltres.map((e,i)=>(
@@ -1666,6 +1672,10 @@ function ElevesPage() {
                             <span style={{fontWeight:700,color:C.txt}}>{e.nom}</span>
                           </div>
                         </td>
+                        <td style={{padding:"10px 12px",fontSize:11,color:C.txtMuted,fontFamily:"monospace"}}>{e.matricule||"—"}</td>
+                        <td style={{padding:"10px 12px",textAlign:"center",fontSize:11,color:C.txtMuted}}>{fmtDateFR(e.date_naissance)}</td>
+                        <td style={{padding:"10px 12px",textAlign:"center",fontSize:11,fontWeight:700,color:C.txtMuted}}>{calcAge(e.date_naissance)}</td>
+                        <td style={{padding:"10px 12px",fontSize:11,color:C.txtMuted}}>{e.lieu_naissance||"—"}</td>
                         <td style={{padding:"10px 12px",textAlign:"center"}}>
                           <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,background:e.g==="F"?C.pinkPale:C.bluePale,color:e.g==="F"?C.pink:C.blue,border:`1px solid ${e.g==="F"?C.pinkA40:C.blueA40}`}}>
                             {e.g==="F"?"♀ F":"♂ M"}
@@ -14434,6 +14444,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </ErrorBoundary>
 );
-
-
 
