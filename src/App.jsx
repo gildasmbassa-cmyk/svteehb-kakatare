@@ -240,7 +240,24 @@ function getClassColor(cl){if(!cl)return"#94a3b8";if(!classColorCache[cl])classC
 // ════════════════════════════════════════════════════════════════
 let _elevesLoaded = false;
 
-function loadElevesDB() {
+async function loadElevesDB(anneeParam = "2026-2027") {
+  try {
+    const data = await sb.get("eleves", `?annee_scolaire=eq.${anneeParam}&order=classe.asc,numero.asc`);
+    if (data && Array.isArray(data) && data.length > 0) {
+      Object.keys(ELEVES_DB).forEach(k => delete ELEVES_DB[k]);
+      data.forEach(e => {
+        const cleanId = e.classe.replace(/[èéêë]/g,"e").replace(/[àâ]/g,"a").replace(/\s+/g,"_");
+        const id = `${cleanId}_${e.numero}`;
+        if (!ELEVES_DB[e.classe]) ELEVES_DB[e.classe] = [];
+        ELEVES_DB[e.classe].push({
+          id, nom: e.nom, g: e.sexe === "F" ? "F" : "M",
+          matricule: e.matricule||null, date_naissance: e.date_naissance||null,
+          prenom: e.prenom||null, lieu_naissance: e.lieu_naissance||null,
+          statut: e.statut||null, db_id: e.id
+        });
+      });
+    }
+  } catch(err) { console.error("loadElevesDB", err); }
   _elevesLoaded = true;
   ALL_CLASSES = getAllClasses();
   TOTAL_ELEVES = getTotalEleves();
