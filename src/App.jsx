@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef, createContext, useCont
 import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
+if (typeof window !== "undefined") window.ELEVES_DB = ELEVES_DB;
 import EDT_REEL from "./data/edt_reel.json";
 import * as XLSX from "xlsx";
 import { RealtimeClient } from "@supabase/realtime-js";
