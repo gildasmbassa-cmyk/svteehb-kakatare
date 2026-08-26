@@ -248,7 +248,7 @@ async function loadElevesDB(anneeParam = "2026-2027") {
     const p1 = await fetch(`${SB_URL}/rest/v1/eleves${q}`, {headers:{...sb.h(), Range:"0-999"}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
     const p2 = await fetch(`${SB_URL}/rest/v1/eleves${q}`, {headers:{...sb.h(), Range:"1000-1999"}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
     const data = [...p1, ...p2];
-    if (data && Array.isArray(data) && data.length > 0) {
+    if (data && Array.isArray(data)) {
       Object.keys(ELEVES_DB).forEach(k => delete ELEVES_DB[k]);
       data.forEach(e => {
         const cleanId = e.classe.replace(/[èéêë]/g,"e").replace(/[àâ]/g,"a").replace(/\s+/g,"_");
