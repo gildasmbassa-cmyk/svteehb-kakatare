@@ -1379,7 +1379,7 @@ function ElevesPage() {
   const chipActifRef = useRef(null);
   const {pendingClasseSelect, setPendingClasseSelect, data: appData} = useApp();
   // ── État principal ────────────────────────────────────────────────
-  const [selClasse, setSelClasse] = useState(() => "6ème 1");
+  const [selClasse, setSelClasse] = useState("");
 
   useEffect(() => {
     if (!isMobile || !chipActifRef.current) return;
@@ -1401,6 +1401,13 @@ function ElevesPage() {
 
   // ── Base locale — modifiable (ajout / retrait) ───────────────────
   const [localDB, setLocalDB] = useState({});
+
+  // Sélectionne la première classe disponible au chargement
+  useEffect(() => {
+    if (selClasse) return;
+    const dispo = Object.keys(localDB).filter(k => localDB[k]?.length > 0).sort();
+    if (dispo.length > 0) setSelClasse(dispo[0]);
+  }, [selClasse, localDB]);
 
   // Synchronisation localDB apres chargement Supabase
   useEffect(() => {
