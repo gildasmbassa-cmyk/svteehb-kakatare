@@ -6701,8 +6701,7 @@ const NAV_PROVISEUR_GROUPS = [
   { section:"ACTEURS & PÉDAGOGIE", items:[
     {id:"enseignants", emoji:"👥", label:"Enseignants"},
     {id:"eleves",      emoji:"🎓", label:"Élèves"},
-    {id:"departements",emoji:"🏛️", label:"Départements & Matières", expandable:true,
-      sub:[{emoji:"🌿",label:"SVT"},{emoji:"📐",label:"Mathématiques"},{emoji:"⚗️",label:"Sciences Physiques"},{emoji:"📚",label:"Lettres"},{emoji:"🌍",label:"Sciences Humaines"},{emoji:"🗣️",label:"Langues Vivantes"}]},
+    {id:"departements",emoji:"🏛️", label:"Départements & Matières"},
     {id:"documents",   emoji:"📄", label:"Documents"},
   ]},
   { section:"SUIVI & PLANNINGS", items:[
@@ -6725,8 +6724,7 @@ const NAV_CENSEUR_GROUPS = [
   { section:"", items:[{id:"dashboard",emoji:"🏠",label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"}] },
   { section:"ACTEURS & PÉDAGOGIE", items:[
     {id:"eleves",      emoji:"🎓", label:"Élèves"},
-    {id:"departements",emoji:"🏛️", label:"Départements & Matières", expandable:true,
-      sub:[{emoji:"🌿",label:"SVT"},{emoji:"📐",label:"Mathématiques"},{emoji:"⚗️",label:"Sciences Physiques"},{emoji:"📚",label:"Lettres"},{emoji:"🌍",label:"Sciences Humaines"},{emoji:"🗣️",label:"Langues Vivantes"}]},
+    {id:"departements",emoji:"🏛️", label:"Départements & Matières"},
   ]},
   { section:"SUIVI & PLANNINGS", items:[
     {id:"edt",      emoji:"📅", label:"Emploi du temps"},
@@ -13442,7 +13440,7 @@ function DepartementsPage() {
     <div style={{padding:"20px 20px 40px", display:"flex", flexDirection:"column", gap:16}}>
       <div>
         <h2 style={{fontSize:18, fontWeight:800, color:C.txt, margin:0}}>🏛️ Départements & Matières</h2>
-        <p style={{color:C.txtMuted, margin:"3px 0 0", fontSize:12}}>8 départements pédagogiques · Lycée de Kakatare</p>
+        <p style={{color:C.txtMuted, margin:"3px 0 0", fontSize:12}}>{DEPARTEMENTS_LIST.length} départements pédagogiques · Lycée de Kakatare</p>
       </div>
 
       {/* Bouton retour si filtré depuis sidebar */}
