@@ -268,6 +268,7 @@ async function loadElevesDB(anneeParam = "2026-2027") {
   TOTAL_FILLES = getTotalFilles();
   TOTAL_GARCONS = getTotalGarcons();
   CLASSES_REELLES = Object.keys(ELEVES_DB).sort().map(code => ({ code, effectif: (ELEVES_DB[code]||[]).length }));
+  try { window.dispatchEvent(new Event("eleves:loaded")); } catch(e) {}
 }
 
 // LECONS_DATA est désormais dans le bundle — chargement direct
@@ -1399,6 +1400,17 @@ function ElevesPage() {
     }
     if (Object.keys(clone).length > 0) setLocalDB(clone);
   }, [appData]);
+
+  useEffect(() => {
+    const h = () => {
+      const clone = {};
+      for (const k in ELEVES_DB) { if (ELEVES_DB[k]?.length) clone[k] = [...ELEVES_DB[k]]; }
+      if (Object.keys(clone).length > 0) setLocalDB(clone);
+    };
+    window.addEventListener("eleves:loaded", h);
+    h();
+    return () => window.removeEventListener("eleves:loaded", h);
+  }, []);
 
 
   // ── Modal ajout / retrait ─────────────────────────────────────────
