@@ -954,7 +954,7 @@ function MesClassesPage() {
       {/* Sélecteur de classe */}
       <div style={{display:"flex", gap:8, overflowX:"auto", paddingBottom:4, flexShrink:0}}>
         {mesClasses.map(cl=>(
-          <button key={cl} onClick={()=>setSelClasse(cl)}
+                    <button key={cl} onClick={()=>setSelClasse(cl)}
             style={{flexShrink:0, padding: isMobile?"9px 14px":"7px 14px", borderRadius:20, fontSize: isMobile?12.5:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap",
               border:`1.5px solid ${selClasse===cl?C.green:C.border}`,
               background:selClasse===cl?C.green:"#eef1f5",
@@ -1376,6 +1376,14 @@ function CahierDeTextePage() {
 
 function ElevesPage() {
   const {isMobile} = useDevice();
+  const chipActifRef = useRef(null);
+  useEffect(() => {
+    if (!isMobile || !chipActifRef.current) return;
+    const t = setTimeout(() => {
+      try { chipActifRef.current?.scrollIntoView({behavior:"smooth", inline:"center", block:"nearest"}); } catch(e) {}
+    }, 120);
+    return () => clearTimeout(t);
+  }, [selClasse, isMobile]);
   const {pendingClasseSelect, setPendingClasseSelect, data: appData} = useApp();
   // ── État principal ────────────────────────────────────────────────
   const [selClasse, setSelClasse] = useState(() => "6ème 1");
@@ -1563,7 +1571,7 @@ function ElevesPage() {
               const ef = (localDB[cl]||[]).length;
               const isActive = cl===selClasse;
               return (
-                <button key={cl} onClick={()=>setSelClasse(cl)}
+                <button key={cl} onClick={()=>setSelClasse(cl)} ref={isActive ? chipActifRef : null}
                   style={{flexShrink:0, display:"flex", alignItems:"center", gap:5,
                     padding:"6px 11px", borderRadius:20, border:"none",
                     background:isActive?C.green:"rgba(255,255,255,.08)",
