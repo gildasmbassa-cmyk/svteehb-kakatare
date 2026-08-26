@@ -243,7 +243,10 @@ let _elevesLoaded = false;
 
 async function loadElevesDB(anneeParam = "2026-2027") {
   try {
-    const data = await sb.get("eleves", `?annee_scolaire=eq.${anneeParam}&order=classe.asc,numero.asc&limit=2000`);
+    const q = `?annee_scolaire=eq.${anneeParam}&order=classe.asc,numero.asc`;
+    const p1 = await fetch(`${SB_URL}/rest/v1/eleves${q}`, {headers:{...sb.h(), Range:"0-999"}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
+    const p2 = await fetch(`${SB_URL}/rest/v1/eleves${q}`, {headers:{...sb.h(), Range:"1000-1999"}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
+    const data = [...p1, ...p2];
     if (data && Array.isArray(data) && data.length > 0) {
       Object.keys(ELEVES_DB).forEach(k => delete ELEVES_DB[k]);
       data.forEach(e => {
