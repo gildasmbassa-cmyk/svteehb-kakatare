@@ -13570,6 +13570,7 @@ function ChangePasswordPage() {
       setDone(true);
       showToast("✓ Mot de passe modifié avec succès");
       setOldPw(""); setNewPw(""); setConf("");
+      setUser(u => u ? {...u, mustChangePwd:false} : u);
     } else {
       showToast("⚠ Mot de passe actuel incorrect ou erreur serveur", false);
     }
@@ -14372,6 +14373,20 @@ export default function App() {
   const [page,setPage]     = useState(()=>{
     try { return localStorage.getItem("svt_last_page")||"dashboard"; } catch { return "dashboard"; }
   });
+
+  // Verrou : tant que le mot de passe initial n'est pas changé, seul settings est accessible
+  const setPageGuarded = useCallback((p) => {
+    setUser(u => {
+      if (u?.mustChangePwd && p !== "settings") {
+        setToast({msg:"⚠ Changez votre mot de passe avant de continuer", ok:false});
+        setTimeout(()=>setToast(null), 3000);
+        setPage("settings");
+        return u;
+      }
+      setPage(p);
+      return u;
+    });
+  }, []);
   const [pendingFicheEns, setPendingFicheEns] = useState(null);
   const [pendingClasseSelect, setPendingClasseSelect] = useState(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -14502,7 +14517,7 @@ export default function App() {
 
   const scopedData = useMemo(()=>filterDataByDept(data, user?.role==="proviseur"?viewDeptId:null), [data, viewDeptId, user?.role]);
 
-  const ctx = {user,setUser,page,setPage,data:scopedData,rawData:data,setData,viewDeptId,setViewDeptId,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus,lang,setLang,t,annee,anneeActive,lectureSeule,changerAnnee};
+  const ctx = {user,setUser,page,setPage:setPageGuarded,setPageRaw:setPage,data:scopedData,rawData:data,setData,viewDeptId,setViewDeptId,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus,lang,setLang,t,annee,anneeActive,lectureSeule,changerAnnee};
 
   return(
     <AppCtx.Provider value={ctx}>
