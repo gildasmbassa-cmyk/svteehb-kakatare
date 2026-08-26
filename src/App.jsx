@@ -268,7 +268,6 @@ async function loadElevesDB(anneeParam = "2026-2027") {
       });
     }
   } catch(err) { console.error("loadElevesDB", err); }
-  console.log("[loadElevesDB] 6e 1 sample:", JSON.stringify(ELEVES_DB["6e 1"]?.[0]));
   _elevesLoaded = true;
   ALL_CLASSES = getAllClasses();
   TOTAL_ELEVES = getTotalEleves();
@@ -14473,4 +14472,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>
-  }, []);
+);
