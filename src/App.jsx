@@ -1377,6 +1377,10 @@ function CahierDeTextePage() {
 function ElevesPage() {
   const {isMobile} = useDevice();
   const chipActifRef = useRef(null);
+  const {pendingClasseSelect, setPendingClasseSelect, data: appData} = useApp();
+  // ── État principal ────────────────────────────────────────────────
+  const [selClasse, setSelClasse] = useState(() => "6ème 1");
+
   useEffect(() => {
     if (!isMobile || !chipActifRef.current) return;
     const t = setTimeout(() => {
@@ -1384,9 +1388,6 @@ function ElevesPage() {
     }, 120);
     return () => clearTimeout(t);
   }, [selClasse, isMobile]);
-  const {pendingClasseSelect, setPendingClasseSelect, data: appData} = useApp();
-  // ── État principal ────────────────────────────────────────────────
-  const [selClasse, setSelClasse] = useState(() => "6ème 1");
   const [search, setSearch]       = useState("");
   const [filtreGenre, setFiltreGenre] = useState("all");
   const [vue, setVue]             = useState("registre");
