@@ -1683,6 +1683,47 @@ function ElevesPage() {
               </div>
 
               {/* Table des élèves */}
+              {isMobile ? (
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {elevesFiltres.length===0 ? (
+                    <div style={{padding:"32px",textAlign:"center",color:C.txtLight,background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}>
+                      <div style={{fontSize:28,marginBottom:6}}>🔍</div>Aucun élève trouvé
+                    </div>
+                  ) : elevesFiltres.map((e,i)=>(
+                    <div key={e.id} style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,padding:12}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                        <div style={{width:34,height:34,borderRadius:"50%",background:e.g==="F"?C.pinkPale:C.bluePale,border:`1.5px solid ${e.g==="F"?C.pink:C.blue}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:e.g==="F"?C.pink:C.blue,flexShrink:0}}>
+                          {e.nom.split(" ")[0]?.[0]||"?"}{e.nom.split(" ").slice(-1)[0]?.[0]||""}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,color:C.txt,fontSize:13,lineHeight:1.3}}>{e.nom}</div>
+                          <div style={{fontSize:11,color:C.txtLight,fontFamily:"monospace"}}>N° {i+1} · {e.matricule||"—"}</div>
+                        </div>
+                        <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:800,background:e.g==="F"?C.pinkPale:C.bluePale,color:e.g==="F"?C.pink:C.blue,border:`1px solid ${e.g==="F"?C.pinkA40:C.blueA40}`,flexShrink:0}}>
+                          {e.g==="F"?"♀":"♂"}
+                        </span>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11,color:C.txtMuted,paddingLeft:44,marginBottom:10}}>
+                        <div>Né(e) : <strong style={{color:C.txt}}>{fmtDateFR(e.date_naissance)}</strong></div>
+                        <div>Âge : <strong style={{color:C.txt}}>{calcAge(e.date_naissance)}</strong></div>
+                        <div style={{gridColumn:"1 / -1"}}>Lieu : <strong style={{color:C.txt}}>{e.lieu_naissance||"—"}</strong></div>
+                      </div>
+                      <div style={{display:"flex",gap:6,paddingLeft:44}}>
+                        {isProviseur && (
+                          <button onClick={()=>setProfilModal(e)}
+                            style={{flex:1,padding:"7px",borderRadius:7,border:"1px solid #0B4D2C",background:"#fff",color:"#0B4D2C",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                            ✏️ Modifier
+                          </button>
+                        )}
+                        <button onClick={()=>setConfirmRetrait(e)}
+                          style={{flex:1,padding:"7px",background:C.redPale,border:`1px solid ${C.redBorder}`,borderRadius:7,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                          ✕ Retirer
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (<>
               <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}><div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{minWidth:920,width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
                     <tr style={{background:"#f8fafc",borderBottom:`1px solid ${C.border}`}}>
@@ -1742,6 +1783,7 @@ function ElevesPage() {
                 </table>
                 </div>
               </div>
+              </>)}
             </div>
           )}
 
