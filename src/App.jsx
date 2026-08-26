@@ -332,18 +332,7 @@ const DEMO_ACCOUNTS = [
 
 // ── Chargement données Supabase ───────────────────────────────────
 // Fusionne les ajouts/modifications d'élèves persistés (eleves_import) dans ELEVES_DB
-async function syncElevesImport() {
-  try {
-    const rows = await sb.get("eleves_import", "?select=classe,donnees");
-    (rows||[]).forEach(r => {
-      let arr = r.donnees;
-      if (typeof arr === "string") { try { arr = JSON.parse(arr); } catch { arr = null; } }
-      if (Array.isArray(arr) && arr.length > 0) {
-        ELEVES_DB[r.classe] = arr;
-      }
-    });
-  } catch { /* échec silencieux — on garde les données par défaut */ }
-}
+async function syncElevesImport() { /* neutralisé — la table eleves est la source unique */ }
 
 async function loadAllData(departementId = null, annee = "2026-2027") {
   const AY = `&annee_scolaire=eq.${annee}`;
@@ -1430,31 +1419,35 @@ function ElevesPage() {
   }
 
   // ── Ajout d'un élève ─────────────────────────────────────────────
-  function ajouterEleve() {
+  async function ajouterEleve() {
     const nom = newNom.trim().toUpperCase();
     if (!nom || nom.length < 3) return showToast("⚠ Nom trop court", false);
-    const safe = selClasse.replace(/[^a-zA-Z0-9]/g,'_');
-    const id   = `${safe}_new_${Date.now()}`;
-    const nouvelleListe = [...(localDB[selClasse]||[]), {id, nom, g:newGenre}];
-    setLocalDB(prev => ({ ...prev, [selClasse]: nouvelleListe }));
-    ELEVES_DB[selClasse] = nouvelleListe;
+    const maxNum = (localDB[selClasse]||[]).reduce((m,e)=>{
+      const n = parseInt(String(e.id).split("_").pop(),10);
+      return isNaN(n) ? m : Math.max(m,n);
+    }, 0);
+    const ok = await sb.upsert("eleves", {
+      numero: maxNum + 1, nom, sexe: newGenre === "F" ? "F" : "G",
+      classe: selClasse, annee_scolaire: "2026-2027", statut: "actif"
+    });
+    if (!ok) return showToast("⚠ Échec Supabase — vérifiez votre session", false);
     showToast(`✓ ${nom} ajouté(e) en ${selClasse}`);
     setNewNom(""); setModal(null);
-    sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe")
-      .then(ok=>{ if(!ok) showToast("⚠ Sauvegarde Supabase échouée — élève visible ici seulement", false); })
-      .catch(()=>showToast("⚠ Sauvegarde Supabase échouée", false));
+    await loadElevesDB("2026-2027");
   }
 
   // ── Retrait d'un élève ───────────────────────────────────────────
-  function retirerEleve(eleve) {
-    const nouvelleListe = (localDB[selClasse]||[]).filter(e => e.id !== eleve.id);
-    setLocalDB(prev => ({ ...prev, [selClasse]: nouvelleListe }));
-    ELEVES_DB[selClasse] = nouvelleListe;
+  async function retirerEleve(eleve) {
+    if (!eleve.db_id) return showToast("⚠ Élève sans identifiant DB — rechargez la page", false);
+    let ok = false;
+    try {
+      const r = await fetch(`${SB_URL}/rest/v1/eleves?id=eq.${eleve.db_id}`, { method:"DELETE", headers: sb.h() });
+      ok = r.ok || r.status === 204;
+    } catch(e) { ok = false; }
+    if (!ok) return showToast("⚠ Échec suppression Supabase", false);
     showToast(`✓ ${eleve.nom} retiré(e)`);
     setConfirmRetrait(null);
-    sb.upsert("eleves_import", {classe:selClasse, donnees:JSON.stringify(nouvelleListe)}, "classe")
-      .then(ok=>{ if(!ok) showToast("⚠ Sauvegarde Supabase échouée", false); })
-      .catch(()=>showToast("⚠ Sauvegarde Supabase échouée", false));
+    await loadElevesDB("2026-2027");
   }
 
   // ── Données de la classe sélectionnée ────────────────────────────
