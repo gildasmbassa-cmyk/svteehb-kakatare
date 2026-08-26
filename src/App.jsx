@@ -248,6 +248,17 @@ async function loadElevesDB(anneeParam = "2026-2027") {
     const p1 = await fetch(`${SB_URL}/rest/v1/eleves${q}`, {headers:{...sb.h(), Range:"0-999"}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
     const p2 = await fetch(`${SB_URL}/rest/v1/eleves${q}`, {headers:{...sb.h(), Range:"1000-1999"}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
     const data = [...p1, ...p2];
+    if (data.length === 0 && sb.token) {
+      try {
+        const s = await fetch(`${SB_URL}/rest/v1/sessions?select=token&token=eq.${sb.token}&limit=1`, {headers: sb.h()}).then(r=>r.ok?r.json():[]);
+        if (!s || s.length === 0) {
+          sb.token = null;
+          try { localStorage.removeItem("sb_session_token"); } catch(e) {}
+          window.dispatchEvent(new Event("session:expired"));
+          return;
+        }
+      } catch(e) {}
+    }
     if (data && Array.isArray(data)) {
       Object.keys(ELEVES_DB).forEach(k => delete ELEVES_DB[k]);
       data.forEach(e => {
@@ -14496,6 +14507,16 @@ export default function App() {
     const d = await loadAllData(deptIdRef.current, a);
     if (d) setData(d);
     setSyncing(false); setScreen("app");
+  }, []);
+
+  useEffect(() => {
+    const h = () => {
+      setUser(null); setData(null); setScreen("login");
+      setToast({msg:"⚠ Session expirée — reconnectez-vous", ok:false});
+      setTimeout(()=>setToast(null), 4000);
+    };
+    window.addEventListener("session:expired", h);
+    return () => window.removeEventListener("session:expired", h);
   }, []);
 
   const handleLogout = ()=>{setUser(null);setData(null);setPage("dashboard");setScreen("login");};
