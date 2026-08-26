@@ -11586,7 +11586,7 @@ const SidebarGrouped = ({groups, role, roleLabel, collapsed, setCollapsed, effec
       {!effectiveCollapsed&&(
         <div style={{padding:"8px 16px 10px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
           <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.3)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:3}}>VUE D'ENSEMBLE</div>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2026 – 2027 ▾</div>
+          <AnneeSelector/>
         </div>
       )}
 
@@ -11731,7 +11731,7 @@ const SidebarProviseur = ({collapsed, setCollapsed, effectiveCollapsed, nbEpAtte
       {!effectiveCollapsed&&(
         <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(255,255,255,.08)",flexShrink:0}}>
           <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:3}}>VUE D'ENSEMBLE</div>
-          <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.7)",background:"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px"}}>2026 – 2027 ▾</div>
+          <AnneeSelector/>
         </div>
       )}
 
@@ -11838,7 +11838,7 @@ const Sidebar = ({collapsed, setCollapsed}) => {
       {!effectiveCollapsed && (
         <div style={{padding:"10px 16px", borderBottom:"1px solid rgba(255,255,255,.08)", flexShrink:0}}>
           <div style={{fontSize:9, fontWeight:700, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:4}}>Année scolaire</div>
-          <div style={{fontSize:12, fontWeight:700, color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.08)", borderRadius:7, padding:"5px 10px"}}>2026 – 2027 ▾</div>
+          <AnneeSelector/>
         </div>
       )}
 
@@ -12165,6 +12165,36 @@ const Topbar = ({title, onLogout, collapsed, setCollapsed}) => {
 // ════════════════════════════════════════════════════════════════
 // GÉNÉRATION BILAN TRIMESTRIEL — PDF automatique animatrice
 // ════════════════════════════════════════════════════════════════
+function AnneeSelector() {
+  const {annee, anneeActive, changerAnnee, lectureSeule} = useApp();
+  const [opts, setOpts] = useState([]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    sb.get("annee_scolaire","?select=annee&order=annee.desc").then(r => {
+      const uniq = [...new Set((r||[]).map(x=>x.annee))];
+      setOpts(uniq.length ? uniq : ["2026-2027"]);
+    }).catch(()=>setOpts(["2026-2027"]));
+  }, []);
+  return (
+    <div style={{position:"relative"}}>
+      <div onClick={()=>setOpen(o=>!o)} style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.85)",background:lectureSeule?"rgba(212,175,55,.25)":"rgba(255,255,255,.08)",borderRadius:7,padding:"5px 10px",cursor:"pointer",userSelect:"none"}}>
+        {annee.replace("-"," – ")} {lectureSeule ? "🔒" : ""} ▾
+      </div>
+      {open && (
+        <div style={{position:"absolute",top:"110%",right:0,background:"#fff",borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,.18)",zIndex:200,minWidth:150,overflow:"hidden"}}>
+          {opts.map(a => (
+            <div key={a} onClick={()=>{setOpen(false); if(a!==annee) changerAnnee(a);}}
+              style={{padding:"9px 14px",fontSize:12,fontWeight:a===annee?800:500,color:a===annee?"#0B4D2C":"#334155",background:a===annee?"#E8F5EE":"#fff",cursor:"pointer",display:"flex",justifyContent:"space-between",gap:8}}>
+              <span>{a.replace("-"," – ")}</span>
+              {a===anneeActive && <span style={{fontSize:10,color:"#D4AF37",fontWeight:700}}>active</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function genBilanTrimestre(trim, data) {
   const trimLabels = {T1:"1er Trimestre",T2:"2ème Trimestre",T3:"3ème Trimestre",ANN:"Annuel"};
   const periode = trimLabels[trim] || trim;
@@ -14399,11 +14429,15 @@ export default function App() {
     setToast({msg,ok});setTimeout(()=>setToast(null),3000);
   },[]);
 
+  const [annee, setAnnee] = useState("2026-2027");
+  const [anneeActive, setAnneeActive] = useState("2026-2027");
+  const anneeRef = useRef("2026-2027");
+  const lectureSeule = annee !== anneeActive;
   const deptIdRef = useRef(null);
   const refreshData = useCallback(async(silent=false)=>{
     setSyncing(true);
     try {
-      const d = await loadAllData(deptIdRef.current);
+      const d = await loadAllData(deptIdRef.current, anneeRef.current);
       if (d) {
         setData(prev=>({...prev, ...d}));
         if (!silent) showToast("✓ Données actualisées");
@@ -14422,7 +14456,11 @@ export default function App() {
     window.__svtSessionToken = acc.token || null;
     await loadStaticData(); // Charger les données statiques en parallèle
     deptIdRef.current = isAdminRole(acc.role) && acc.role !== "proviseur" ? acc.departement_id : null;
-    const d = await loadAllData(deptIdRef.current);
+    try {
+      const act = await sb.get("annee_scolaire","?select=annee&active=eq.true&limit=1");
+      if (act?.[0]?.annee) { anneeRef.current = act[0].annee; setAnnee(act[0].annee); setAnneeActive(act[0].annee); }
+    } catch(e) {}
+    const d = await loadAllData(deptIdRef.current, anneeRef.current);
     const safeD = d || { users:{}, prog:{}, epreuves:[], classes:[], exceptions:{} };
     const sbUser = safeD.users?.[acc.id];
     // Fallback: si Supabase ne retourne pas les classes, utiliser les données EDT
@@ -14435,6 +14473,15 @@ export default function App() {
     const savedPage = !acc.mustChangePwd ? (localStorage.getItem("svt_last_page")||"dashboard") : "settings";
     setPage(savedPage);
   },[]);
+
+  const changerAnnee = useCallback(async (a) => {
+    anneeRef.current = a; setAnnee(a);
+    setSyncing(true); setScreen("loading");
+    await loadElevesDB(a);
+    const d = await loadAllData(deptIdRef.current, a);
+    if (d) setData(d);
+    setSyncing(false); setScreen("app");
+  }, []);
 
   const handleLogout = ()=>{setUser(null);setData(null);setPage("dashboard");setScreen("login");};
 
@@ -14455,7 +14502,7 @@ export default function App() {
 
   const scopedData = useMemo(()=>filterDataByDept(data, user?.role==="proviseur"?viewDeptId:null), [data, viewDeptId, user?.role]);
 
-  const ctx = {user,setUser,page,setPage,data:scopedData,rawData:data,setData,viewDeptId,setViewDeptId,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus,lang,setLang,t};
+  const ctx = {user,setUser,page,setPage,data:scopedData,rawData:data,setData,viewDeptId,setViewDeptId,online,syncing,toast,showToast,staticLoaded,setStaticLoaded,refreshData,pendingFicheEns,setPendingFicheEns,pendingClasseSelect,setPendingClasseSelect,mobileSearchOpen,setMobileSearchOpen,realtimeStatus,lang,setLang,t,annee,anneeActive,lectureSeule,changerAnnee};
 
   return(
     <AppCtx.Provider value={ctx}>
