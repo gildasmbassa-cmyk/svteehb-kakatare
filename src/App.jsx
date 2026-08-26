@@ -1,3 +1,13 @@
+
+  // Synchronisation après chargement Supabase
+  useEffect(() => {
+    if (!appData) return;
+    const clone = {};
+    for (const k in ELEVES_DB) {
+      if (ELEVES_DB[k]?.length) clone[k] = [...ELEVES_DB[k]];
+    }
+    if (Object.keys(clone).length > 0) setLocalDB(clone);
+  }, [appData]);
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
@@ -1386,12 +1396,7 @@ function ElevesPage() {
   }, [pendingClasseSelect]);
 
   // ── Base locale — modifiable (ajout / retrait) ───────────────────
-  const [localDB, setLocalDB] = useState(() => {
-    // Cloner ELEVES_DB pour pouvoir le modifier localement
-    const clone = {};
-    for (const k in ELEVES_DB) clone[k] = [...ELEVES_DB[k]];
-    return clone;
-  });
+  const [localDB, setLocalDB] = useState({});
 
   // Resynchronise localDB quand ELEVES_DB est rechargé depuis Supabase
   useEffect(() => {
@@ -14468,4 +14473,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>
-);
+  }, []);
