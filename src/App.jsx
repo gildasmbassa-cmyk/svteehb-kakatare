@@ -13193,7 +13193,12 @@ function AccountBotPage() {
 function GestionAnnuellePage() {
   const {showToast, data, setPage} = useApp();
   const {isMobile} = useDevice();
-  const [selClasse, setSelClasse] = useState("6ème 1");
+  const [selClasse, setSelClasse] = useState("");
+  useEffect(() => {
+    if (selClasse) return;
+    const dispo = Object.keys(ELEVES_DB).filter(k => ELEVES_DB[k]?.length > 0).sort();
+    if (dispo.length > 0) setSelClasse(dispo[0]);
+  }, [selClasse]);
   const [csvText, setCsvText]     = useState("");
   const [preview, setPreview]     = useState([]);
   const [importing, setImporting] = useState(false);
