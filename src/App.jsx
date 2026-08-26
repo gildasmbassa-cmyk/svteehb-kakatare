@@ -1,13 +1,4 @@
 
-  // Synchronisation après chargement Supabase
-  useEffect(() => {
-    if (!appData) return;
-    const clone = {};
-    for (const k in ELEVES_DB) {
-      if (ELEVES_DB[k]?.length) clone[k] = [...ELEVES_DB[k]];
-    }
-    if (Object.keys(clone).length > 0) setLocalDB(clone);
-  }, [appData]);
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
@@ -1397,12 +1388,15 @@ function ElevesPage() {
   // ── Base locale — modifiable (ajout / retrait) ───────────────────
   const [localDB, setLocalDB] = useState({});
 
-  // Resynchronise localDB quand ELEVES_DB est rechargé depuis Supabase
+  // Synchronisation localDB apres chargement Supabase
   useEffect(() => {
     const clone = {};
-    for (const k in ELEVES_DB) clone[k] = [...ELEVES_DB[k]];
-    setLocalDB(clone);
+    for (const k in ELEVES_DB) {
+      if (ELEVES_DB[k]?.length) clone[k] = [...ELEVES_DB[k]];
+    }
+    if (Object.keys(clone).length > 0) setLocalDB(clone);
   }, [appData]);
+
 
   // ── Modal ajout / retrait ─────────────────────────────────────────
   const [modal, setModal]           = useState(null); // null | "ajout" | {type:"retrait",eleve}
@@ -7295,6 +7289,7 @@ function DashboardSurveillance() {
     window.addEventListener("sg:tab", handler);
     return () => window.removeEventListener("sg:tab", handler);
   }, []);
+
   const [vieSco,setVieSco]       = useState([]);
   const [vieLoading,setVieLoading] = useState(true);
   const [ficheEleve,setFicheEleve] = useState(null);
