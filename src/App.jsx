@@ -1,13 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
-        if (ok) {
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
-        } else {
-          addToQueue(entry);
-          setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"queued"}));
-          showToast("📶 Note mise en file — sera envoyée à la reconnexion", true);
-        }
 if (typeof window !== "undefined") window.ELEVES_DB = ELEVES_DB;
 import EDT_REEL from "./data/edt_reel.json";
 import * as XLSX from "xlsx";
