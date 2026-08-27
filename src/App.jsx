@@ -1,8 +1,13 @@
 
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
-import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
+        if (ok) {
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
+        } else {
+          addToQueue(entry);
+          setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"queued"}));
+          showToast("📶 Note mise en file — sera envoyée à la reconnexion", true);
+        }
 if (typeof window !== "undefined") window.ELEVES_DB = ELEVES_DB;
 import EDT_REEL from "./data/edt_reel.json";
 import * as XLSX from "xlsx";
@@ -113,6 +118,7 @@ const sb = {
         const errBody = await r.text().catch(()=>"");
         console.error(`sb.rpc(${fn}) → ${r.status}: ${errBody}`);
         sb.lastError = errBody;
+        if (errBody.includes("Session invalide") || errBody.includes("expir")) { sb.token = null; try { localStorage.removeItem("sb_session_token"); window.__svtSessionToken = null; window.dispatchEvent(new Event("session:expired")); } catch(e) {} }
         return null;
       }
       const d = await r.json();
