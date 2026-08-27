@@ -882,6 +882,41 @@ function MesClassesPage() {
   const evalCode = selMatiere ? `${selMatiere}-S${seqNum}` : `${selTrim}-${selEval}`;
   const notesEval = selClasse ? (data?.notes?.[`${selClasse}||${evalCode}`]||{}) : {};
 
+  // ── File hors connexion ──────────────────────────────────────────
+  const QUEUE_KEY = `svt_notes_queue_${user?.id||"?"}`;
+  const getQueue  = () => { try { return JSON.parse(localStorage.getItem(QUEUE_KEY)||"[]"); } catch { return []; } };
+  const saveQueue = (q) => { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch {} };
+  const addToQueue = (entry) => {
+    const q = getQueue().filter(e => !(e.classe===entry.classe && e.evaluation===entry.evaluation && e.eleveId===entry.eleveId));
+    q.push({...entry, ts: Date.now()});
+    saveQueue(q);
+  };
+  const removeFromQueue = (entry) => {
+    saveQueue(getQueue().filter(e => !(e.classe===entry.classe && e.evaluation===entry.evaluation && e.eleveId===entry.eleveId)));
+  };
+
+  const replayQueue = async (force=false) => {
+    const q = getQueue();
+    if (!q.length) return;
+    const old = q.filter(e => (Date.now()-e.ts) > 86400000);
+    const fresh = q.filter(e => (Date.now()-e.ts) <= 86400000);
+    if (old.length && !force) {
+      showToast(`📋 ${old.length} note(s) en attente depuis >24h — confirmez l'envoi`, true);
+      return;
+    }
+    let ok_count = 0;
+    for (const e of q) {
+      const ok = await sb.rpc("submit_note", {p_classe:e.classe, p_evaluation:e.evaluation, p_eleve_id:e.eleveId, p_note:e.note});
+      if (ok) { removeFromQueue(e); ok_count++; }
+    }
+    if (ok_count > 0) showToast(`✓ ${ok_count} note(s) synchronisée(s)`, true);
+  };
+
+  useEffect(() => {
+    const q = getQueue();
+    if (q.length > 0) replayQueue();
+  }, [user?.id]);
+
   const saveNote = (eleveId, valeur) => {
     if (!selClasse) return;
     const num = valeur==="" ? null : Math.max(0, Math.min(20, Number(valeur)));
@@ -895,17 +930,21 @@ function MesClassesPage() {
     const timerKey = `${eleveId}-${evalCode}`;
     if (syncTimer.current[timerKey]) clearTimeout(syncTimer.current[timerKey]);
     syncTimer.current[timerKey] = setTimeout(async () => {
+      const entry = {classe:selClasse, evaluation:evalCode, eleveId, note:num};
       try {
-        // Écriture via RPC sécurisée (submit_note) plutôt que PATCH/POST direct sur la table —
-        // notes passe en RLS avec écriture directe bloquée ; seule cette fonction peut écrire.
-        const ok = await sb.rpc("submit_note", {
-          p_classe: selClasse, p_evaluation: evalCode, p_eleve_id: eleveId, p_note: num
-        });
-        setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]: ok?"saved":"error"}));
-        if (!ok) showToast("⚠ Note non sauvegardée — réessaie", false);
+        const ok = await sb.rpc("submit_note", {p_classe:selClasse, p_evaluation:evalCode, p_eleve_id:eleveId, p_note:num});
+        if (ok) {
+          removeFromQueue(entry);
+          setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"saved"}));
+        } else {
+          addToQueue(entry);
+          setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"queued"}));
+          showToast("📶 Note mise en file — sera envoyée à la reconnexion", true);
+        }
       } catch {
-        setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"error"}));
-        showToast("⚠ Erreur réseau — note non sauvegardée", false);
+        addToQueue(entry);
+        setSavingNote(prev=>({...prev, [`${eleveId}-${evalCode}`]:"queued"}));
+        showToast("📶 Note mise en file — sera envoyée à la reconnexion", true);
       }
     }, 600);
   };
@@ -1125,7 +1164,7 @@ function MesClassesPage() {
                     placeholder="—"
                     style={{width: isMobile?60:64, padding: isMobile?"8px":"6px 8px", borderRadius:7, border:`1px solid ${C.border}`, fontSize:13, fontFamily:"inherit", textAlign:"center", flexShrink:0}}/>
                   <span style={{width:16, flexShrink:0, fontSize:13}}>
-                    {status==="pending"?"⏳":status==="saved"?"✅":status==="error"?"⚠️":""}
+                      {status==="pending"?"⏳":status==="saved"?"✅":status==="queued"?"📶":status==="error"?"⚠️":""}
                   </span>
                 </div>
               );
