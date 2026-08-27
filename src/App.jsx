@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } from "react";
+import { TRANSLATIONS_EN, DEPARTEMENTS_LIST } from "./lib/constants.js";
 import ReactDOM from "react-dom/client";
 import ELEVES_DB from "./data/eleves.json";
 if (typeof window !== "undefined") window.ELEVES_DB = ELEVES_DB;
