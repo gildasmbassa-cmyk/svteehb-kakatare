@@ -2245,8 +2245,8 @@ function EnsGerer({ data, setData, showToast }) {
   // Source enseignants
   const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
   const enseignants = supabaseEns.length > 0
-    ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), ini:u.ini||getIni(u.nom), classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
-    : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, col:getColor(a.id), ini:getIni(a.nom), classes:ENS_CLASSES_REF[a.id]||[]}));
+    ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), ini:u.ini||getIni(u.nom), classes:(u.classes||[]).length>0?u.classes:([])}))
+    : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, col:getColor(a.id), ini:getIni(a.nom), classes:[]}));
 
   // ── Supprimer un enseignant ──
   const supprimerEnseignant = async(ens) => {
@@ -2897,12 +2897,12 @@ function EnsListe({ data, onSelect }) {
     ? supabaseEns.map(u=>({
         ...u,
         col: u.col||getColor(u.id), ini: u.ini||getIni(u.nom),
-        classes: (u.classes||[]).length > 0 ? u.classes : (ENS_CLASSES_REF[u.id]||[])
+        classes: (u.classes||[]).length > 0 ? u.classes : ([])
       }))
     // Fallback complet : DEMO_ACCOUNTS + ENS_CLASSES_REF
     : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({
         ...a, col:getColor(a.id), ini:getIni(a.nom),
-        classes: ENS_CLASSES_REF[a.id]||[]
+        classes: []
       }));
 
   const enseignants = sourceData
@@ -12270,8 +12270,8 @@ function genBilanTrimestre(trim, data) {
   // Source enseignants avec fallback
   const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
   const enseignants = supabaseEns.length > 0
-    ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
-    : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, classes:ENS_CLASSES_REF[a.id]||[]}));
+    ? supabaseEns.map(u=>({...u, col:u.col||getColor(u.id), classes:(u.classes||[]).length>0?u.classes:([])}))
+    : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a, classes:[]}));
 
   // Calculer les stats par enseignant
   const statsEns = enseignants.map(ens => {
@@ -12509,8 +12509,8 @@ function SuiviProgrammePage() {
   // Source enseignants
   const supabaseEns = Object.values(data?.users||{}).filter(u=>u.role!=="proviseur");
   const enseignants = ((supabaseEns.length>0 || data?.deptFilterActive)
-    ? supabaseEns.map(u=>({...u,col:u.col||getColor(u.id),ini:u.ini||getIni(u.nom),classes:(u.classes||[]).length>0?u.classes:(ENS_CLASSES_REF[u.id]||[])}))
-    : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a,col:getColor(a.id),ini:getIni(a.nom),classes:ENS_CLASSES_REF[a.id]||[]}))
+    ? supabaseEns.map(u=>({...u,col:u.col||getColor(u.id),ini:u.ini||getIni(u.nom),classes:(u.classes||[]).length>0?u.classes:([])}))
+    : DEMO_ACCOUNTS.filter(a=>a.role==="enseignant").map(a=>({...a,col:getColor(a.id),ini:getIni(a.nom),classes:[]}))
   );
 
   // Calculer stats par enseignant × classe
@@ -14553,7 +14553,7 @@ export default function App() {
     // Fallback: si Supabase ne retourne pas les classes, utiliser les données EDT
     const classes = (sbUser?.classes||[]).length > 0
       ? sbUser.classes
-      : (acc.classes||ENS_CLASSES_REF[acc.id]||[]);
+      : (acc.classes||[]);
     setData(safeD);
     setUser({...acc, classes, photo: sbUser?.photo||null});
     setSyncing(false); setScreen("app");
