@@ -13971,7 +13971,7 @@ function LoginPage({onLogin}){
     setErr("");
     if(!id.trim()){setErr("Veuillez saisir votre identifiant.");return;}
     if(!pw){setErr("Veuillez saisir votre mot de passe.");return;}
-    if(profile.needsDept&&!selDept){setErr("Sélectionnez un département.");return;}
+    
     setLoading(true);
     let authUser=null;
     try{ authUser=await sb.rpc("authenticate_user",{p_id:id.trim().toLowerCase(),p_mdp:pw}); }
@@ -13982,7 +13982,7 @@ function LoginPage({onLogin}){
     if(profile.role==="animateur" && authUser.role!=="animateur" && authUser.role!=="animatrice"){setErr("Ce compte n'est pas un compte Animateur Pédagogique.");setLoading(false);return;}
     if(profile.role==="surveillant_general"&& authUser.role!=="surveillant_general"){setErr("Ce compte n'est pas un compte Surveillance Générale.");setLoading(false);return;}
     if(profile.role==="enseignant" && (authUser.role==="proviseur"||authUser.role==="censeur"||authUser.role==="surveillant_general")){setErr("Utilisez l'accès correspondant à ce compte.");setLoading(false);return;}
-    if(profile.needsDept && authUser.departement_id && String(authUser.departement_id)!==String(selDept)){setErr("Ce compte n'appartient pas à ce département.");setLoading(false);return;}
+    
     if(authUser.token){ sb.token = authUser.token; try{ localStorage.setItem("sb_session_token", authUser.token); }catch(e){} }
     if(rememberMe)localStorage.setItem("svt_remember_id",id.trim().toLowerCase());
     else localStorage.removeItem("svt_remember_id");
@@ -14254,7 +14254,7 @@ function LoginPage({onLogin}){
       </div>
 
       {/* Département (seulement Enseignant) */}
-      {profile.needsDept && (
+            {false && (
         <div style={{marginBottom:14}}>
           <label style={{display:"block",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",color:clr.slate,marginBottom:6,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
             Département
