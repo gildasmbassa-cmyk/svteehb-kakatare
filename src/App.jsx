@@ -14332,7 +14332,7 @@ function LoginPage({onLogin}){
         tabIndex={p.soon?-1:0}
         onClick={()=>{
           if(p.soon)return;
-          setSelProfile(p.key); setErr(""); setSelNiveau(""); setSelNiveau("");
+          setSelProfile(p.key); setErr(""); setSelNiveau("");
           if(isMobile)setMobileFormOpen(true);
         }}
         onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!p.soon){setSelProfile(p.key);setErr("");if(isMobile)setMobileFormOpen(true);}}}
