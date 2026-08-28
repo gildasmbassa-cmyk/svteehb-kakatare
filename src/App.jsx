@@ -926,7 +926,17 @@ function MesClassesPage() {
     let ok_count = 0;
     for (const e of q) {
       const ok = await sb.rpc("submit_note", {p_classe:e.classe, p_evaluation:e.evaluation, p_eleve_id:e.eleveId, p_note:e.note});
-      if (ok) { removeFromQueue(e); ok_count++; }
+      if (ok) {
+        removeFromQueue(e);
+        ok_count++;
+        setData(prev => {
+          const k = `${e.classe}||${e.evaluation}`;
+          const cur = {...(prev?.notes?.[k]||{})};
+          if (e.note===null) delete cur[e.eleveId]; else cur[e.eleveId]=e.note;
+          return {...prev, notes:{...(prev?.notes||{}), [k]:cur}};
+        });
+        setSavingNote(prev=>({...prev, [`${e.eleveId}-${e.evaluation}`]:"saved"}));
+      }
     }
     if (ok_count > 0) showToast(`✓ ${ok_count} note(s) synchronisée(s)`, true);
   };
