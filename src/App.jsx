@@ -379,7 +379,14 @@ async function loadAllData(departementId = null, annee = "2026-2027") {
     .sort((a,b)=>{const da=a.soumis||a.created_at||a.id||0, db=b.soumis||b.created_at||b.id||0; return db>da?1:-1;});
   const edtBaseMap={};
   (edtBase||[]).forEach(r=>{if(!edtBaseMap[r.ens_id])edtBaseMap[r.ens_id]={};edtBaseMap[r.ens_id][r.slot]=r.lbl||null;});
-  return{classes:classes||[],users:usersMap,prog:progIndex,epreuves:eps,exceptions:excMap,notes:notesIndex,absences:absIndex,edtBase:edtBaseMap};
+  let matieresDept = [];
+  if (departementId) {
+    try {
+      const md = await sb.get("matieres", `?select=nom&departement_id=eq.${departementId}`);
+      matieresDept = (md||[]).map(m=>m.nom);
+    } catch(e) {}
+  }
+  return{matieresDept,classes:classes||[],users:usersMap,prog:progIndex,epreuves:eps,exceptions:excMap,notes:notesIndex,absences:absIndex,edtBase:edtBaseMap};
 }
 
 // ── Palette ───────────────────────────────────────────────────────
@@ -841,6 +848,16 @@ function MesClassesPage() {
   const [selTrim,   setSelTrim]   = useState("T1");
   const [selEval,   setSelEval]   = useState("E1");
   const [selMatiere, setSelMatiere] = useState("");
+
+  // Présélection automatique si une seule matière disponible
+  useEffect(() => {
+    if (!selClasse || !data) return;
+    const toutes = getCoefsForClasse(selClasse).map(c=>c.matiere);
+    const mesMat = (data?.matieresDept||[]).filter(m => toutes.includes(m));
+    const matieres = mesMat.length > 0 ? mesMat : toutes;
+    if (matieres.length === 1) setSelMatiere(matieres[0]);
+    else setSelMatiere("");
+  }, [selClasse, data]);
   // Correspondance Trimestre+Eval → Séquence (format bulletin)
   const TRIM_EVAL_TO_SEQ = {"T1-E1":1,"T1-E2":2,"T2-E1":3,"T2-E2":4,"T3-E1":5,"T3-E2":6};
   const [savingNote, setSavingNote] = useState({}); // {eleveId: 'pending'|'saved'|'error'}
@@ -1126,7 +1143,9 @@ function MesClassesPage() {
 
           {/* Sélecteur matière — menu déroulant */}
           {selClasse && (()=>{
-            const matieres = getCoefsForClasse(selClasse).map(c=>c.matiere);
+                const toutes = getCoefsForClasse(selClasse).map(c=>c.matiere);
+                const mesMat = (data?.matieresDept||[]).filter(m => toutes.includes(m));
+                const matieres = mesMat.length > 0 ? mesMat : toutes;
             return matieres.length>0 ? (
               <div style={{flexShrink:0}}>
                 <select value={selMatiere} onChange={e=>setSelMatiere(e.target.value)}
