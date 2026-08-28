@@ -346,7 +346,7 @@ const DEMO_ACCOUNTS = [
 // Fusionne les ajouts/modifications d'élèves persistés (eleves_import) dans ELEVES_DB
 async function syncElevesImport() { /* neutralisé — la table eleves est la source unique */ }
 
-async function loadAllData(departementId = null, annee = "2026-2027", deptMatieres = null) {
+async function loadAllData(departementId = null, annee = "2026-2027", userId = null) {
   const AY = `&annee_scolaire=eq.${annee}`;
   await loadTrimestres();
   await loadCoefficients();
@@ -380,11 +380,10 @@ async function loadAllData(departementId = null, annee = "2026-2027", deptMatier
   const edtBaseMap={};
   (edtBase||[]).forEach(r=>{if(!edtBaseMap[r.ens_id])edtBaseMap[r.ens_id]={};edtBaseMap[r.ens_id][r.slot]=r.lbl||null;});
   let matieresDept = [];
-  const dm = deptMatieres || departementId;
-  if (dm) {
+  if (userId) {
     try {
-      const md = await sb.get("matieres", `?select=nom&departement_id=eq.${dm}`);
-      matieresDept = (md||[]).map(m=>m.nom);
+      const em = await sb.get("enseignant_matieres", `?select=matiere&ens_id=eq.${userId}&annee_scolaire=eq.${annee}`);
+      matieresDept = (em||[]).map(m=>m.matiere);
     } catch(e) {}
   }
   return{matieresDept,classes:classes||[],users:usersMap,prog:progIndex,epreuves:eps,exceptions:excMap,notes:notesIndex,absences:absIndex,edtBase:edtBaseMap};
@@ -14591,11 +14590,11 @@ export default function App() {
   const anneeRef = useRef("2026-2027");
   const lectureSeule = annee !== anneeActive;
   const deptIdRef = useRef(null);
-  const deptMatRef = useRef(null);
+  const userIdRef = useRef(null);
   const refreshData = useCallback(async(silent=false)=>{
     setSyncing(true);
     try {
-      const d = await loadAllData(deptIdRef.current, anneeRef.current, deptMatRef.current);
+      const d = await loadAllData(deptIdRef.current, anneeRef.current, userIdRef.current);
       if (d) {
         setData(prev=>({...prev, ...d}));
         if (!silent) showToast("✓ Données actualisées");
@@ -14618,8 +14617,8 @@ export default function App() {
       const act = await sb.get("annee_scolaire","?select=annee&active=eq.true&limit=1");
       if (act?.[0]?.annee) { anneeRef.current = act[0].annee; setAnnee(act[0].annee); setAnneeActive(act[0].annee); }
     } catch(e) {}
-    deptMatRef.current = acc.departement_id || null;
-    const d = await loadAllData(deptIdRef.current, anneeRef.current, acc.departement_id);
+    userIdRef.current = acc.id || null;
+    const d = await loadAllData(deptIdRef.current, anneeRef.current, acc.id);
     const safeD = d || { users:{}, prog:{}, epreuves:[], classes:[], exceptions:{} };
     const sbUser = safeD.users?.[acc.id];
     // Fallback: si Supabase ne retourne pas les classes, utiliser les données EDT
@@ -14637,7 +14636,7 @@ export default function App() {
     anneeRef.current = a; setAnnee(a);
     setSyncing(true); setScreen("loading");
     await loadElevesDB(a);
-    const d = await loadAllData(deptIdRef.current, a, deptMatRef.current);
+    const d = await loadAllData(deptIdRef.current, a, userIdRef.current);
     if (d) setData(d);
     setSyncing(false); setScreen("app");
   }, []);
