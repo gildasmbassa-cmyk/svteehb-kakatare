@@ -6820,7 +6820,7 @@ const NAV_ANIMATEUR_GROUPS = [
     {id:"documents-ap",emoji:"📄",label:"Documents"},
   ]},
   { section:"PLANNINGS", items:[
-    {id:"edt-teacher",emoji:"📅",label:"Mon emploi du temps"},
+    {id:"edt",emoji:"📅",label:"Emplois du temps"},
   ]},
 ];
 const NAV_SURVEILLANCE = [{id:"dashboard", emoji:"🏠", label:"Tableau de bord"},{id:"babillard",emoji:"📌",label:"Babillard"},{id:"conduite",emoji:"🛡️",label:"Conduite & Discipline"}];
