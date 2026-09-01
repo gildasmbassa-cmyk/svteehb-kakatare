@@ -6367,7 +6367,7 @@ function EdtPage() {
   const {data, user, showToast, refreshData} = useApp();
   const {isMobile} = useDevice();
   const [onglet, setOnglet] = useState("maintenant"); // maintenant | parEnseignant | parClasse
-  const [selEns, setSelEns] = useState(()=> Object.keys(EDT_REEL)[0]||null);
+  const [selEns, setSelEns] = useState(null);
   const [selCl, setSelCl] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [edtGrid, setEdtGrid] = useState(null); // copie de travail {L:[8],Ma:[8],Me:[8],J:[8],V:[8]} pendant l'édition
