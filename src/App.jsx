@@ -13849,7 +13849,7 @@ const AppLayout = ({onLogout}) => {
     if(page==="programme")         return <W>{(isAdmin||user?.role==="censeur")?<SuiviProgrammePage/>:<MonProgrammePage/>}</W>
     if(page==="epreuves")          return <W><EpreuvesPage/></W>
     if(page==="edt-teacher")       return <W><MonEdtPage/></W>
-    if(page==="edt")               return <W>{(isAdmin||user?.role==="censeur")?<EdtPage/>:<MonEdtPage/>}</W>
+    if(page==="edt")               return <W>{(isAdmin||user?.role==="censeur"||user?.role==="animateur")?<EdtPage/>:<MonEdtPage/>}</W>
     if(page==="enseignants")       return <W>{isAdmin?<EnseignantsPage/>:null}</W>
     if(page==="gestion-annuelle")  return <W>{isAdmin?<GestionAnnuellePage/>:null}</W>
     if(page==="comptes")           return <W>{user?.role==="proviseur"?<AccountBotPage/>:null}</W>
